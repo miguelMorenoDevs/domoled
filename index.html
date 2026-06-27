@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Authenticating Spotify...</title>
-    <!-- Using Tailwind CSS for a quick, clean loading screen -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-zinc-900 text-white h-screen flex flex-col items-center justify-center font-sans">
@@ -23,13 +22,11 @@
     </div>
 
     <script>
-        // Wait briefly just so the user sees the loading screen, 
-        // avoiding an aggressive and confusing white flash.
         setTimeout(() => {
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
-            const state = urlParams.get('state'); // We stored the Pi's IP here (e.g., 192.168.1.50:5000)
-            const error = urlParams.get('error'); // Spotify sends this if user denies access
+            const state = urlParams.get('state');
+            const error = urlParams.get('error');
 
             const statusEl = document.getElementById('statusMessage');
 
@@ -45,16 +42,13 @@
                 return;
             }
 
-            // Redirect the browser straight to the local Raspberry Pi
-            // This bypasses CORS issues entirely!
-            const piCallbackUrl = `http://${state}/callback?code=${code}`;
+            const piCallbackUrl = `http://${state}/spotify/callback?code=${code}`;
             
             statusEl.innerText = `Redirecting to local device (${state})...`;
             
-            // Perform the redirect
             window.location.replace(piCallbackUrl);
 
-        }, 800); // 800ms delay for aesthetics
+        }, 800);
     </script>
 </body>
 </html>

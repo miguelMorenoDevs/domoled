@@ -1,5 +1,11 @@
-import { SpotifyService } from "./spotify/service.js";
+import express from "express";
 
-const spotifyService = new SpotifyService();
+import spotifyRouter from "./spotify/routes.js";
 
-await spotifyService.getCurrentSong();
+const app = express();
+
+app.use("/spotify", spotifyRouter);
+
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
+});

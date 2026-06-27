@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "build": "tsc",
+    "dev": "pnpx tsx --env-file=.env src/app.ts"
   },
   "keywords": [],
   "author": "",
@@ -19,10 +20,14 @@
   },
   "type": "module",
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^26.0.1",
+    "@types/qrcode-terminal": "^0.12.2",
+    "qrcode-terminal": "^0.12.0",
     "typescript": "^6.0.3"
   },
   "dependencies": {
+    "express": "^5.2.1",
     "rpi-led-matrix": "^1.15.0"
   }
 }
