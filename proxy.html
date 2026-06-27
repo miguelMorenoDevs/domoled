@@ -1,0 +1,14 @@
+const params = new URLSearchParams(window.location.search);
+const code = params.get('code');
+const piAddress = params.get('state'); 
+
+if (code && piAddress) {
+  // Your phone sends the code to the Pi locally!
+  fetch(`http://${piAddress}/callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code })
+  }).then(() => {
+      document.body.innerHTML = "Success! Look at the Raspberry Pi screen.";
+  });
+}
