@@ -8,8 +8,7 @@ const router: Router = Router();
 
 router.post("/login", (_req: Request, res: Response) => {
   const state = getLocalIP()! + ":3000";
-  console.log({ state });
-  const scope = "user-read-currently-playing";
+  const scope = "user-read-currently-playing user-read-email";
 
   const params = new URLSearchParams();
   params.append("response_type", "code");
@@ -35,29 +34,48 @@ router.get("/callback", async (req: Request, res: Response) => {
 
     if (typeof code !== "string") throw Error("code is not string");
 
-    await SpotifyClient.auth({
+    await SpotifyClient.getUserToken({
       grant_type: "authorization_code",
       token: code,
     });
 
-    const data: any = await SpotifyClient.fetch("/me/player/currently-playing");
-
-    console.log(`User is ${!data?.is_playing ? "not " : ""}playing music.`);
-    if (data?.is_playing) {
-      console.log("Song title: " + data.item.name);
-    }
-
-    res.send(`
-      <script>
-        // Workaround for manually opened tabs
-        window.open('','_parent','');
-        window.close();
-      </script>
-    `);
+    // TODO: Render successful page
+    res.sendStatus(200);
   } catch (error) {
     console.error(error);
     res.status(400).send("Something went wrong.");
   }
+});
+
+router.get("/users", async (_req: Request, res: Response) => {
+  const users = await SpotifyClient.getLoggedUsers();
+  res.send({
+    users,
+  });
+});
+
+// @ts-expect-error
+router.post("/users/active", async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) return res.status(400).send("Email is mandatory");
+
+    await SpotifyClient.setActiveUser(email);
+    res.sendStatus(200);
+  } catch (error: any) {
+    console.error(error);
+    if ("message" in error && error.message.includes("not logged")) {
+      res.status(403).send(error.message);
+    } else {
+      res.sendStatus(502);
+    }
+  }
+});
+
+router.delete("/users/active", async (_req: Request, res: Response) => {
+  SpotifyClient.clearActiveUser();
+  res.sendStatus(200);
 });
 
 export default router;
