@@ -1,4 +1,8 @@
-import type { GetUserTokenOptions, GrantTypes, UserTokens } from "./types.js";
+import type {
+  GetUserTokenOptions,
+  GrantTypes,
+  UserTokens,
+} from "./types/api.js";
 
 class SpotifyClient {
   private readonly auth_url: string;
@@ -87,7 +91,9 @@ class SpotifyClient {
     if (grant_type === "authorization_code") await this.assingTokensToEmail();
   }
 
-  private async fetch<T>(path: string) {
+  private async fetch<T extends Record<string, unknown> | string>(
+    path: string,
+  ): Promise<T | undefined> {
     if (!this.active_user) throw Error("There is no active user");
 
     const userTokens = this.users_map.get(this.active_user);
@@ -108,7 +114,19 @@ class SpotifyClient {
       this.fetch(path);
     }
 
-    if (res.status !== 204) return (await res.json()) as T;
+    const contentType = res.headers.get("content-type");
+
+    if (!contentType) {
+      return;
+    }
+
+    if (contentType.includes("application/json")) {
+      return (await res.json()) as T;
+    } else if (contentType.includes("text/")) {
+      return (await res.text()) as T;
+    } else {
+      throw Error("Non supported response type");
+    }
   }
 
   async getLoggedUsers() {
