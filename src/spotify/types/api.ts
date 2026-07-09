@@ -9,3 +9,9 @@ export interface UserTokens {
   access_token: string;
   refresh_token: string;
 }
+
+export interface GetCurrentlyPlayedSong {
+  title: string;
+  image: string;
+  durationMs: number;
+}

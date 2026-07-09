@@ -109,14 +109,8 @@ export interface TrackObject {
   href: string;
   id: string;
   is_playable?: boolean;
-  /** @deprecated */
-  linked_from?: LinkedFromObject;
   restrictions?: RestrictionsObject;
   name: string;
-  /** @deprecated */
-  popularity?: number;
-  /** @deprecated */
-  preview_url: string | null;
   track_number: number;
   type: "track";
   uri: string;

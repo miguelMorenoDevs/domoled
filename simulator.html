@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LED Matrix Simulator</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: sans-serif;
+        }
+        .matrix-container {
+            /* We scale the 64x64 image up so you can actually see it */
+            width: 512px;
+            height: 512px;
+            border: 2px solid #333;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+            background: #111;
+        }
+        #screen {
+            width: 100%;
+            height: 100%;
+            /* image-rendering ensures the pixels stay sharp and chunky, not blurry! */
+            image-rendering: pixelated; 
+        }
+        .status { margin-bottom: 20px; font-weight: bold; color: #ff4444; }
+        .connected { color: #00C851; }
+    </style>
+</head>
+<body>
+
+    <div id="status" class="status">🔴 Disconnected. Waiting for Node server...</div>
+    
+    <div class="matrix-container">
+        <img id="screen" src="" alt="Waiting for frames..." />
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const screen = document.getElementById('screen');
+        
+        function connect() {
+            const ws = new WebSocket('ws://localhost:8080');
+            
+            ws.onopen = () => {
+                statusEl.textContent = '🟢 Connected to Node.js Matrix Simulator!';
+                statusEl.className = 'status connected';
+            };
+            
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                // The Node server sends us the frame, we just slap it into the image tag!
+                if (msg.type === 'frame') {
+                    screen.src = msg.dataUrl;
+                }
+            };
+            
+            ws.onclose = () => {
+                statusEl.textContent = '🔴 Disconnected. Retrying in 2 seconds...';
+                statusEl.className = 'status';
+                setTimeout(connect, 2000);
+            };
+        }
+
+        connect();
+    </script>
+</body>
+</html>

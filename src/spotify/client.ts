@@ -1,8 +1,10 @@
 import type {
+  GetCurrentlyPlayedSong,
   GetUserTokenOptions,
   GrantTypes,
   UserTokens,
 } from "./types/api.js";
+import type { GetCurrentSongResponse } from "./types/service.js";
 
 class SpotifyClient {
   private readonly auth_url: string;
@@ -91,7 +93,7 @@ class SpotifyClient {
     if (grant_type === "authorization_code") await this.assingTokensToEmail();
   }
 
-  private async fetch<T extends Record<string, unknown> | string>(
+  private async fetch<T extends object | string>(
     path: string,
   ): Promise<T | undefined> {
     if (!this.active_user) throw Error("There is no active user");
@@ -147,6 +149,32 @@ class SpotifyClient {
 
   async clearActiveUser() {
     this.active_user = undefined;
+  }
+
+  async getCurrentSong(): Promise<GetCurrentlyPlayedSong | undefined> {
+    const track = await this.fetch<GetCurrentSongResponse>(
+      "/me/player/currently-playing",
+    );
+
+    if (!track || !track.item || track.item.type !== "track") return;
+
+    const { images } = track.item.album;
+
+    if (!images.length) return;
+
+    const squareImages = images.filter(
+      (i) => i.height && i.width && i.height === i.width,
+    );
+
+    const bestImage = squareImages
+      ? squareImages.sort((a, b) => b.height! - a.height!)[0]
+      : images[0];
+
+    return {
+      title: track.item.name,
+      image: bestImage!.url,
+      durationMs: track.item.duration_ms,
+    };
   }
 
   private async assingTokensToEmail() {

@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import qrcode from "qrcode-terminal";
 import SpotifyClient from "./client.js";
 import { getLocalIP } from "../utils/network.js";
+import { CdAnimator } from "../led/animator.js";
 
 const router: Router = Router();
 
@@ -38,6 +39,15 @@ router.get("/callback", async (req: Request, res: Response) => {
       grant_type: "authorization_code",
       token: code,
     });
+
+    const song = await SpotifyClient.getCurrentSong();
+    console.log({ song });
+    if (song) {
+      const cd = new CdAnimator();
+
+      await cd.setTrack({ imageUrl: song.image, durationMs: song.durationMs });
+      cd.play();
+    }
 
     // TODO: Render successful page
     res.sendStatus(200);
