@@ -47,6 +47,9 @@ router.get("/callback", async (req: Request, res: Response) => {
 
       await cd.setTrack({ imageUrl: song.image, durationMs: song.durationMs });
       cd.play();
+      console.info(
+        "Check your animation in: " + process.cwd() + "/simulator.html",
+      );
     }
 
     // TODO: Render successful page
