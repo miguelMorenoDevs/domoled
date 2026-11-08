@@ -19,6 +19,9 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      actions: write
+      # Lets the agent commit workflow files, e.g. the close-linked-issues safety net.
+      workflows: write
     concurrency:
       group: issue-agent-${{ github.event.issue.number }}
       cancel-in-progress: false
@@ -62,7 +65,7 @@ jobs:
           echo "OPENCODE_API_KEY=$token" >> "$GITHUB_ENV"
 
       - name: Implement issue
-        run: opencode run --standalone --archived --auto --model opencode-go/deepseek-v4.1-flash "$PROMPT"
+        run: bash .github/scripts/opencode-run.sh --model opencode-go/deepseek-v4.1-flash "$PROMPT"
         env:
           GH_TOKEN: ${{ github.token }}
           PROMPT: |
@@ -70,5 +73,7 @@ jobs:
             Read the issue with `gh issue view ${{ github.event.issue.number }}`.
             Follow `.opencode/skills/issue/SKILL.md` and `.opencode/skills/pr/SKILL.md`.
             Work non-interactively: never ask questions; make a reasonable call and note assumptions in the PR.
+            Do not use web search or fetch URLs; local files and `gh` are enough.
             Run `pnpm build` before committing. Skip live Spotify and simulator checks that need `.env` or hardware,
             and state what you did not verify under `## Verification`.
+            After opening the PR, request the review yourself with `gh workflow run pr-review.yml -f pr=<n>`.

@@ -47,4 +47,21 @@ Apply the docs rules in `AGENTS.md`: update `README.md` and `docs/codebase.md` w
 
 Follow the `pr` skill to commit, push and open the PR. The body must include `Closes #<n>` so the issue closes on merge.
 
+Author the commit as the model, not as the human running this skill. Pass the identity to `git commit`; do not edit the user's git config:
+
+```sh
+git -c user.name="opencode-agent[bot]" -c user.email="opencode-agent[bot]@users.noreply.github.com" commit ...
+```
+
 Keep the body factual. Do not claim verification you did not run. Do not close the issue by hand unless the PR is abandoned.
+
+## 8. Request the review
+
+Once the PR exists and `pnpm build` passes, start the review yourself:
+
+```sh
+number=$(gh pr list --head "$(git branch --show-current)" --state open --limit 1 --json number --jq '.[0].number')
+gh workflow run pr-review.yml -f pr="$number"
+```
+
+The review may approve and auto-merge the PR, so only request it when the branch is ready.

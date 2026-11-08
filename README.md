@@ -9,6 +9,7 @@ Animates the album art of the Spotify track currently playing on a 64x64 Raspber
 - In-memory multi-user token store with an active-user switch (`/spotify/users`).
 - Automatic matrix mock on Windows/macOS plus a live WebSocket frame stream for `simulator.html`.
 - Clear `502` response when the Spotify album art cannot be loaded, instead of a generic `400`.
+- GitHub issue agent: `ai-ready` + `auto` issues are implemented, reviewed and auto-merged through Actions, and merged PRs close their linked issues even when GitHub's native auto-close misses them.
 
 ## Docs
 

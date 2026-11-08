@@ -1,0 +1,120 @@
+name: pr review
+
+on:
+  issue_comment:
+    types: [created]
+  # GITHUB_TOKEN events do not trigger workflows, so the issue skill requests the
+  # review explicitly with `gh workflow run pr-review.yml -f pr=<n>`.
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+
+jobs:
+  review:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request &&
+       contains(github.event.comment.body, '@miguelmoreno-reviewer') &&
+       contains(fromJSON('["MEMBER","OWNER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write # comment on the PR when the review starts
+      issues: read
+    concurrency:
+      group: pr-review-${{ inputs.pr || github.event.issue.number }}
+      cancel-in-progress: true
+    steps:
+      - name: Resolve PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # The dispatch check runs before checkout, so gh needs the repo explicitly.
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          number="${{ inputs.pr }}"
+          if [ -z "$number" ]; then number="${{ github.event.issue.number }}"; fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          # Skip drafts and forks for every trigger.
+          draft=$(gh pr view "$number" --json isDraft --jq .isDraft)
+          repo=$(gh pr view "$number" --json headRepository --jq .headRepository.nameWithOwner)
+          if [ "$draft" = true ] || [ "$repo" != "$GITHUB_REPOSITORY" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment that the review started
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: gh pr comment "$PR_NUMBER" --body "Review started."
+
+      - uses: actions/checkout@v6
+        if: steps.pr.outputs.skip != 'true'
+        with:
+          ref: refs/pull/${{ steps.pr.outputs.number }}/head
+          persist-credentials: false
+
+      - name: Create review app token
+        id: app
+        if: steps.pr.outputs.skip != 'true'
+        uses: actions/create-github-app-token@v3
+        with:
+          # The numeric App ID (digits only), not the Client ID.
+          client-id: ${{ secrets.REVIEW_APP_ID }}
+          private-key: ${{ secrets.REVIEW_APP_PRIVATE_KEY }}
+
+      - name: Install OpenCode
+        if: steps.pr.outputs.skip != 'true'
+        run: npm install -g @opencode/cli
+
+      - name: Sign in to OpenCode
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          AUDIENCE: https://opencode.ai/console
+          OPENCODE_CLIENT_ID: ${{ secrets.OPENCODE_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          : "${OPENCODE_CLIENT_ID:?missing OPENCODE_CLIENT_ID secret}"
+          oidc=$(curl -sS --fail-with-body --oauth2-bearer "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUDIENCE" | jq -er .value)
+          token=$(curl -sS --fail-with-body https://opencode.ai/console/auth/oauth/token \
+            -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
+            -d subject_token_type=urn:ietf:params:oauth:token-type:jwt \
+            -d client_id="$OPENCODE_CLIENT_ID" \
+            -d subject_token="$oidc" | jq -er .access_token)
+          echo "::add-mask::$token"
+          echo "OPENCODE_API_KEY=$token" >> "$GITHUB_ENV"
+
+      - name: Review PR
+        if: steps.pr.outputs.skip != 'true'
+        run: bash .github/scripts/opencode-run.sh --model opencode-go/deepseek-v4.1-flash "$PROMPT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVIEW_TOKEN: ${{ steps.app.outputs.token }}
+          PROMPT: |
+            Review pull request #${{ steps.pr.outputs.number }} in ${{ github.repository }}.
+
+            1. Read it with `gh pr view ${{ steps.pr.outputs.number }} --json title,body,files` and
+               `gh pr diff ${{ steps.pr.outputs.number }}`.
+            2. Find the linked issue in the PR body (`Closes #N` or `Fixes #N`) and read it with
+               `gh issue view N`. If there is no linked issue, review against the PR description.
+            3. Check the diff does what the issue asks, stays in scope, keeps existing behavior and
+               error handling, and has no blocking bug: broken imports or types, missing callers or
+               docs, secrets, or destructive changes. Do not demand extras the issue did not ask for.
+            4. If there is a blocking problem, submit a request-changes review with the app token:
+               `GH_TOKEN="$REVIEW_TOKEN" gh pr review ${{ steps.pr.outputs.number }} --request-changes --body "<problem and why>"`,
+               and stop. Do not merge, disable auto-merge, or approve.
+            5. Otherwise submit a real approving review, using the app token:
+               `GH_TOKEN="$REVIEW_TOKEN" gh pr review ${{ steps.pr.outputs.number }} --approve --body "Review passed: <one-line reason>"`.
+               Auto-merge was enabled by the PR author when it was opened; do not touch it.
+
+            Only review and decide: submit the review with `$REVIEW_TOKEN`; use `GH_TOKEN` only to
+            read. Do not push commits, edit files, or ask questions. Work non-interactively.
+            Do not use web search or fetch URLs; local files and `gh` are enough.
