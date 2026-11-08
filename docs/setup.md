@@ -44,6 +44,7 @@ pnpm build   # tsc -> dist/
 - Both workflows need the `OPENCODE_CLIENT_ID` secret: they exchange their GitHub Actions OIDC token for a short-lived OpenCode token (`id-token: write`). They install OpenCode V2 with `npm install -g @opencode/cli` and run `opencode-go/deepseek-v4.1-flash`; change the `--model` flag to use another provider/model.
 - Both workflows run OpenCode through `.github/scripts/opencode-run.sh`. It captures the JSON stream and prints only the final assistant message in the step log, or the error and exit status when the run fails.
 - The skill commits as `opencode-agent[bot]`, not as the human running it. The PR creator is still the `gh` account that opened it.
+- `.github/workflows/close-linked-issues.yml` is the safety net: when a PR merges, it closes every open issue referenced with `Closes`/`Fixes`/`Resolves #<n>` in the PR title or body (bare or `owner/repo#<n>` for this repository) and comments with the PR link. Unmerged PRs, other repositories, pull request numbers and already-closed issues are left alone.
 
 ### Review app
 
