@@ -47,4 +47,6 @@ Apply the docs rules in `AGENTS.md`: update `README.md` and `docs/codebase.md` w
 
 Follow the `pr` skill to commit, push and open the PR. The body must include `Closes #<n>` so the issue closes on merge.
 
+If the source issue has the `auto` label, add it to the PR after creation: `gh pr edit <n> --add-label auto`. This is what lets the PR review workflow pick it up.
+
 Keep the body factual. Do not claim verification you did not run. Do not close the issue by hand unless the PR is abandoned.
