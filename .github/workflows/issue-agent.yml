@@ -19,6 +19,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      actions: write
     concurrency:
       group: issue-agent-${{ github.event.issue.number }}
       cancel-in-progress: false
@@ -62,7 +63,7 @@ jobs:
           echo "OPENCODE_API_KEY=$token" >> "$GITHUB_ENV"
 
       - name: Implement issue
-        run: opencode run --standalone --archived --auto --model opencode-go/deepseek-v4.1-flash "$PROMPT"
+        run: bash .github/scripts/opencode-run.sh --model opencode-go/deepseek-v4.1-flash "$PROMPT"
         env:
           GH_TOKEN: ${{ github.token }}
           PROMPT: |
@@ -72,3 +73,12 @@ jobs:
             Work non-interactively: never ask questions; make a reasonable call and note assumptions in the PR.
             Run `pnpm build` before committing. Skip live Spotify and simulator checks that need `.env` or hardware,
             and state what you did not verify under `## Verification`.
+
+      # GITHUB_TOKEN cannot trigger `pull_request` workflows, so start the review explicitly.
+      - name: Request PR review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          number=$(gh pr list --head "$(git branch --show-current)" --state open --limit 1 --json number --jq '.[0].number')
+          if [ -n "$number" ]; then gh workflow run pr-review.yml -f pr="$number"; fi
