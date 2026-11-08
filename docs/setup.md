@@ -39,8 +39,8 @@ pnpm build   # tsc -> dist/
 
 `.github/workflows/issue-agent.yml` runs OpenCode when an issue gets both the `ai-ready` and `auto` labels. It implements the issue with `.opencode/skills/issue/SKILL.md` and opens a PR that closes it.
 
-- The reviewer runs when a member, owner or collaborator comments `@review` on a PR (`.github/workflows/pr-review.yml`), or on manual dispatch. It skips drafts and forks. The PR author enables auto-merge when opening the PR. The reviewer only decides: it approves and GitHub merges, or it requests changes with the problem in the review body.
-- `GITHUB_TOKEN` events do not trigger workflows, so `.opencode/skills/issue/SKILL.md` makes the agent request the review itself with `gh workflow run pr-review.yml -f pr=<n>` after opening the PR. Commenting `@review` on a PR also works for people.
+- The reviewer runs when a member, owner or collaborator comments `@miguelmoreno-reviewer` on a PR (`.github/workflows/pr-review.yml`), or on manual dispatch. It skips drafts and forks. The PR author enables auto-merge when opening the PR. The reviewer only decides: it approves and GitHub merges, or it requests changes with the problem in the review body.
+- `GITHUB_TOKEN` events do not trigger workflows, so `.opencode/skills/issue/SKILL.md` makes the agent request the review itself with `gh workflow run pr-review.yml -f pr=<n>` after opening the PR. Commenting `@miguelmoreno-reviewer` on a PR also works for people.
 - Both workflows need the `OPENCODE_CLIENT_ID` secret: they exchange their GitHub Actions OIDC token for a short-lived OpenCode token (`id-token: write`). They install OpenCode V2 with `npm install -g @opencode/cli` and run `opencode-go/deepseek-v4.1-flash`; change the `--model` flag to use another provider/model.
 - Both workflows run OpenCode through `.github/scripts/opencode-run.sh`. It captures the JSON stream and prints only the final assistant message in the step log, or the error and exit status when the run fails.
 - The skill commits as `opencode-agent[bot]`, not as the human running it. The PR creator is still the `gh` account that opened it.
