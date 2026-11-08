@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import qrcode from "qrcode-terminal";
 import SpotifyClient from "./client.js";
 import { getLocalIP } from "../utils/network.js";
-import { CdAnimator } from "../led/animator.js";
+import { cdAnimator } from "../led/animator.js";
 
 const router: Router = Router();
 
@@ -43,10 +43,11 @@ router.get("/callback", async (req: Request, res: Response) => {
     const song = await SpotifyClient.getCurrentSong();
     console.log({ song });
     if (song) {
-      const cd = new CdAnimator();
-
-      await cd.setTrack({ imageUrl: song.image, durationMs: song.durationMs });
-      cd.play();
+      await cdAnimator.setTrack({
+        imageUrl: song.image,
+        durationMs: song.durationMs,
+      });
+      cdAnimator.play();
       console.info(
         "Check your animation in: " + process.cwd() + "/simulator.html",
       );
