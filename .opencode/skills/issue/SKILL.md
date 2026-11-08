@@ -54,3 +54,14 @@ git -c user.name="opencode-agent[bot]" -c user.email="opencode-agent[bot]@users.
 ```
 
 Keep the body factual. Do not claim verification you did not run. Do not close the issue by hand unless the PR is abandoned.
+
+## 8. Request the review
+
+Once the PR exists and `pnpm build` passes, start the review yourself:
+
+```sh
+number=$(gh pr list --head "$(git branch --show-current)" --state open --limit 1 --json number --jq '.[0].number')
+gh workflow run pr-review.yml -f pr="$number"
+```
+
+The review may approve and auto-merge the PR, so only request it when the branch is ready.

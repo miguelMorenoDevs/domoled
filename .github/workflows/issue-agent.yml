@@ -74,12 +74,4 @@ jobs:
             Do not use web search or fetch URLs; local files and `gh` are enough.
             Run `pnpm build` before committing. Skip live Spotify and simulator checks that need `.env` or hardware,
             and state what you did not verify under `## Verification`.
-
-      # GITHUB_TOKEN cannot trigger `pull_request` workflows, so start the review explicitly.
-      - name: Request PR review
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          number=$(gh pr list --head "$(git branch --show-current)" --state open --limit 1 --json number --jq '.[0].number')
-          if [ -n "$number" ]; then gh workflow run pr-review.yml -f pr="$number"; fi
+            After opening the PR, request the review yourself with `gh workflow run pr-review.yml -f pr=<n>`.

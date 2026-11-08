@@ -3,8 +3,8 @@ name: pr review
 on:
   issue_comment:
     types: [created]
-  # The issue agent opens PRs with GITHUB_TOKEN, which does not trigger
-  # `issue_comment` workflows, so it dispatches the review instead.
+  # GITHUB_TOKEN events do not trigger workflows, so the issue skill requests the
+  # review explicitly with `gh workflow run pr-review.yml -f pr=<n>`.
   workflow_dispatch:
     inputs:
       pr:
