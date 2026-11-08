@@ -327,3 +327,6 @@ export class CdAnimator {
     this.matrix.sync();
   }
 }
+
+// One instance for the whole process: the matrix and simulator socket bind only once.
+export const cdAnimator = new CdAnimator();
