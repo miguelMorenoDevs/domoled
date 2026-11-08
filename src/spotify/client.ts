@@ -95,6 +95,7 @@ class SpotifyClient {
 
   private async fetch<T extends object | string>(
     path: string,
+    retryOnUnauthorized = true,
   ): Promise<T | undefined> {
     if (!this.active_user) throw Error("There is no active user");
 
@@ -108,12 +109,12 @@ class SpotifyClient {
       },
     });
 
-    if (res.status === 401) {
+    if (res.status === 401 && retryOnUnauthorized) {
       await this.getUserToken({
         grant_type: "refresh_token",
         token: userTokens.refresh_token,
       });
-      this.fetch(path);
+      return this.fetch<T>(path, false);
     }
 
     const contentType = res.headers.get("content-type");
