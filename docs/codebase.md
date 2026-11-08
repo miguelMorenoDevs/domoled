@@ -41,5 +41,5 @@ index.html                GitHub Pages OAuth relay
 - Strict TS extras: `noUncheckedIndexedAccess` (indexed reads are possibly undefined; the code uses `!`), `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature` (hence `process.env["X"]`), plus `noUnusedLocals`/`noUnusedParameters`.
 - `src/led/animator.ts` mocks the matrix on win32/darwin and loads `rpi-led-matrix` through `eval("require")` on Linux so bundlers skip the native module. Keep this pattern; do not turn it into a normal import.
 - `src/spotify/client.ts` exports a singleton instance. User tokens live in a `Map<email, UserTokens>`; "temp" is used until `/me` resolves the email.
-- Spotify `401` handling lives in `SpotifyClient.fetch` (see `docs/TODOs.md` — it is currently broken).
-- `TrackData` only carries `imageUrl` and `durationMs`; playback position is not propagated (see `docs/TODOs.md`).
+- Spotify `401` handling lives in `SpotifyClient.fetch` (known broken; tracked in GitHub issues).
+- `TrackData` only carries `imageUrl` and `durationMs`; playback position is not propagated yet (tracked in GitHub issues).
