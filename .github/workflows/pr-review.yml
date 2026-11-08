@@ -22,7 +22,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-      pull-requests: read
+      pull-requests: write # comment on the PR when the review starts
       issues: read
     concurrency:
       group: pr-review-${{ inputs.pr || github.event.issue.number }}
@@ -46,6 +46,14 @@ jobs:
           if [ "$draft" = true ] || [ "$repo" != "$GITHUB_REPOSITORY" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Comment that the review started
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: gh pr comment "$PR_NUMBER" --body "Review started."
 
       - uses: actions/checkout@v6
         if: steps.pr.outputs.skip != 'true'
