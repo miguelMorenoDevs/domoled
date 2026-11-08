@@ -20,7 +20,6 @@ Repo commands and code conventions live in `AGENTS.md`; read only the docs the c
 - `pnpm build` must pass before committing.
 - Conventional commits, lowercase subject, scope when useful: `chore(spotify): ...`, `fix(led): ...`.
 - One logical commit per PR. No tool attribution.
-- Never commit `.env`, `dist/` or `node_modules/`.
 - "commit" means commit **and push** the branch unless told otherwise.
 - Leave unrelated untracked files out; do not fold them into the commit to make the branch look clean.
 
