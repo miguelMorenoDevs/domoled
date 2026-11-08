@@ -11,7 +11,7 @@ Repo commands and code conventions live in `AGENTS.md`; read only the docs the c
 
 ## 1. Branch
 
-- One TODO item or feature per branch and PR.
+- One issue or feature per branch and PR.
 - `git fetch`, update local `main` to the latest, then branch from it — unless told otherwise.
 - `fix/<slug>` for bugs, `feat/<slug>` for features.
 
@@ -36,7 +36,7 @@ gh pr create --base main --body-file .git/PR_BODY.md
 - Body sections, in this order:
 
   - `## Summary` — what changed and why, in one short paragraph.
-  - `## TODO` — the `docs/TODOs.md` item quoted verbatim, or `new feature: <one line>`.
+  - `## Issue` — `Closes #<n>` plus the issue title, or `new feature: <one line>`.
   - `## Changes` — bullets by file or area.
   - `## Verification` — exact commands run with their results, manual checks, and what was not tested. Never claim verification you did not run.
   - `## Risk` — user-visible changes, new failure modes, follow-ups; say so when there is none.

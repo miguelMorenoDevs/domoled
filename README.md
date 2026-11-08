@@ -13,4 +13,4 @@ Animates the album art of the Spotify track currently playing on a 64x64 Raspber
 
 - `docs/setup.md` — install, env vars, commands, simulator, OAuth setup.
 - `docs/codebase.md` — architecture and conventions.
-- `docs/TODOs.md` — known bugs and deferred work.
+- [GitHub Issues](https://github.com/miguelMorenoDevs/domoled/issues) — known bugs and deferred work.
