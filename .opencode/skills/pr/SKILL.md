@@ -27,11 +27,13 @@ Repo commands and code conventions live in `AGENTS.md`; read only the docs the c
 
 - Target `main`. `CODEOWNERS` routes review to `@miguelMorenoDevs`.
 - Title = commit subject.
-- Write the body to `.git/PR_BODY.md` (inside `.git`, so it is never committed), then run:
+- Open the PR with the title and body inline:
 
 ```
-gh pr create --base main --body-file .git/PR_BODY.md
+gh pr create --base main --title "<commit subject>" --body "<body>"
 ```
+
+For a long body, pipe it with `--body-file -` instead.
 
 - Body sections, in this order:
 
@@ -40,5 +42,3 @@ gh pr create --base main --body-file .git/PR_BODY.md
   - `## Changes` — bullets by file or area.
   - `## Verification` — exact commands run with their results, manual checks, and what was not tested. Never claim verification you did not run.
   - `## Risk` — user-visible changes, new failure modes, follow-ups; say so when there is none.
-
-- Report the URL that `gh` printed. To fix the body afterward, use `gh pr edit <number> --body-file .git/PR_BODY.md` and report the URL again.
