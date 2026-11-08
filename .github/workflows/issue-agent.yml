@@ -42,22 +42,22 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Install OpenCode
-        run: |
-          curl -fsSL https://opencode.ai/install | bash
-          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+        run: npm install -g @opencode/cli
 
       - name: Sign in to OpenCode
         env:
           AUDIENCE: https://opencode.ai/console
-          OPENCODE_CLIENT_ID: opencode-cli
+          OPENCODE_CLIENT_ID: ${{ secrets.OPENCODE_CLIENT_ID }}
         run: |
-          oidc=$(curl -sSf --oauth2-bearer "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUDIENCE" | jq -r .value)
-          token=$(curl -sSf https://opencode.ai/console/auth/oauth/token \
+          set -euo pipefail
+          : "${OPENCODE_CLIENT_ID:?missing OPENCODE_CLIENT_ID secret}"
+          oidc=$(curl -sS --fail-with-body --oauth2-bearer "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUDIENCE" | jq -er .value)
+          token=$(curl -sS --fail-with-body https://opencode.ai/console/auth/oauth/token \
             -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
             -d subject_token_type=urn:ietf:params:oauth:token-type:jwt \
             -d client_id="$OPENCODE_CLIENT_ID" \
-            -d subject_token="$oidc" | jq -r .access_token)
+            -d subject_token="$oidc" | jq -er .access_token)
           echo "::add-mask::$token"
           echo "OPENCODE_API_KEY=$token" >> "$GITHUB_ENV"
 

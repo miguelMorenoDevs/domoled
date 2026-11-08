@@ -39,8 +39,8 @@ pnpm build   # tsc -> dist/
 
 `.github/workflows/issue-agent.yml` runs OpenCode when an issue gets both the `ai-ready` and `auto` labels. It implements the issue with `.opencode/skills/issue/SKILL.md` and opens a PR that closes it.
 
-- No API key secret is needed: the workflow exchanges its GitHub Actions OIDC token for a short-lived OpenCode token (`id-token: write`).
-- The workflow runs `opencode-go/deepseek-v4.1-flash`; change the `--model` flag to use another provider/model.
+- No API key secret is needed: add an `OPENCODE_CLIENT_ID` repository secret with the Console OAuth client id. The workflow exchanges its GitHub Actions OIDC token for a short-lived OpenCode token (`id-token: write`).
+- The workflow installs OpenCode V2 with `npm install -g @opencode/cli` and runs `opencode-go/deepseek-v4.1-flash`; change the `--model` flag to use another provider/model.
 - PRs opened with the default `GITHUB_TOKEN` do not trigger other workflows.
 
 ## Ports and simulator
