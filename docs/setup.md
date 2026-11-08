@@ -35,13 +35,52 @@ pnpm build   # tsc -> dist/
 - `pnpm test` intentionally exits 1 ("no test specified"). There is no test suite.
 - No lint or formatter config exists.
 
-## Issue agent
+## Issue and PR agents
 
 `.github/workflows/issue-agent.yml` runs OpenCode when an issue gets both the `ai-ready` and `auto` labels. It implements the issue with `.opencode/skills/issue/SKILL.md` and opens a PR that closes it.
 
-- No API key secret is needed: add an `OPENCODE_CLIENT_ID` repository secret with the Console OAuth client id. The workflow exchanges its GitHub Actions OIDC token for a short-lived OpenCode token (`id-token: write`).
-- The workflow installs OpenCode V2 with `npm install -g @opencode/cli` and runs `opencode-go/deepseek-v4.1-flash`; change the `--model` flag to use another provider/model.
-- PRs opened with the default `GITHUB_TOKEN` do not trigger other workflows.
+- The reviewer runs when a member, owner or collaborator comments `@miguelmoreno-reviewer` on a PR (`.github/workflows/pr-review.yml`), or on manual dispatch. It skips drafts and forks. The PR author enables auto-merge when opening the PR. The reviewer only decides: it approves and GitHub merges, or it requests changes with the problem in the review body.
+- `GITHUB_TOKEN` events do not trigger workflows, so `.opencode/skills/issue/SKILL.md` makes the agent request the review itself with `gh workflow run pr-review.yml -f pr=<n>` after opening the PR. Commenting `@miguelmoreno-reviewer` on a PR also works for people.
+- Both workflows need the `OPENCODE_CLIENT_ID` secret: they exchange their GitHub Actions OIDC token for a short-lived OpenCode token (`id-token: write`). They install OpenCode V2 with `npm install -g @opencode/cli` and run `opencode-go/deepseek-v4.1-flash`; change the `--model` flag to use another provider/model.
+- Both workflows run OpenCode through `.github/scripts/opencode-run.sh`. It captures the JSON stream and prints only the final assistant message in the step log, or the error and exit status when the run fails.
+- The skill commits as `opencode-agent[bot]`, not as the human running it. The PR creator is still the `gh` account that opened it.
+
+### Review app
+
+`GITHUB_TOKEN` cannot approve PRs and a user cannot approve their own, so the reviewer approves as a GitHub App. The official [OpenCode Agent](https://github.com/apps/opencode-agent) app runs OpenCode on issues/PRs but does not expose a token to this workflow; create your own app instead:
+
+1. GitHub **Settings → Developer settings → GitHub Apps → New GitHub App**. Any name works (for example `domoled-reviewer`); set the homepage URL to this repository and uncheck **Webhook → Active**.
+2. Repository permissions: **Contents: Read and write**, **Pull requests: Read and write**. `Contents: write` is required — with read-only contents the app's approval shows as "approved with read-only permissions" and does not count toward required reviews.
+3. Create the app, then **Install App** on this repository.
+4. Generate a private key in the app settings and copy the **App ID** — the numeric id, not the Client ID.
+5. Add the secrets with no quotes or whitespace:
+
+   ```sh
+   gh secret set REVIEW_APP_ID --body "<numeric-app-id>"
+   gh secret set REVIEW_APP_PRIVATE_KEY < path/to/app.private-key.pem
+   ```
+
+`pr-review.yml` mints an installation token with `actions/create-github-app-token@v3` and uses it only for `gh pr review --approve`; comments and auto-merge still use `GITHUB_TOKEN`.
+
+If the token step fails with `'Issuer' claim ('iss') must be an Integer`, `REVIEW_APP_ID` is not the numeric App ID (it is the Client ID, or has a trailing newline). Re-set it with `gh secret set ... --body`.
+
+To make the approval mandatory, require one approving review on `main`:
+
+```sh
+gh api -X PUT repos/{owner}/{repo}/branches/main/protection --input - <<'JSON'
+{
+  "required_status_checks": null,
+  "enforce_admins": true,
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 1,
+    "dismiss_stale_reviews": true
+  },
+  "restrictions": null
+}
+JSON
+```
+
+`dismiss_stale_reviews` drops the approval on every push, and the `synchronize` run re-approves. `enforce_admins` also stops the repo owner from bypassing the gate. Without this protection, auto-merge still merges immediately once enabled.
 
 ## Ports and simulator
 
