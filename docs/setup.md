@@ -33,7 +33,15 @@ pnpm build   # tsc -> dist/
 
 - `tsx` is fetched on demand by `pnpx`; it is not a declared dependency.
 - `pnpm test` intentionally exits 1 ("no test specified"). There is no test suite.
-- No lint, formatter or CI config exists.
+- No lint or formatter config exists.
+
+## Issue agent
+
+`.github/workflows/issue-agent.yml` runs OpenCode when an issue gets both the `ai-ready` and `auto` labels. It implements the issue with `.opencode/skills/issue/SKILL.md` and opens a PR that closes it.
+
+- No API key secret is needed: the workflow exchanges its GitHub Actions OIDC token for a short-lived OpenCode token (`id-token: write`).
+- The workflow runs `opencode-go/deepseek-v4.1-flash`; change the `--model` flag to use another provider/model.
+- PRs opened with the default `GITHUB_TOKEN` do not trigger other workflows.
 
 ## Ports and simulator
 

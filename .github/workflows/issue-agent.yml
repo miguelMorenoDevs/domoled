@@ -1,0 +1,74 @@
+name: issue agent
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  implement:
+    # Both labels, in any order, mean "the agent may take this one unattended".
+    # Only the last-added one triggers, so later label edits do not rerun it.
+    if: >-
+      github.event.issue.state == 'open' &&
+      (github.event.label.name == 'ai-ready' || github.event.label.name == 'auto') &&
+      contains(github.event.issue.labels.*.name, 'ai-ready') &&
+      contains(github.event.issue.labels.*.name, 'auto')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      issues: write
+      pull-requests: write
+    concurrency:
+      group: issue-agent-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      # tsc only needs the types; native modules are not built in CI.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Install OpenCode
+        run: |
+          curl -fsSL https://opencode.ai/install | bash
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+
+      - name: Sign in to OpenCode
+        env:
+          AUDIENCE: https://opencode.ai/console
+          OPENCODE_CLIENT_ID: opencode-cli
+        run: |
+          oidc=$(curl -sSf --oauth2-bearer "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUDIENCE" | jq -r .value)
+          token=$(curl -sSf https://opencode.ai/console/auth/oauth/token \
+            -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
+            -d subject_token_type=urn:ietf:params:oauth:token-type:jwt \
+            -d client_id="$OPENCODE_CLIENT_ID" \
+            -d subject_token="$oidc" | jq -r .access_token)
+          echo "::add-mask::$token"
+          echo "OPENCODE_API_KEY=$token" >> "$GITHUB_ENV"
+
+      - name: Implement issue
+        run: opencode run --standalone --archived --auto --model opencode-go/deepseek-v4.1-flash "$PROMPT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROMPT: |
+            Implement GitHub issue #${{ github.event.issue.number }} end to end and open a PR that closes it.
+            Read the issue with `gh issue view ${{ github.event.issue.number }}`.
+            Follow `.opencode/skills/issue/SKILL.md` and `.opencode/skills/pr/SKILL.md`.
+            Work non-interactively: never ask questions; make a reasonable call and note assumptions in the PR.
+            Run `pnpm build` before committing. Skip live Spotify and simulator checks that need `.env` or hardware,
+            and state what you did not verify under `## Verification`.
