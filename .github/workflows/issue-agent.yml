@@ -71,6 +71,7 @@ jobs:
             Read the issue with `gh issue view ${{ github.event.issue.number }}`.
             Follow `.opencode/skills/issue/SKILL.md` and `.opencode/skills/pr/SKILL.md`.
             Work non-interactively: never ask questions; make a reasonable call and note assumptions in the PR.
+            Do not use web search or fetch URLs; local files and `gh` are enough.
             Run `pnpm build` before committing. Skip live Spotify and simulator checks that need `.env` or hardware,
             and state what you did not verify under `## Verification`.
 

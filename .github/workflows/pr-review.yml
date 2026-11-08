@@ -114,3 +114,4 @@ jobs:
 
             Use `$REVIEW_TOKEN` only for the approving review; keep `GH_TOKEN` for comments and the
             merge. Do not push commits, edit files, or ask questions. Work non-interactively.
+            Do not use web search or fetch URLs; local files and `gh` are enough.
