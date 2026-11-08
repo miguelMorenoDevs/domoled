@@ -68,12 +68,14 @@ router.get("/users", async (_req: Request, res: Response) => {
   });
 });
 
-// @ts-expect-error
 router.post("/users/active", async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
 
-    if (!email) return res.status(400).send("Email is mandatory");
+    if (!email) {
+      res.status(400).send("Email is mandatory");
+      return;
+    }
 
     await SpotifyClient.setActiveUser(email);
     res.sendStatus(200);

@@ -4,6 +4,8 @@ import spotifyRouter from "./spotify/routes.js";
 
 const app = express();
 
+app.use(express.json());
+
 app.use("/spotify", spotifyRouter);
 
 app.use(express.static("public"));
