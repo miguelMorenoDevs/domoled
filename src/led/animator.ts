@@ -9,6 +9,17 @@ import { WebSocketServer, WebSocket } from "ws";
 import { createCanvas, loadImage, Canvas, Image } from "@napi-rs/canvas";
 import type { AnimatorConfig, TrackData } from "./types.js";
 
+/** Raised when the album art URL cannot be fetched or decoded. */
+export class AlbumArtLoadError extends Error {
+  readonly imageUrl: string;
+
+  constructor(imageUrl: string, cause: unknown) {
+    super(`Failed to load album art from ${imageUrl}`, { cause });
+    this.name = "AlbumArtLoadError";
+    this.imageUrl = imageUrl;
+  }
+}
+
 let LedMatrix: any;
 
 // 2. Platform Check
@@ -114,10 +125,23 @@ export class CdAnimator {
    */
   public async setTrack(track: TrackData): Promise<void> {
     this.stop(); // Halt any current animation
-    this.currentDurationMs = track.durationMs;
+
+    // Never keep the previous track's art/duration when this load fails.
+    this.cdImage = null;
+    this.currentDurationMs = 0;
 
     console.log(`[CdAnimator] Loading album art from: ${track.imageUrl}`);
-    this.cdImage = await loadImage(track.imageUrl);
+    try {
+      this.cdImage = await loadImage(track.imageUrl);
+    } catch (error) {
+      console.error(
+        `[CdAnimator] Failed to load album art from: ${track.imageUrl}`,
+        error,
+      );
+      throw new AlbumArtLoadError(track.imageUrl, error);
+    }
+
+    this.currentDurationMs = track.durationMs;
     console.log(`[CdAnimator] Track loaded. Duration: ${track.durationMs}ms`);
   }
 

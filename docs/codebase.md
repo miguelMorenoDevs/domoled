@@ -43,3 +43,4 @@ index.html                GitHub Pages OAuth relay
 - `src/spotify/client.ts` exports a singleton instance. User tokens live in a `Map<email, UserTokens>`; "temp" is used until `/me` resolves the email.
 - Spotify `401` handling lives in `SpotifyClient.fetch`: it refreshes the user token and retries the request once with the new token.
 - `TrackData` only carries `imageUrl` and `durationMs`; playback position is not propagated yet (tracked in GitHub issues).
+- `CdAnimator.setTrack` clears the previous art/duration and throws `AlbumArtLoadError` when `loadImage` rejects; `GET /spotify/callback` maps that to a `502` retry message while other callback failures stay `400`.

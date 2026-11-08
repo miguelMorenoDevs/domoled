@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import qrcode from "qrcode-terminal";
 import SpotifyClient from "./client.js";
 import { getLocalIP } from "../utils/network.js";
-import { cdAnimator } from "../led/animator.js";
+import { AlbumArtLoadError, cdAnimator } from "../led/animator.js";
 
 const router: Router = Router();
 
@@ -57,6 +57,14 @@ router.get("/callback", async (req: Request, res: Response) => {
     res.sendStatus(200);
   } catch (error) {
     console.error(error);
+    if (error instanceof AlbumArtLoadError) {
+      res
+        .status(502)
+        .send(
+          "Logged in, but the album art could not be loaded from Spotify. Please try again.",
+        );
+      return;
+    }
     res.status(400).send("Something went wrong.");
   }
 });
