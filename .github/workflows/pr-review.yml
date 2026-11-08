@@ -1,10 +1,10 @@
 name: pr review
 
 on:
-  pull_request:
-    types: [opened, labeled, synchronize, reopened]
+  issue_comment:
+    types: [created]
   # The issue agent opens PRs with GITHUB_TOKEN, which does not trigger
-  # `pull_request` workflows, so it dispatches the review instead.
+  # `issue_comment` workflows, so it dispatches the review instead.
   workflow_dispatch:
     inputs:
       pr:
@@ -15,9 +15,9 @@ jobs:
   review:
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (!github.event.pull_request.draft &&
-       github.event.pull_request.head.repo.full_name == github.repository &&
-       contains(github.event.pull_request.labels.*.name, 'auto'))
+      (github.event.issue.pull_request &&
+       contains(github.event.comment.body, '@review') &&
+       contains(fromJSON('["MEMBER","OWNER","COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -25,7 +25,7 @@ jobs:
       pull-requests: write
       issues: read
     concurrency:
-      group: pr-review-${{ github.event.pull_request.number || inputs.pr }}
+      group: pr-review-${{ inputs.pr || github.event.issue.number }}
       cancel-in-progress: true
     steps:
       - name: Resolve PR
@@ -37,17 +37,14 @@ jobs:
         run: |
           set -euo pipefail
           number="${{ inputs.pr }}"
-          if [ -z "$number" ]; then number="${{ github.event.pull_request.number }}"; fi
+          if [ -z "$number" ]; then number="${{ github.event.issue.number }}"; fi
           echo "number=$number" >> "$GITHUB_OUTPUT"
           echo "skip=false" >> "$GITHUB_OUTPUT"
-          # A manual dispatch skips the job-level filter, so apply the same gate.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            draft=$(gh pr view "$number" --json isDraft --jq .isDraft)
-            repo=$(gh pr view "$number" --json headRepository --jq .headRepository.nameWithOwner)
-            if [ "$draft" = true ] || [ "$repo" != "$GITHUB_REPOSITORY" ] ||
-              ! gh pr view "$number" --json labels --jq '.labels[].name' | grep -qx auto; then
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-            fi
+          # Skip drafts and forks for every trigger.
+          draft=$(gh pr view "$number" --json isDraft --jq .isDraft)
+          repo=$(gh pr view "$number" --json headRepository --jq .headRepository.nameWithOwner)
+          if [ "$draft" = true ] || [ "$repo" != "$GITHUB_REPOSITORY" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/checkout@v6
