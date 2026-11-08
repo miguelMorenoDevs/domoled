@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: write
-      pull-requests: write
+      contents: read
+      pull-requests: read
       issues: read
     concurrency:
       group: pr-review-${{ inputs.pr || github.event.issue.number }}
@@ -100,15 +100,13 @@ jobs:
             3. Check the diff does what the issue asks, stays in scope, keeps existing behavior and
                error handling, and has no blocking bug: broken imports or types, missing callers or
                docs, secrets, or destructive changes. Do not demand extras the issue did not ask for.
-            4. If there is a blocking problem, post one comment with
-               `gh pr comment ${{ steps.pr.outputs.number }} --body "<problem and why>"`, run
-               `gh pr merge ${{ steps.pr.outputs.number }} --disable-auto` (ignore an error saying
-               auto-merge is already disabled), and stop. Leave auto-merge off.
+            4. If there is a blocking problem, submit a request-changes review with the app token:
+               `GH_TOKEN="$REVIEW_TOKEN" gh pr review ${{ steps.pr.outputs.number }} --request-changes --body "<problem and why>"`,
+               and stop. Do not merge, disable auto-merge, or approve.
             5. Otherwise submit a real approving review, using the app token:
-               `GH_TOKEN="$REVIEW_TOKEN" gh pr review ${{ steps.pr.outputs.number }} --approve --body "Review passed: <one-line reason>"`,
-               then enable auto-merge with
-               `gh pr merge ${{ steps.pr.outputs.number }} --auto --squash`.
+               `GH_TOKEN="$REVIEW_TOKEN" gh pr review ${{ steps.pr.outputs.number }} --approve --body "Review passed: <one-line reason>"`.
+               Auto-merge was enabled by the PR author when it was opened; do not touch it.
 
-            Use `$REVIEW_TOKEN` only for the approving review; keep `GH_TOKEN` for comments and the
-            merge. Do not push commits, edit files, or ask questions. Work non-interactively.
+            Only review and decide: submit the review with `$REVIEW_TOKEN`; use `GH_TOKEN` only to
+            read. Do not push commits, edit files, or ask questions. Work non-interactively.
             Do not use web search or fetch URLs; local files and `gh` are enough.
