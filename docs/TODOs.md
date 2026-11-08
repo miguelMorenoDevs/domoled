@@ -4,7 +4,6 @@ Verified against the current code. Re-check before relying on any item.
 
 ## Bugs
 
-- **Missing JSON body parser.** `src/app.ts` never registers `express.json()`, so `req.body` in `POST /spotify/users/active` is always `undefined` and the route always returns 400. The `@ts-expect-error` on that route hides the typing symptom.
 - **Token refresh discards its result.** In `SpotifyClient.fetch`, a `401` triggers `await this.getUserToken(...)` then a fire-and-forget `this.fetch(path);`; the original 401 response is still parsed and returned. Return/await the recursive call.
 - **Playback position ignored.** `getCurrentSong` drops Spotify's `progress_ms`, and the callback calls `cd.play()` with no argument. Mid-song playback restarts the animation at 0.
 - **Nothing-playing case is silent.** `getCurrentSong` returns `undefined` when no track is playing, and the callback then returns 200 without feedback or animation.
