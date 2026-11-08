@@ -20,9 +20,6 @@ Raspberry Pi LED matrix that animates the Spotify track currently playing. Expre
 
 - "commit" means commit **and push** the branch unless told otherwise.
 - Branch from `main`: `fix/<slug>` for bugs, `feat/<slug>` for features. One TODO item or feature per branch and PR.
-- Before creating a PR: `git fetch`, then pull the latest `main`, and branch from that — unless told otherwise.
 - Conventional commits, lowercase subject, scope when useful: `chore(spotify): ...`, `fix(led): ...`. One logical commit, no tool attribution.
 - Never commit `.env`, `dist/` or `node_modules/`.
-- PRs target `main`; `CODEOWNERS` routes review to `@miguelMorenoDevs`. Title = commit subject.
-- PR body sections: `## Summary`, `## TODO` (item quoted, or "new feature: ..."), `## Changes`, `## Verification` (commands run and results, manual checks, what was not tested), `## Risk`.
-- Open the PR with `gh pr create --base main --body-file .git/PR_BODY.md` when `gh` is available. Otherwise push and give the user `https://github.com/miguelMorenoDevs/domoled/compare/main...<branch>?expand=1`; never claim a PR exists when it does not.
+- For the full branch, commit and PR spec (body sections, `gh` command), use the `pr` skill in `.opencode/skills/pr/SKILL.md`. `gh` is always available.

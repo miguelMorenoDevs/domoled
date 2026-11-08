@@ -5,7 +5,7 @@ description: Implement one item from docs/TODOs.md (bug or missing feature) and 
 
 # TODO to PR
 
-One TODO item per branch and PR. Repo commands, code conventions, commit style and the PR format live in `AGENTS.md`; follow them instead of restating them here.
+One TODO item per branch and PR. Repo commands and code conventions live in `AGENTS.md`; the branch, commit and PR spec lives in the `pr` skill.
 
 ## 1. Pick and verify the item
 
@@ -45,6 +45,6 @@ Apply the docs rules in `AGENTS.md`: `README.md`, `docs/TODOs.md`, and `docs/cod
 
 ## 7. Commit, push, open the PR
 
-Follow the git and PR rules in `AGENTS.md`, including the PR body sections and the `gh` fallback. Write the body to `.git/PR_BODY.md` (inside `.git`, so it is never committed) before calling `gh pr create`.
+Follow the `pr` skill to commit, push and open the PR.
 
 Keep the body factual. Do not claim verification you did not run.
