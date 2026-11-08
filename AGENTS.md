@@ -18,7 +18,9 @@ Raspberry Pi LED matrix that animates the Spotify track currently playing. Expre
 
 ## Git and PRs
 
+- "commit" means commit **and push** the branch unless told otherwise.
 - Branch from `main`: `fix/<slug>` for bugs, `feat/<slug>` for features. One TODO item or feature per branch and PR.
+- Before creating a PR: `git fetch`, then pull the latest `main`, and branch from that — unless told otherwise.
 - Conventional commits, lowercase subject, scope when useful: `chore(spotify): ...`, `fix(led): ...`. One logical commit, no tool attribution.
 - Never commit `.env`, `dist/` or `node_modules/`.
 - PRs target `main`; `CODEOWNERS` routes review to `@miguelMorenoDevs`. Title = commit subject.
