@@ -47,6 +47,7 @@ router.get("/callback", async (req: Request, res: Response) => {
       await cdAnimator.setTrack({
         imageUrl: song.image,
         durationMs: song.durationMs,
+        progressMs: song.progressMs,
       });
       cdAnimator.play();
       console.info(
