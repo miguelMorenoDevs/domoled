@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify connected</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #121212;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        }
+        .card {
+            background-color: #181818;
+            border: 1px solid #282828;
+            border-radius: 16px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+            max-width: 420px;
+            padding: 40px 32px;
+            text-align: center;
+        }
+        .icon {
+            align-items: center;
+            background-color: #1db954;
+            border-radius: 50%;
+            display: flex;
+            height: 72px;
+            justify-content: center;
+            margin: 0 auto 24px;
+            width: 72px;
+        }
+        .icon svg {
+            height: 36px;
+            width: 36px;
+        }
+        h1 {
+            font-size: 1.5rem;
+            letter-spacing: -0.02em;
+            margin: 0 0 12px;
+        }
+        p {
+            color: #a7a7a7;
+            line-height: 1.6;
+            margin: 0;
+        }
+        p + p {
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <div class="icon" aria-hidden="true">
+            <svg fill="none" viewBox="0 0 24 24" stroke="#121212" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+            </svg>
+        </div>
+
+        <h1>You're connected to Spotify</h1>
+        <p>Login succeeded. Your current track will start playing on the LED matrix.</p>
+        <p>You can close this tab.</p>
+    </main>
+</body>
+</html>

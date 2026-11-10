@@ -16,6 +16,7 @@ src/
   utils/network.ts        getLocalIP() for the OAuth state round-trip
 simulator.html            Standalone browser view of the 8080 frame stream
 index.html                GitHub Pages OAuth relay
+public/success.html       Friendly page rendered after a successful OAuth callback
 ```
 
 ## Execution flow
@@ -23,7 +24,7 @@ index.html                GitHub Pages OAuth relay
 1. `src/app.ts` mounts `spotifyRouter` at `/spotify` and listens on 3000.
 2. `POST /spotify/login` builds the Spotify authorize URL (`state` = `<localIP>:3000`), prints a QR code, returns the URL.
 3. Spotify redirects to the GitHub Pages `index.html`, which forwards to `GET /spotify/callback?code=...` on the local machine.
-4. The callback exchanges the code for tokens, fetches the current song, loads the album art into the shared `cdAnimator`, and calls `play()`.
+4. The callback exchanges the code for tokens, fetches the current song, loads the album art into the shared `cdAnimator`, calls `play()`, and renders `public/success.html`.
 5. Each frame is drawn with `@napi-rs/canvas` (CD disc, rotating album art, center hole, sheen), pushed to the matrix, then sent as a data URL over WebSocket on non-Pi platforms.
 
 ## Routes
