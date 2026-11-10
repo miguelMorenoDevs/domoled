@@ -87,7 +87,7 @@ JSON
 
 - Express listens on **3000**.
 - On win32/darwin the animator starts a WebSocket server on **8080** and streams frames.
-- Open `simulator.html` directly in a browser (double-click or `file://`); it connects to `ws://localhost:8080`. It is not served by Express — `express.static("public")` exists but `public/` is empty.
+- Open `simulator.html` directly in a browser (double-click or `file://`); it connects to `ws://localhost:8080`. It is not served by Express — `public/` only holds the OAuth success page at `public/success.html`.
 
 ## Spotify OAuth setup
 

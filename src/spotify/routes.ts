@@ -1,3 +1,4 @@
+import path from "node:path";
 import { Router } from "express";
 import type { Request, Response } from "express";
 import qrcode from "qrcode-terminal";
@@ -53,8 +54,7 @@ router.get("/callback", async (req: Request, res: Response) => {
       );
     }
 
-    // TODO: Render successful page
-    res.sendStatus(200);
+    res.sendFile(path.join(process.cwd(), "public", "success.html"));
   } catch (error) {
     console.error(error);
     if (error instanceof AlbumArtLoadError) {
