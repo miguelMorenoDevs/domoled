@@ -14,4 +14,5 @@ export interface GetCurrentlyPlayedSong {
   title: string;
   image: string;
   durationMs: number;
+  progressMs: number;
 }

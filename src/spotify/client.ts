@@ -175,6 +175,7 @@ class SpotifyClient {
       title: track.item.name,
       image: bestImage!.url,
       durationMs: track.item.duration_ms,
+      progressMs: track.progress_ms ?? 0,
     };
   }
 

@@ -24,7 +24,7 @@ public/success.html       Friendly page rendered after a successful OAuth callba
 1. `src/app.ts` mounts `spotifyRouter` at `/spotify` and listens on 3000.
 2. `POST /spotify/login` builds the Spotify authorize URL (`state` = `<localIP>:3000`), prints a QR code, returns the URL.
 3. Spotify redirects to the GitHub Pages `index.html`, which forwards to `GET /spotify/callback?code=...` on the local machine.
-4. The callback exchanges the code for tokens, fetches the current song, loads the album art into the shared `cdAnimator`, calls `play()`, and renders `public/success.html`.
+4. The callback exchanges the code for tokens, fetches the current song (including `progress_ms`), loads the album art into the shared `cdAnimator`, calls `play()` from that playback position, and renders `public/success.html`.
 5. Each frame is drawn with `@napi-rs/canvas` (CD disc, rotating album art, center hole, sheen), pushed to the matrix, then sent as a data URL over WebSocket on non-Pi platforms.
 
 ## Routes
@@ -43,5 +43,5 @@ public/success.html       Friendly page rendered after a successful OAuth callba
 - `src/led/animator.ts` mocks the matrix on win32/darwin and loads `rpi-led-matrix` through `eval("require")` on Linux so bundlers skip the native module. Keep this pattern; do not turn it into a normal import.
 - `src/spotify/client.ts` exports a singleton instance. User tokens live in a `Map<email, UserTokens>`; "temp" is used until `/me` resolves the email.
 - Spotify `401` handling lives in `SpotifyClient.fetch`: it refreshes the user token and retries the request once with the new token.
-- `TrackData` only carries `imageUrl` and `durationMs`; playback position is not propagated yet (tracked in GitHub issues).
-- `CdAnimator.setTrack` clears the previous art/duration and throws `AlbumArtLoadError` when `loadImage` rejects; `GET /spotify/callback` maps that to a `502` retry message while other callback failures stay `400`.
+- `TrackData` carries `imageUrl`, `durationMs` and `progressMs`; `CdAnimator.play()` starts from `progressMs` (Spotify `progress_ms`, `0` when null) so a mid-song track skips the intro instead of restarting at 0.
+- `CdAnimator.setTrack` clears the previous art/duration/progress and throws `AlbumArtLoadError` when `loadImage` rejects; `GET /spotify/callback` maps that to a `502` retry message while other callback failures stay `400`.

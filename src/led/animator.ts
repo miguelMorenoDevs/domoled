@@ -70,6 +70,7 @@ export class CdAnimator {
   private intervalId: NodeJS.Timeout | null = null;
 
   private currentDurationMs: number = 0;
+  private trackProgressMs: number = 0;
   private startTime: number = 0;
   private progressOffsetMs: number = 0;
 
@@ -129,6 +130,7 @@ export class CdAnimator {
     // Never keep the previous track's art/duration when this load fails.
     this.cdImage = null;
     this.currentDurationMs = 0;
+    this.trackProgressMs = 0;
 
     console.log(`[CdAnimator] Loading album art from: ${track.imageUrl}`);
     try {
@@ -142,14 +144,16 @@ export class CdAnimator {
     }
 
     this.currentDurationMs = track.durationMs;
-    console.log(`[CdAnimator] Track loaded. Duration: ${track.durationMs}ms`);
+    this.trackProgressMs = track.progressMs;
+    console.log(
+      `[CdAnimator] Track loaded. Duration: ${track.durationMs}ms, position: ${track.progressMs}ms`,
+    );
   }
 
   /**
-   * Starts or resumes the animation.
-   * @param progressMs The current playback position of the song (default: 0)
+   * Starts or resumes the animation from the track's current playback position.
    */
-  public play(progressMs: number = 0): void {
+  public play(): void {
     if (!this.cdImage) {
       console.warn("No track loaded. Call setTrack() first.");
       return;
@@ -157,11 +161,11 @@ export class CdAnimator {
 
     this.stop(); // Prevent overlapping intervals
 
-    this.progressOffsetMs = progressMs;
+    this.progressOffsetMs = this.trackProgressMs;
     this.startTime = Date.now();
     const frameDelay = 1000 / this.config.fps;
 
-    console.log(`[CdAnimator] Playing from ${progressMs}ms...`);
+    console.log(`[CdAnimator] Playing from ${this.progressOffsetMs}ms...`);
     this.intervalId = setInterval(this.renderFrame, frameDelay);
   }
 
