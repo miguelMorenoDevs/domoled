@@ -29,11 +29,15 @@ Both are required: `src/spotify/client.ts` throws at import time when either is 
 ```sh
 pnpm dev     # tsx src/app.ts with .env
 pnpm build   # tsc -> dist/
+pnpm lint          # eslint . (eslint.config.js)
+pnpm format:check  # prettier --check . (.prettierrc.json, .prettierignore)
+pnpm format        # prettier --write .
 ```
 
 - `tsx` is fetched on demand by `pnpx`; it is not a declared dependency.
 - `pnpm test` intentionally exits 1 ("no test specified"). There is no test suite.
-- No lint or formatter config exists.
+- ESLint (flat config, typescript-eslint recommended) ignores `dist/` and `node_modules/`. `no-explicit-any` is a warning because the rpi-led-matrix shim in `src/led/animator.ts` is intentionally untyped.
+- Prettier skips `dist/`, `node_modules/`, `pnpm-lock.yaml`, `public/`, `index.html`, `simulator.html` and the `issue-create` skill (see `.prettierignore`).
 
 ## Issue and PR agents
 

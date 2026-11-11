@@ -1,0 +1,7 @@
+dist/
+node_modules/
+pnpm-lock.yaml
+index.html
+simulator.html
+public/
+.opencode/skills/issue-create/SKILL.md
