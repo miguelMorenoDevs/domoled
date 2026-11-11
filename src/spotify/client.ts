@@ -1,7 +1,10 @@
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import type {
   GetCurrentlyPlayedSong,
   GetUserTokenOptions,
   GrantTypes,
+  StoredUsers,
   UserTokens,
 } from "./types/api.js";
 import type { GetCurrentSongResponse } from "./types/service.js";
@@ -12,6 +15,7 @@ class SpotifyClient {
   private readonly client_id: string;
   private readonly client_secret: string;
   private readonly redirect_uri: string;
+  private readonly store_path: string;
   private active_user: string | undefined;
   private readonly users_map: Map<string, UserTokens>;
 
@@ -28,7 +32,50 @@ class SpotifyClient {
 
     this.client_id = process.env["SPOTIFY_CLIENT_ID"];
     this.client_secret = process.env["SPOTIFY_CLIENT_SECRET"];
+    this.store_path = path.resolve("data", "users.json");
     this.users_map = new Map();
+    this.loadStore();
+  }
+
+  private loadStore() {
+    let raw: string;
+    try {
+      raw = readFileSync(this.store_path, "utf8");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+        console.error(error);
+      return;
+    }
+
+    try {
+      const store = JSON.parse(raw) as StoredUsers;
+      for (const [email, tokens] of Object.entries(store.users))
+        this.users_map.set(email, tokens);
+      if (store.active_user && this.users_map.has(store.active_user))
+        this.active_user = store.active_user;
+    } catch (error) {
+      console.error("Ignoring unreadable Spotify token store", error);
+      this.users_map.clear();
+    }
+  }
+
+  private saveStore() {
+    const users = Object.fromEntries(
+      Array.from(this.users_map).filter(([email]) => email !== "temp"),
+    );
+    const store: StoredUsers = {
+      users,
+      active_user: this.active_user ?? null,
+    };
+
+    try {
+      mkdirSync(path.dirname(this.store_path), { recursive: true });
+      const tmpPath = this.store_path + ".tmp";
+      writeFileSync(tmpPath, JSON.stringify(store, null, 2), { mode: 0o600 });
+      renameSync(tmpPath, this.store_path);
+    } catch (error) {
+      console.error("Could not persist Spotify tokens", error);
+    }
   }
 
   async getUserToken<T extends GrantTypes>({
@@ -98,6 +145,8 @@ class SpotifyClient {
     });
 
     if (grant_type === "authorization_code") await this.assingTokensToEmail();
+
+    this.saveStore();
   }
 
   private async fetch<T extends object | string>(
@@ -153,10 +202,12 @@ class SpotifyClient {
     if (!loggedUsers.includes(email)) throw Error("User is not logged in");
 
     this.active_user = email;
+    this.saveStore();
   }
 
   async clearActiveUser() {
     this.active_user = undefined;
+    this.saveStore();
   }
 
   async getCurrentSong(): Promise<GetCurrentlyPlayedSong | undefined> {
@@ -194,7 +245,7 @@ class SpotifyClient {
     const userTokens = this.users_map.get("temp");
     this.users_map.set(data.email, userTokens!);
     this.users_map.delete("temp");
-    this.setActiveUser(data.email);
+    await this.setActiveUser(data.email);
   }
 }
 

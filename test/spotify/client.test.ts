@@ -1,12 +1,16 @@
 import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 process.env["SPOTIFY_CLIENT_ID"] ??= "test-client-id";
 process.env["SPOTIFY_CLIENT_SECRET"] ??= "test-client-secret";
 
+const storeDir = mkdtempSync(path.join(os.tmpdir(), "domoled-test-"));
+process.chdir(storeDir);
+
 const { default: spotify } = await import("../../src/spotify/client.js");
-
-
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -146,5 +150,36 @@ test("getCurrentSong refreshes the token once on 401 and retries", async (t) => 
 
   assert.equal(song?.title, "Song");
   assert.equal(refreshCalls, 1);
+  assert.equal(playingCalls, 2);
+});
+
+test("logged users, active user and refresh token survive a restart", async (t) => {
+  await login(t);
+
+  const stored = JSON.parse(readFileSync(path.join(storeDir, "data", "users.json"), "utf8"));
+  assert.deepEqual(stored.users["user@example.com"], { access_token: "access", refresh_token: "refresh" });
+  assert.equal(stored.active_user, "user@example.com");
+
+  const restartedModule = "../../src/spotify/client.js?restart=1";
+  const { default: restarted } = await import(restartedModule);
+  assert.ok((await restarted.getLoggedUsers()).includes("user@example.com"));
+  assert.equal(await restarted.hasActiveUser(), true);
+
+  let playingCalls = 0;
+  t.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith("/token")) {
+      assert.equal(String(init?.body).includes("refresh_token=refresh"), true);
+      return jsonResponse({ access_token: "new-access" });
+    }
+    if (url.endsWith("/me/player/currently-playing")) {
+      playingCalls++;
+      if (playingCalls === 1) return new Response(null, { status: 401 });
+      return jsonResponse(track());
+    }
+    throw new Error("Unexpected fetch: " + url);
+  });
+
+  assert.equal((await restarted.getCurrentSong())?.title, "Song");
   assert.equal(playingCalls, 2);
 });
