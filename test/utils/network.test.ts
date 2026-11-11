@@ -31,10 +31,7 @@ test("getLocalIP returns the first external IPv4 of a preferred interface", (t) 
 
 test("getLocalIP skips internal and IPv6 addresses", (t) => {
   mockInterfaces(t, {
-    eth0: [
-      address("127.0.0.1", true),
-      address("fe80::1", false, "IPv6"),
-    ],
+    eth0: [address("127.0.0.1", true), address("fe80::1", false, "IPv6")],
     wlan0: [address("192.168.1.20", false)],
   });
 
