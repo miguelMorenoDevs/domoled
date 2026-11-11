@@ -16,6 +16,7 @@ Raspberry Pi LED matrix that animates the Spotify track currently playing. Expre
 - Match the existing ESM conventions: relative imports end in `.js`, type-only imports use `import type`, env access uses `process.env["X"]`.
 - Keep the `eval("require")` platform shim in `src/led/animator.ts`; do not turn it into a normal import.
 - Record new bugs, gaps and deferred work as GitHub issues with the `issue-create` skill; do not add a local TODO list.
+- Never commit, or mention in PR descriptions, issues or comments, where this project is being run (machine, OS, host, paths, local IPs) or any personal information (names, emails, account IDs, tokens). Describe the behavior, not the environment.
 - When a change resolves an issue, close it from the PR (`Closes #N`); update `docs/codebase.md` if the module map, routes or flow changed.
 
 ## Git and PRs

@@ -8,7 +8,7 @@ import { AlbumArtLoadError, cdAnimator } from "../led/animator.js";
 
 const router: Router = Router();
 
-router.post("/login", (_req: Request, res: Response) => {
+function spotifyAuthorizeUrl(): string {
   const state = getLocalIP()! + ":3000";
   const scope = "user-read-currently-playing user-read-email";
 
@@ -19,7 +19,11 @@ router.post("/login", (_req: Request, res: Response) => {
   params.append("state", state);
   params.append("redirect_uri", "https://miguelmorenodevs.github.io/domoled");
 
-  const url = "https://accounts.spotify.com/authorize?" + params;
+  return "https://accounts.spotify.com/authorize?" + params;
+}
+
+router.post("/login", (_req: Request, res: Response) => {
+  const url = spotifyAuthorizeUrl();
 
   if (qrcode) {
     qrcode.generate(url, { small: true });
@@ -27,6 +31,15 @@ router.post("/login", (_req: Request, res: Response) => {
 
   res.json({ url });
 });
+
+// Short target for the matrix QR: the phone opens it on the LAN and gets redirected to Spotify.
+router.get("/login", (_req: Request, res: Response) => {
+  res.redirect(spotifyAuthorizeUrl());
+});
+
+export function loginQrUrl(): string {
+  return `http://${getLocalIP()!}:3000/spotify/login`;
+}
 
 router.get("/callback", async (req: Request, res: Response) => {
   try {
@@ -106,7 +119,7 @@ router.post("/users/active", async (req: Request, res: Response) => {
 
 router.delete("/users/active", async (_req: Request, res: Response) => {
   SpotifyClient.clearActiveUser();
-  cdAnimator.stop();
+  cdAnimator.showQr(loginQrUrl());
   res.sendStatus(200);
 });
 
