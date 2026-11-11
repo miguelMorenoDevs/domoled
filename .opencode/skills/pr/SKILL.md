@@ -33,8 +33,6 @@ Repo commands and code conventions live in `AGENTS.md`; read only the docs the c
 gh pr create --base main --title "<commit subject>" --body "<body>"
 ```
 
-For a long body, pipe it with `--body-file -` instead.
-
 - Enable auto-merge only when the prompt says to. Then, as the PR creator, it merges once approved:
 
 ```

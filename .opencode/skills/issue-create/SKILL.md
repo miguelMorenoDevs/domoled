@@ -47,10 +47,10 @@ Body sections, in this order:
 - `## Scope` — files/functions likely touched.
 - `## Verification` — exact command or manual check that proves it.
 
-Write the body to `.git/ISSUE_BODY.md` (inside `.git`, so it is never committed). The labels already exist in the repo: run `gh label list` and create only a missing one, never with `--force` (it overwrites existing labels). Then create the issue:
+The labels already exist in the repo: run `gh label list` and create only a missing one, never with `--force` (it overwrites existing labels). Then create the issue with the body inline:
 
 ```
-gh issue create --title "<title>" --body-file .git/ISSUE_BODY.md --label "ai-ready,complexity: mid,review"
+gh issue create --title "<title>" --body "<body>" --label "ai-ready,complexity: mid,review"
 ```
 
 ## 5. Verify
