@@ -35,7 +35,8 @@ pnpm format        # prettier --write .
 ```
 
 - `tsx` is fetched on demand by `pnpx`; it is not a declared dependency.
-- `pnpm test` intentionally exits 1 ("no test specified"). There is no test suite.
+- `pnpm test` builds `test/` (via `tsconfig.test.json`, output in `dist-test/`) and runs the built-in `node --test` runner. No test dependencies are used.
+- No lint or formatter config exists.
 - ESLint (flat config, typescript-eslint recommended) ignores `dist/` and `node_modules/`. `no-explicit-any` is a warning because the rpi-led-matrix shim in `src/led/animator.ts` is intentionally untyped.
 - Prettier skips `dist/`, `node_modules/`, `pnpm-lock.yaml`, `public/`, `index.html`, `simulator.html` and the `issue-create` skill (see `.prettierignore`).
 

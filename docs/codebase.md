@@ -14,6 +14,7 @@ src/
     animator.ts           Canvas rendering, matrix output, WS simulator stream (singleton `cdAnimator`)
     types.ts              AnimatorConfig, TrackData, matrix dimensions
   utils/network.ts        getLocalIP() for the OAuth state round-trip
+test/                      node:test suites (spotify client, network utils), run by `pnpm test`
 simulator.html            Standalone browser view of the 8080 frame stream
 index.html                GitHub Pages OAuth relay
 public/success.html       Friendly page rendered after a successful OAuth callback
@@ -41,6 +42,7 @@ public/success.html       Friendly page rendered after a successful OAuth callba
 - `verbatimModuleSyntax` is on: type-only imports must use `import type`.
 - Strict TS extras: `noUncheckedIndexedAccess` (indexed reads are possibly undefined; the code uses `!`), `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature` (hence `process.env["X"]`), plus `noUnusedLocals`/`noUnusedParameters`.
 - `src/led/animator.ts` mocks the matrix on win32/darwin and loads `rpi-led-matrix` through `eval("require")` on Linux so bundlers skip the native module. Keep this pattern; do not turn it into a normal import.
+- `tsconfig.json` only includes `src/`; `tsconfig.test.json` compiles `src/` and `test/` into `dist-test/` for `pnpm test`.
 - `src/spotify/client.ts` exports a singleton instance. User tokens live in a `Map<email, UserTokens>`; "temp" is used until `/me` resolves the email.
 - Spotify `401` handling lives in `SpotifyClient.fetch`: it refreshes the user token and retries the request once with the new token.
 - `TrackData` carries `imageUrl`, `durationMs` and `progressMs`; `CdAnimator.play()` starts from `progressMs` (Spotify `progress_ms`, `0` when null) so a mid-song track skips the intro instead of restarting at 0.
