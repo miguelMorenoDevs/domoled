@@ -5,10 +5,18 @@ import type {
   MatrixOptions,
   RuntimeOptions,
 } from "rpi-led-matrix";
+import { createRequire } from "node:module";
 import { WebSocketServer, WebSocket } from "ws";
 import { createCanvas, loadImage, Canvas, Image } from "@napi-rs/canvas";
 import type { AnimatorConfig, LedAnimation, TrackData } from "./types.js";
 import { CdAnimation } from "./animations/cd.js";
+
+// qrcode-terminal's encoder returns the module grid; its public API only prints text.
+const requireQr = createRequire(import.meta.url);
+const QRCode = requireQr("qrcode-terminal/vendor/QRCode");
+const QRErrorCorrectLevel = requireQr(
+  "qrcode-terminal/vendor/QRCode/QRErrorCorrectLevel",
+);
 
 /** Raised when the album art URL cannot be fetched or decoded. */
 export class AlbumArtLoadError extends Error {
@@ -129,6 +137,8 @@ export class CdAnimator {
   private idleCycleStartMs: number = 0;
   private idleCycleDurationMs: number = 0;
 
+  private qrModules: boolean[][] = [];
+
   private wss: WebSocketServer | null = null;
   private wsClients: Set<WebSocket> = new Set();
 
@@ -246,6 +256,21 @@ export class CdAnimator {
   }
 
   /**
+   * Shows a login QR code (dark modules on white) until the stream is replaced.
+   */
+  public showQr(url: string): void {
+    this.stop();
+
+    const qr = new QRCode(-1, QRErrorCorrectLevel.L);
+    qr.addData(url);
+    qr.make();
+    this.qrModules = qr.modules;
+
+    const frameDelay = 1000 / this.config.fps;
+    this.intervalId = setInterval(this.renderQrFrame, frameDelay);
+  }
+
+  /**
    * Stops the animation and clears the LED matrix.
    */
   public stop(): void {
@@ -255,8 +280,8 @@ export class CdAnimator {
     }
     this.idleEnabled = false;
     this.exitAnimation();
-    this.matrix.clear();
-    this.matrix.sync();
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.presentFrame();
   }
 
   /**
@@ -307,6 +332,27 @@ export class CdAnimator {
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawCat({ x, jump, lie, lick, breath, sleeping: t >= activeMs });
+    this.presentFrame();
+  };
+
+  /**
+   * Renders the login QR: white background, black modules, one quiet-zone module around the code.
+   */
+  private renderQrFrame = (): void => {
+    const size = this.qrModules.length;
+    const cell = Math.floor(this.canvas.width / (size + 2));
+    const offset = Math.floor((this.canvas.width - size * cell) / 2);
+
+    this.ctx.fillStyle = "#fff";
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillStyle = "#000";
+    this.qrModules.forEach((row, y) =>
+      row.forEach((dark, x) => {
+        if (dark) {
+          this.ctx.fillRect(offset + x * cell, offset + y * cell, cell, cell);
+        }
+      }),
+    );
     this.presentFrame();
   };
 
