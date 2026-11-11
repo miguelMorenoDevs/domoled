@@ -13,6 +13,8 @@ pnpm install
 
 `pnpm-workspace.yaml` sets `allowBuilds`: `rpi-led-matrix: true`, `canvas: false`. Keep this in mind if a native dependency fails to build.
 
+`pnpm install` runs the `prepare` script, which sets `core.hooksPath` to `.githooks` when `.git` exists. The pre-commit hook then runs `pnpm build`, `pnpm lint`, `pnpm format:check` and `pnpm test` before each commit and aborts on the first failure, the same checks as CI. Skip it with `git commit --no-verify`. Installs with `--ignore-scripts` (CI) or without `.git` (tarballs) skip the hook setup.
+
 ## Environment
 
 Copy `.env.example` to `.env`:

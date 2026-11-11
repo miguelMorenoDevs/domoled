@@ -29,16 +29,22 @@ function mockSpotify(t: TestContext, routes: Record<string, () => Response>) {
   });
 }
 
-function loginRoutes(email = "user@example.com"): Record<string, () => Response> {
+function loginRoutes(
+  email = "user@example.com",
+): Record<string, () => Response> {
   return {
-    "/token": () => jsonResponse({ access_token: "access", refresh_token: "refresh" }),
+    "/token": () =>
+      jsonResponse({ access_token: "access", refresh_token: "refresh" }),
     "/me": () => jsonResponse({ email }),
   };
 }
 
 async function login(t: TestContext) {
   mockSpotify(t, loginRoutes());
-  await spotify.getUserToken({ grant_type: "authorization_code", token: "code" });
+  await spotify.getUserToken({
+    grant_type: "authorization_code",
+    token: "code",
+  });
 }
 
 function track(overrides: Record<string, unknown> = {}) {
@@ -98,7 +104,8 @@ test("getCurrentSong returns the largest square album image", async (t) => {
 test("getCurrentSong defaults progressMs to 0 when Spotify returns null", async (t) => {
   await login(t);
   mockSpotify(t, {
-    "/me/player/currently-playing": () => jsonResponse(track({ progress_ms: null })),
+    "/me/player/currently-playing": () =>
+      jsonResponse(track({ progress_ms: null })),
   });
 
   const song = await spotify.getCurrentSong();
@@ -110,7 +117,12 @@ test("getCurrentSong returns undefined for episodes", async (t) => {
   await login(t);
   mockSpotify(t, {
     "/me/player/currently-playing": () =>
-      jsonResponse(track({ item: { type: "episode", name: "Episode" }, currently_playing_type: "episode" })),
+      jsonResponse(
+        track({
+          item: { type: "episode", name: "Episode" },
+          currently_playing_type: "episode",
+        }),
+      ),
   });
 
   assert.equal(await spotify.getCurrentSong(), undefined);
@@ -130,21 +142,31 @@ test("getCurrentSong refreshes the token once on 401 and retries", async (t) => 
 
   let playingCalls = 0;
   let refreshCalls = 0;
-  t.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
-    const url = String(input);
-    if (url.endsWith("/token")) {
-      refreshCalls++;
-      assert.equal(String(init?.body).includes("grant_type=refresh_token"), true);
-      return jsonResponse({ access_token: "new-access" });
-    }
-    if (url.endsWith("/me/player/currently-playing")) {
-      playingCalls++;
-      if (playingCalls === 1) return new Response(null, { status: 401 });
-      assert.equal((init?.headers as Record<string, string>)["Authorization"], "Bearer new-access");
-      return jsonResponse(track());
-    }
-    throw new Error("Unexpected fetch: " + url);
-  });
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/token")) {
+        refreshCalls++;
+        assert.equal(
+          String(init?.body).includes("grant_type=refresh_token"),
+          true,
+        );
+        return jsonResponse({ access_token: "new-access" });
+      }
+      if (url.endsWith("/me/player/currently-playing")) {
+        playingCalls++;
+        if (playingCalls === 1) return new Response(null, { status: 401 });
+        assert.equal(
+          (init?.headers as Record<string, string>)["Authorization"],
+          "Bearer new-access",
+        );
+        return jsonResponse(track());
+      }
+      throw new Error("Unexpected fetch: " + url);
+    },
+  );
 
   const song = await spotify.getCurrentSong();
 
@@ -156,8 +178,13 @@ test("getCurrentSong refreshes the token once on 401 and retries", async (t) => 
 test("logged users, active user and refresh token survive a restart", async (t) => {
   await login(t);
 
-  const stored = JSON.parse(readFileSync(path.join(storeDir, "data", "users.json"), "utf8"));
-  assert.deepEqual(stored.users["user@example.com"], { access_token: "access", refresh_token: "refresh" });
+  const stored = JSON.parse(
+    readFileSync(path.join(storeDir, "data", "users.json"), "utf8"),
+  );
+  assert.deepEqual(stored.users["user@example.com"], {
+    access_token: "access",
+    refresh_token: "refresh",
+  });
   assert.equal(stored.active_user, "user@example.com");
 
   const restartedModule = "../../src/spotify/client.js?restart=1";
@@ -166,19 +193,26 @@ test("logged users, active user and refresh token survive a restart", async (t) 
   assert.equal(await restarted.hasActiveUser(), true);
 
   let playingCalls = 0;
-  t.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
-    const url = String(input);
-    if (url.endsWith("/token")) {
-      assert.equal(String(init?.body).includes("refresh_token=refresh"), true);
-      return jsonResponse({ access_token: "new-access" });
-    }
-    if (url.endsWith("/me/player/currently-playing")) {
-      playingCalls++;
-      if (playingCalls === 1) return new Response(null, { status: 401 });
-      return jsonResponse(track());
-    }
-    throw new Error("Unexpected fetch: " + url);
-  });
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/token")) {
+        assert.equal(
+          String(init?.body).includes("refresh_token=refresh"),
+          true,
+        );
+        return jsonResponse({ access_token: "new-access" });
+      }
+      if (url.endsWith("/me/player/currently-playing")) {
+        playingCalls++;
+        if (playingCalls === 1) return new Response(null, { status: 401 });
+        return jsonResponse(track());
+      }
+      throw new Error("Unexpected fetch: " + url);
+    },
+  );
 
   assert.equal((await restarted.getCurrentSong())?.title, "Song");
   assert.equal(playingCalls, 2);

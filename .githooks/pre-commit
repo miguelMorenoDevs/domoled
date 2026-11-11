@@ -1,0 +1,10 @@
+#!/bin/sh
+# Runs the same checks as CI before each commit. Skip with: git commit --no-verify
+set -e
+
+cd "$(git rev-parse --show-toplevel)"
+
+pnpm build
+pnpm lint
+pnpm format:check
+pnpm test
