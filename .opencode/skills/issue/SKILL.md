@@ -55,6 +55,12 @@ git -c user.name="opencode-agent[bot]" -c user.email="opencode-agent[bot]@users.
 
 Keep the body factual. Do not claim verification you did not run. Do not close the issue by hand unless the PR is abandoned.
 
+The agent token cannot push changes under `.github/workflows/`. If the fix needs those files, do not leave a patch in `/tmp`; stop at section 9.
+
+## 9. If no PR is opened
+
+If you cannot commit, push or open the PR, do not say the task is done. End your final message with one concise line: `No PR: <step that failed> because <reason>`, for example `No PR: push rejected because the change touches .github/workflows/ and the agent token lacks workflows permission`.
+
 ## 8. Request the review
 
 Once the PR exists and `pnpm build` passes, start the review yourself:
