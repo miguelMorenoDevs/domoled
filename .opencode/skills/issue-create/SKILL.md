@@ -47,18 +47,10 @@ Body sections, in this order:
 - `## Scope` — files/functions likely touched.
 - `## Verification` — exact command or manual check that proves it.
 
-Write the body to `.git/ISSUE_BODY.md` (inside `.git`, so it is never committed), then create the labels if missing and the issue:
+The labels already exist in the repo: run `gh label list` and create only a missing one, never with `--force` (it overwrites existing labels). Then create the issue with the body inline:
 
 ```
-gh label create ai-ready --color 0e8a16 --description "AI can implement without a plan" --force
-gh label create needs-plan --color fbca04 --description "Needs a plan before implementation" --force
-gh label create "complexity: low" --color c2e0c6 --description "Small, contained change" --force
-gh label create "complexity: mid" --color fef2c0 --description "Multiple files or behavior change" --force
-gh label create "complexity: high" --color f9d0c4 --description "Cross-cutting or needs design" --force
-gh label create auto --color 1d76db --description "Can be implemented automatically" --force
-gh label create review --color 5319e7 --description "Requires human review" --force
-
-gh issue create --title "<title>" --body-file .git/ISSUE_BODY.md --label "ai-ready,complexity: mid,review"
+gh issue create --title "<title>" --body "<body>" --label "ai-ready,complexity: mid,review"
 ```
 
 ## 5. Verify
