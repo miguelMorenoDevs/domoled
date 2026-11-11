@@ -87,6 +87,50 @@ test("login stores the user under their email and makes it active", async (t) =>
   assert.equal(await spotify.hasActiveUser(), true);
 });
 
+test("a login whose /me lookup fails keeps the previous active user and store", async (t) => {
+  mockSpotify(t, loginRoutes("previous@example.com"));
+  await spotify.getUserToken({
+    grant_type: "authorization_code",
+    token: "previous-code",
+  });
+
+  const storePath = path.join(storeDir, "data", "users.json");
+  const storeBefore = readFileSync(storePath, "utf8");
+  const usersBefore = await spotify.getLoggedUsers();
+
+  mockSpotify(t, {
+    "/token": () =>
+      jsonResponse({ access_token: "failed-access", refresh_token: "failed" }),
+    "/me": () => new Response(null, { status: 500 }),
+  });
+  await assert.rejects(
+    spotify.getUserToken({ grant_type: "authorization_code", token: "bad" }),
+    /Fetching user email failed/,
+  );
+
+  assert.deepEqual(await spotify.getLoggedUsers(), usersBefore);
+  assert.equal(await spotify.hasActiveUser(), true);
+  assert.equal(readFileSync(storePath, "utf8"), storeBefore);
+  assert.equal(storeBefore.includes('"temp"'), false);
+
+  let playingAuth: string | undefined;
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input).endsWith("/me/player/currently-playing")) {
+        playingAuth = (init?.headers as Record<string, string>)[
+          "Authorization"
+        ];
+        return jsonResponse(track());
+      }
+      throw new Error("Unexpected fetch: " + String(input));
+    },
+  );
+  await spotify.getCurrentSong();
+  assert.equal(playingAuth, "Bearer access");
+});
+
 test("getCurrentSong returns the largest square album image", async (t) => {
   await login(t);
   mockSpotify(t, {
