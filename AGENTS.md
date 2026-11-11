@@ -12,7 +12,7 @@ Raspberry Pi LED matrix that animates the Spotify track currently playing. Expre
 
 - Keep `README.md` updated with what this project offers: add/remove features there whenever behavior changes.
 - Don't read, search or edit `.env`, `dist/` or `node_modules/`: they are gitignored and only matter when the task needs them.
-- Use `pnpm` (version enforced by `devEngines`). `pnpm dev` runs with `.env`; `pnpm build` is `tsc`; `pnpm test` compiles `test/` with `tsconfig.test.json` and runs `node --test`. `pnpm build` must pass before committing.
+- Use `pnpm` (version enforced by `devEngines`). `pnpm dev` runs with `.env`; `pnpm build` is `tsc`; `pnpm test` compiles `test/` with `tsconfig.test.json` and runs `node --test`. Run `pnpm build` and `pnpm test` before committing only when the change touches `src/`; docs, skills and workflow-only changes skip both.
 - Match the existing ESM conventions: relative imports end in `.js`, type-only imports use `import type`, env access uses `process.env["X"]`.
 - Keep the `eval("require")` platform shim in `src/led/animator.ts`; do not turn it into a normal import.
 - Record new bugs, gaps and deferred work as GitHub issues with the `issue-create` skill; do not add a local TODO list.
