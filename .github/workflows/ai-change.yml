@@ -1,0 +1,116 @@
+name: ai change
+
+# A maintainer comments `change: <request>` on an open ai-developed PR (pushes a commit to its branch)
+# or an open ai-ready issue (rewrites the issue body).
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  change:
+    if: >-
+      startsWith(github.event.comment.body, 'change:') &&
+      github.event.issue.state == 'open' &&
+      (
+        (github.event.issue.pull_request && contains(github.event.issue.labels.*.name, 'ai-developed')) ||
+        (!github.event.issue.pull_request && contains(github.event.issue.labels.*.name, 'ai-ready'))
+      ) &&
+      contains(fromJSON('["MEMBER","OWNER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      issues: write
+      pull-requests: write
+      # GITHUB_TOKEN has no workflows permission; `workflows: write` would invalidate this file.
+    concurrency:
+      group: ai-change-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Resolve target
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          IS_PR: ${{ github.event.issue.pull_request && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+          echo "is_pr=$IS_PR" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          # The agent cannot push to forks.
+          if [ "$IS_PR" = true ]; then
+            repo=$(gh pr view "$NUMBER" --json headRepository --jq .headRepository.nameWithOwner)
+            if [ "$repo" != "$GITHUB_REPOSITORY" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; fi
+          fi
+
+      - uses: actions/checkout@v6
+        if: steps.target.outputs.skip != 'true' && steps.target.outputs.is_pr == 'true'
+
+      - name: Check out PR branch
+        if: steps.target.outputs.skip != 'true' && steps.target.outputs.is_pr == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr checkout ${{ github.event.issue.number }}
+
+      - name: Install OpenCode
+        if: steps.target.outputs.skip != 'true'
+        run: npm install -g @opencode/cli
+
+      - name: Sign in to OpenCode
+        if: steps.target.outputs.skip != 'true'
+        env:
+          AUDIENCE: https://opencode.ai/console
+          OPENCODE_CLIENT_ID: ${{ secrets.OPENCODE_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          : "${OPENCODE_CLIENT_ID:?missing OPENCODE_CLIENT_ID secret}"
+          oidc=$(curl -sS --fail-with-body --oauth2-bearer "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUDIENCE" | jq -er .value)
+          token=$(curl -sS --fail-with-body https://opencode.ai/console/auth/oauth/token \
+            -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
+            -d subject_token_type=urn:ietf:params:oauth:token-type:jwt \
+            -d client_id="$OPENCODE_CLIENT_ID" \
+            -d subject_token="$oidc" | jq -er .access_token)
+          echo "::add-mask::$token"
+          echo "OPENCODE_API_KEY=$token" >> "$GITHUB_ENV"
+
+      - name: Apply change to PR
+        if: steps.target.outputs.skip != 'true' && steps.target.outputs.is_pr == 'true'
+        run: bash .github/scripts/opencode-run.sh --model opencode-go/claude-haiku-5-5 "$PROMPT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROMPT: |
+            Apply this change request to pull request #${{ github.event.issue.number }} in ${{ github.repository }}.
+            The request is the text after `change:` in this comment:
+
+            ${{ github.event.comment.body }}
+
+            1. Read the PR with `gh pr view ${{ github.event.issue.number }}` and `gh pr diff ${{ github.event.issue.number }}`.
+               You are already on the PR branch.
+            2. Make only the requested change, following AGENTS.md. If the request is unclear or unsafe, change nothing.
+            3. Run `pnpm build` if `src/` changed.
+            4. Commit with a conventional commit subject and push to the PR branch, with
+               `git -c user.name="opencode-agent[bot]" -c user.email="opencode-agent[bot]@users.noreply.github.com" commit ...`.
+               Do not open a PR, change labels, merge, or approve.
+            5. Comment on the PR with `gh pr comment ${{ github.event.issue.number }} --body "<one line: what changed, or why nothing changed>"`.
+            Work non-interactively: never ask questions.
+
+      - name: Apply change to issue
+        if: steps.target.outputs.skip != 'true' && steps.target.outputs.is_pr != 'true'
+        run: bash .github/scripts/opencode-run.sh --model opencode-go/claude-haiku-5-5 "$PROMPT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROMPT: |
+            Apply this change request to issue #${{ github.event.issue.number }} in ${{ github.repository }}.
+            The request is the text after `change:` in this comment:
+
+            ${{ github.event.comment.body }}
+
+            1. Read the issue with `gh issue view ${{ github.event.issue.number }}`.
+            2. Apply the requested change to the issue body only. Keep the sections Summary, Current behavior, Expected,
+               Scope and Verification in that order. Write the new body to a file under $RUNNER_TEMP and run
+               `gh issue edit ${{ github.event.issue.number }} --body-file <file>`.
+            3. Do not change labels, state, or assignees, and do not write code or open PRs.
+            4. Comment on the issue with `gh issue comment ${{ github.event.issue.number }} --body "<one line: what changed, or why nothing changed>"`.
+            Work non-interactively: never ask questions.

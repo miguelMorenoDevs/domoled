@@ -27,10 +27,11 @@ Repo commands and code conventions live in `AGENTS.md`; read only the docs the c
 
 - Target `main`. `CODEOWNERS` routes review to `@miguelMorenoDevs`.
 - Title = commit subject.
-- Open the PR with the title and body inline:
+- Label every PR the agent opens `ai-developed`.
+- Open the PR with the title, label and body inline:
 
 ```
-gh pr create --base main --title "<commit subject>" --body "<body>"
+gh pr create --base main --title "<commit subject>" --label ai-developed --body "<body>"
 ```
 
 - Enable auto-merge only when the prompt says to. Then, as the PR creator, it merges once approved:
