@@ -7,7 +7,6 @@ import type {
 export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
   introJumpMs: 1200,
   introSettleMs: 700,
-  stretchPeriodMs: 14000,
   sleepMs: 10000,
   stretchMs: 4000,
   outroDurationMs: 1200,
@@ -91,14 +90,14 @@ export function calicoPhaseAt(
 }
 
 /**
- * Stand and stretch (each 0..1) at loopMs into the loop: every stretchPeriodMs the cat sleeps for
- * sleepMs, then stands up, stretches in the middle of stretchMs, and lies back down to sleep.
+ * Stand and stretch (each 0..1) at loopMs into the loop: the cat sleeps for sleepMs, then stands up,
+ * stretches in the middle of stretchMs, and lies back down to sleep. The cycle repeats.
  */
 export function standStretchAt(
   loopMs: number,
   timing: CalicoTimingConfig,
 ): { stand: number; stretch: number } {
-  const t = (loopMs % timing.stretchPeriodMs) - timing.sleepMs;
+  const t = (loopMs % (timing.sleepMs + timing.stretchMs)) - timing.sleepMs;
   if (t < 0 || t >= timing.stretchMs) return { stand: 0, stretch: 0 };
   const u = t / timing.stretchMs;
   const stand = Math.min(1, u / 0.2, (1 - u) / 0.2);
@@ -162,7 +161,7 @@ function calicoPose(
 }
 
 /**
- * The calico cat: jumps in from the left and lies down once, stretches every 10 s while asleep, until
+ * The calico cat: jumps in from the left and lies down once, then sleeps 10 s and stands up to stretch in a loop, until
  * exit() is called, then opens its eyes and jumps out to the right once.
  */
 export class CalicoCatAnimation implements LedAnimation {

@@ -24,7 +24,6 @@ export interface CdTimingConfig {
 export interface CalicoTimingConfig {
   introJumpMs: number;
   introSettleMs: number;
-  stretchPeriodMs: number;
   sleepMs: number;
   stretchMs: number;
   outroDurationMs: number;

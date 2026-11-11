@@ -41,7 +41,7 @@ test("calico outro plays once after exit, then the cat is done", () => {
   );
 });
 
-test("calico stands, stretches, then sleeps once every 10 s", () => {
+test("calico sleeps 10 s, then stands and stretches, in a loop", () => {
   const mid = timing.sleepMs + timing.stretchMs / 2;
   const asleep = { stand: 0, stretch: 0 };
   const awake = { stand: 1, stretch: 1 };
@@ -53,7 +53,10 @@ test("calico stands, stretches, then sleeps once every 10 s", () => {
     standStretchAt(timing.sleepMs + timing.stretchMs, timing),
     asleep,
   );
-  assert.deepEqual(standStretchAt(timing.stretchPeriodMs + mid, timing), awake);
+  assert.deepEqual(
+    standStretchAt(timing.sleepMs + timing.stretchMs + mid, timing),
+    awake,
+  );
 });
 
 test("calico exit requested during the intro waits for the intro to finish", () => {
