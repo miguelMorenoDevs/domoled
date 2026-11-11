@@ -70,11 +70,8 @@ class SpotifyClient {
   }
 
   private saveStore() {
-    const users = Object.fromEntries(
-      Array.from(this.users_map).filter(([email]) => email !== "temp"),
-    );
     const store: StoredUsers = {
-      users,
+      users: Object.fromEntries(this.users_map),
       active_user: this.active_user ?? null,
     };
 
@@ -147,14 +144,16 @@ class SpotifyClient {
       refresh_token?: string;
     };
 
-    if (grant_type === "authorization_code") this.active_user = "temp";
-
-    this.users_map.set(this.active_user!, {
+    const tokens: UserTokens = {
       access_token,
       refresh_token: refresh_token ?? storedRefreshToken!,
-    });
+    };
 
-    if (grant_type === "authorization_code") await this.assingTokensToEmail();
+    if (grant_type === "authorization_code") {
+      await this.assingTokensToEmail(tokens);
+    } else {
+      this.users_map.set(this.active_user!, tokens);
+    }
 
     this.saveStore();
   }
@@ -247,15 +246,21 @@ class SpotifyClient {
     };
   }
 
-  private async assingTokensToEmail() {
-    const data = await this.fetch<{ email: string }>("/me");
+  private async assingTokensToEmail(tokens: UserTokens) {
+    const res = await fetch(this.api_url + "/me", {
+      headers: {
+        Authorization: "Bearer " + tokens.access_token,
+      },
+    });
+
+    const data = res.ok
+      ? ((await res.json()) as { email?: string })
+      : undefined;
 
     if (!data || !data.email) throw Error("Fetching user email failed");
 
-    const userTokens = this.users_map.get("temp");
-    this.users_map.set(data.email, userTokens!);
-    this.users_map.delete("temp");
-    await this.setActiveUser(data.email);
+    this.users_map.set(data.email, tokens);
+    this.active_user = data.email;
   }
 }
 
