@@ -21,6 +21,16 @@ export interface CdTimingConfig {
   outroDurationMs: number;
 }
 
+export interface CalicoTimingConfig {
+  introJumpMs: number;
+  introSettleMs: number;
+  lickPeriodMs: number;
+  lickCount: number;
+  outroDurationMs: number;
+  pauseMinMs: number;
+  pauseMaxMs: number;
+}
+
 export interface AnimationFrame {
   ctx: ReturnType<Canvas["getContext"]>;
   width: number;
