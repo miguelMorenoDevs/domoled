@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "format:check:crlf": "prettier --check --end-of-line crlf .",
     "dev": "pnpx tsx --env-file=.env src/app.ts",
     "prepare": "node -e \"require('fs').existsSync('.git') && require('child_process').execFileSync('git', ['config', 'core.hooksPath', '.githooks'], { stdio: 'inherit' })\""
   },
