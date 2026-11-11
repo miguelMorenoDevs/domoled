@@ -32,7 +32,7 @@ pnpm build   # tsc -> dist/
 ```
 
 - `tsx` is fetched on demand by `pnpx`; it is not a declared dependency.
-- `pnpm test` intentionally exits 1 ("no test specified"). There is no test suite.
+- `pnpm test` builds `test/` (via `tsconfig.test.json`, output in `dist-test/`) and runs the built-in `node --test` runner. No test dependencies are used.
 - No lint or formatter config exists.
 
 ## Issue and PR agents
