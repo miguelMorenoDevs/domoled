@@ -9,6 +9,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { createCanvas, loadImage, Canvas, Image } from "@napi-rs/canvas";
 import type { AnimatorConfig, LedAnimation, TrackData } from "./types.js";
 import { CdAnimation } from "./animations/cd.js";
+import { CalicoCatAnimation } from "./animations/calico.js";
 
 /** Raised when the album art URL cannot be fetched or decoded. */
 export class AlbumArtLoadError extends Error {
@@ -19,54 +20,6 @@ export class AlbumArtLoadError extends Error {
     this.name = "AlbumArtLoadError";
     this.imageUrl = imageUrl;
   }
-}
-
-const IDLE_CAT = {
-  jumpMs: 1200,
-  settleMs: 700,
-  lickPeriodMs: 800,
-  lickCount: 3,
-  pauseMinMs: 5000,
-  pauseMaxMs: 10000,
-};
-
-const CAT_WHITE = "#f5f1ea";
-const CAT_ORANGE = "#e8892b";
-const CAT_BLACK = "#1c1c1c";
-
-type CanvasContext = ReturnType<Canvas["getContext"]>;
-
-function lerp(from: number, to: number, progress: number): number {
-  return from + (to - from) * progress;
-}
-
-function fillEllipse(
-  ctx: CanvasContext,
-  x: number,
-  y: number,
-  rx: number,
-  ry: number,
-  color: string,
-): void {
-  ctx.beginPath();
-  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
-}
-
-function fillTriangle(
-  ctx: CanvasContext,
-  points: readonly (readonly [number, number])[],
-  color: string,
-): void {
-  const [first, ...rest] = points;
-  if (!first) return;
-  ctx.beginPath();
-  ctx.moveTo(first[0], first[1]);
-  for (const [px, py] of rest) ctx.lineTo(px, py);
-  ctx.closePath();
-  ctx.fillStyle = color;
-  ctx.fill();
 }
 
 let LedMatrix: any;
@@ -125,9 +78,8 @@ export class CdAnimator {
   private startTime: number = 0;
   private progressOffsetMs: number = 0;
 
-  private idleEnabled: boolean = false;
-  private idleCycleStartMs: number = 0;
-  private idleCycleDurationMs: number = 0;
+  private idleAnimation: LedAnimation | null = null;
+  private idleStartMs: number = 0;
 
   private wss: WebSocketServer | null = null;
   private wsClients: Set<WebSocket> = new Set();
@@ -227,18 +179,16 @@ export class CdAnimator {
   }
 
   /**
-   * Starts the idle loop: a sleeping calico cat jumps in, lies down and licks its leg.
+   * Starts the idle loop: a calico cat jumps in, lies down, licks its leg and jumps out.
    * Call only for an authenticated user with nothing playing.
    */
   public startIdle(): void {
-    if (this.idleEnabled && this.intervalId) return;
+    if (this.idleAnimation && this.intervalId) return;
 
     this.stop(); // Replaces any running CD animation
 
-    const now = Date.now();
-    this.idleEnabled = true;
-    this.idleCycleStartMs = now;
-    this.idleCycleDurationMs = 0;
+    this.idleAnimation = new CalicoCatAnimation();
+    this.idleStartMs = Date.now();
 
     console.log("[CdAnimator] Idle cat animation started.");
     const frameDelay = 1000 / this.config.fps;
@@ -253,7 +203,7 @@ export class CdAnimator {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    this.idleEnabled = false;
+    this.idleAnimation = null;
     this.exitAnimation();
     this.matrix.clear();
     this.matrix.sync();
@@ -269,160 +219,20 @@ export class CdAnimator {
   }
 
   /**
-   * Renders one idle frame: the calico cat jumps in, settles, licks and sleeps.
+   * Renders one idle frame by drawing the calico cat animation.
    */
   private renderIdleFrame = (): void => {
-    const now = Date.now();
-    const { jumpMs, settleMs, lickPeriodMs, lickCount } = IDLE_CAT;
-    const activeMs = jumpMs + settleMs + lickPeriodMs * lickCount;
-
-    if (now - this.idleCycleStartMs >= this.idleCycleDurationMs) {
-      const pauseMs =
-        IDLE_CAT.pauseMinMs +
-        Math.random() * (IDLE_CAT.pauseMaxMs - IDLE_CAT.pauseMinMs);
-      this.idleCycleStartMs = now;
-      this.idleCycleDurationMs = activeMs + pauseMs;
-    }
-
-    const t = now - this.idleCycleStartMs;
-    let x = this.canvas.width / 2;
-    let jump = 0;
-    let lie = 1;
-    let lick = 0;
-
-    if (t < jumpMs) {
-      const progress = t / jumpMs;
-      x = lerp(8, this.canvas.width / 2, progress);
-      jump = Math.sin(Math.PI * progress) * 16;
-      lie = 0;
-    } else if (t < jumpMs + settleMs) {
-      const progress = (t - jumpMs) / settleMs;
-      lie = 1 - Math.pow(1 - progress, 2);
-    } else if (t < activeMs) {
-      const lickT = t - jumpMs - settleMs;
-      lick = Math.max(0, Math.sin((2 * Math.PI * lickT) / lickPeriodMs));
-    }
-
-    const breath = Math.sin(now / 600) * 0.04;
+    if (!this.idleAnimation) return;
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.drawCat({ x, jump, lie, lick, breath, sleeping: t >= activeMs });
+    this.idleAnimation.render({
+      ctx: this.ctx,
+      width: this.canvas.width,
+      height: this.canvas.height,
+      elapsedMs: Date.now() - this.idleStartMs,
+    });
     this.presentFrame();
   };
-
-  private drawCat(pose: {
-    x: number;
-    jump: number;
-    lie: number;
-    lick: number;
-    breath: number;
-    sleeping: boolean;
-  }): void {
-    const ctx = this.ctx;
-    const { x, lie, lick, breath } = pose;
-    const y = -pose.jump;
-    const lerpPose = (standing: number, lying: number) =>
-      lerp(standing, lying, lie);
-
-    // Body: upright oval when standing, flat loaf when lying.
-    const bodyX = lerpPose(x - 1, x);
-    const bodyY = lerpPose(40, 44) + y;
-    const bodyRx = lerpPose(9, 13);
-    const bodyRy = lerpPose(8, 4.5) * (1 + breath);
-
-    // Head: rests on the front paws and tilts down while licking.
-    const headX = lerpPose(x + 8, x + 13) + lick * 1;
-    const headY = lerpPose(31, 42) + y + lick * 2;
-    const headR = 5.5;
-
-    // Tail: curls along the floor when lying down.
-    ctx.beginPath();
-    ctx.moveTo(bodyX - bodyRx * 0.8, bodyY + bodyRy * 0.3);
-    ctx.quadraticCurveTo(
-      lerpPose(x - 16, x - 18),
-      lerpPose(44, 49) + y,
-      lerpPose(x - 14, x - 17),
-      lerpPose(30, 42) + y,
-    );
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = CAT_ORANGE;
-    ctx.lineCap = "round";
-    ctx.stroke();
-
-    // Legs: four stubs at the floor, back pair tucked, front paw forward.
-    fillEllipse(
-      ctx,
-      bodyX - bodyRx * 0.6,
-      bodyY + bodyRy * 0.8,
-      2.2,
-      2.2,
-      CAT_WHITE,
-    );
-    fillEllipse(
-      ctx,
-      bodyX + bodyRx * 0.5,
-      bodyY + bodyRy * 0.8,
-      2.2,
-      2.2,
-      CAT_WHITE,
-    );
-
-    // Body with calico patches clipped to its outline.
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(bodyX, bodyY, bodyRx, bodyRy, 0, 0, Math.PI * 2);
-    ctx.fillStyle = CAT_WHITE;
-    ctx.fill();
-    ctx.clip();
-    fillEllipse(ctx, bodyX - 4, bodyY - 1, 5, 4.5, CAT_ORANGE);
-    fillEllipse(ctx, bodyX + 4, bodyY - 2, 3, 3, CAT_BLACK);
-    fillEllipse(ctx, bodyX + 9, bodyY + 1, 2.5, 2, CAT_ORANGE);
-    ctx.restore();
-
-    // Ears behind the head.
-    const earBack = [
-      [headX - 4, headY - 3],
-      [headX - 5, headY - 9],
-      [headX - 1, headY - 4],
-    ] as const;
-    fillTriangle(ctx, earBack, CAT_ORANGE);
-
-    // Head with calico cap and cheek patch.
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(headX, headY, headR, 0, Math.PI * 2);
-    ctx.fillStyle = CAT_WHITE;
-    ctx.fill();
-    ctx.clip();
-    fillEllipse(ctx, headX - 2, headY - 3, 3.5, 2.5, CAT_ORANGE);
-    fillEllipse(ctx, headX + 3, headY + 2, 2, 2, CAT_BLACK);
-    ctx.restore();
-
-    // Front ear.
-    const earFront = [
-      [headX + 1, headY - 4],
-      [headX + 2, headY - 10],
-      [headX + 5, headY - 3],
-    ] as const;
-    fillTriangle(ctx, earFront, CAT_BLACK);
-
-    // Closed eyes while asleep.
-    if (pose.sleeping || lie > 0.5) {
-      ctx.beginPath();
-      ctx.arc(headX + 2.5, headY - 0.5, 1.2, Math.PI * 0.1, Math.PI * 0.9);
-      ctx.strokeStyle = CAT_BLACK;
-      ctx.lineWidth = 0.8;
-      ctx.stroke();
-    }
-
-    // Front leg: resting on the floor, raised to the mouth while licking.
-    const pawX = lerp(headX + 1, headX + 4, lick);
-    const pawY = lerp(bodyY + bodyRy * 0.8, headY + 3, lick);
-    if (lick > 0.5) {
-      fillEllipse(ctx, headX + 4, headY + 3.5, 1.4, 1, "#ff7fa0");
-    }
-    fillEllipse(ctx, pawX, pawY, 2.6, 1.8, CAT_WHITE);
-  }
 
   /**
    * Renders one CD frame: clears the canvas, lets the active animation draw, then pushes it out.
