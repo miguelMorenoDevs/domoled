@@ -8,7 +8,7 @@ export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
   introJumpMs: 1200,
   introSettleMs: 700,
   stretchPeriodMs: 10000,
-  stretchMs: 1500,
+  stretchMs: 4000,
   outroDurationMs: 1200,
 };
 
@@ -89,11 +89,21 @@ export function calicoPhaseAt(
   return { phase: "loop", elapsedInPhaseMs: elapsedMs - introMs };
 }
 
-/** Stretch amount (0..1) at loopMs into the loop: one stretch every stretchPeriodMs, then asleep. */
-export function stretchAt(loopMs: number, timing: CalicoTimingConfig): number {
+/**
+ * Stand and stretch (each 0..1) at loopMs into the loop: every stretchPeriodMs the cat stands up,
+ * stretches in the middle of stretchMs, then lies back down to sleep.
+ */
+export function standStretchAt(
+  loopMs: number,
+  timing: CalicoTimingConfig,
+): { stand: number; stretch: number } {
   const t = loopMs % timing.stretchPeriodMs;
-  if (t >= timing.stretchMs) return 0;
-  return Math.sin((Math.PI * t) / timing.stretchMs);
+  if (t >= timing.stretchMs) return { stand: 0, stretch: 0 };
+  const u = t / timing.stretchMs;
+  const stand = Math.min(1, u / 0.2, (1 - u) / 0.2);
+  const s = (u - 0.25) / 0.5;
+  const stretch = s > 0 && s < 1 ? Math.sin(Math.PI * s) : 0;
+  return { stand, stretch };
 }
 
 function calicoPose(
@@ -125,14 +135,16 @@ function calicoPose(
         eyesClosed: progress >= 0.5,
       };
     }
-    case "loop":
+    case "loop": {
+      const { stand, stretch } = standStretchAt(ms, timing);
       return {
         x: center,
         jump: 0,
-        lie: 1,
-        stretch: stretchAt(ms, timing),
-        eyesClosed: stretchAt(ms, timing) < 0.3,
+        lie: 1 - stand,
+        stretch,
+        eyesClosed: stand < 0.5,
       };
+    }
     case "outro": {
       const progress = ms / timing.outroDurationMs;
       return {
@@ -193,15 +205,15 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   const lerpPose = (standing: number, lying: number) =>
     lerp(standing, lying, lie);
 
-  // Body: upright oval when standing, flat loaf when lying; lengthens while stretching.
+  // Body: upright oval when standing, flat loaf when lying; rear lifts and lengthens while stretching.
   const bodyX = lerpPose(x - 1, x);
-  const bodyY = lerpPose(40, 44) + y;
+  const bodyY = lerpPose(40, 44) + y - stretch * 2;
   const bodyRx = lerpPose(9, 13) + stretch * 2;
   const bodyRy = lerpPose(8, 4.5) * (1 + breath);
 
-  // Head: rests on the front paws and lifts forward while stretching.
-  const headX = lerpPose(x + 8, x + 13) + stretch * 2;
-  const headY = lerpPose(31, 42) + y - stretch * 3;
+  // Head: rests on the front paws, and dips forward while stretching.
+  const headX = lerpPose(x + 8, x + 13) + stretch * 3;
+  const headY = lerpPose(31, 42) + y + stretch * 4;
   const headR = 5.5;
 
   // Tail: curls along the floor when lying down.
