@@ -7,8 +7,8 @@ import type {
 export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
   introJumpMs: 1200,
   introSettleMs: 700,
-  stretchPeriodMs: 10000,
-  sleepMs: 4000,
+  stretchPeriodMs: 14000,
+  sleepMs: 10000,
   stretchMs: 4000,
   outroDurationMs: 1200,
 };
