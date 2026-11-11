@@ -70,4 +70,4 @@ number=$(gh pr list --head "$(git branch --show-current)" --state open --limit 1
 gh workflow run pr-review.yml -f pr="$number"
 ```
 
-The review may approve and auto-merge the PR, so only request it when the branch is ready.
+The review may approve, and auto-merge merges the PR when the prompt enabled it, so only request it when the branch is ready.

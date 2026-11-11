@@ -1,0 +1,31 @@
+name: issue implement comment
+
+# A maintainer comments `implement` on an open ai-ready issue. The PR is opened without auto-merge.
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  implement:
+    if: >-
+      !github.event.issue.pull_request &&
+      github.event.issue.state == 'open' &&
+      github.event.comment.body == 'implement' &&
+      contains(github.event.issue.labels.*.name, 'ai-ready') &&
+      contains(fromJSON('["MEMBER","OWNER","COLLABORATOR"]'), github.event.comment.author_association)
+    permissions:
+      id-token: write
+      contents: write
+      issues: write
+      pull-requests: write
+      actions: write
+      # GITHUB_TOKEN has no workflows permission; `workflows: write` would invalidate this file.
+    # Same group as issue-agent.yml so the two paths never run one issue at once.
+    concurrency:
+      group: issue-agent-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/issue-implement.yml
+    with:
+      issue: ${{ github.event.issue.number }}
+      automerge: false
+    secrets: inherit

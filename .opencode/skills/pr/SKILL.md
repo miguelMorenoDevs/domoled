@@ -35,11 +35,13 @@ gh pr create --base main --title "<commit subject>" --body "<body>"
 
 For a long body, pipe it with `--body-file -` instead.
 
-- As the PR creator, enable auto-merge so it merges once approved:
+- Enable auto-merge only when the prompt says to. Then, as the PR creator, it merges once approved:
 
 ```
 gh pr merge --auto --squash
 ```
+
+Otherwise leave it off: a human merges the PR.
 
 - Body sections, in this order:
 

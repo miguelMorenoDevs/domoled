@@ -25,4 +25,4 @@ Raspberry Pi LED matrix that animates the Spotify track currently playing. Expre
 - Every issue carries one label from each group: `ai-ready`/`needs-plan`, `complexity: low|mid|high`, `auto`/`review`.
 - Conventional commits, lowercase subject, scope when useful: `chore(spotify): ...`, `fix(led): ...`. One logical commit, no tool attribution.
 - For the full branch, commit and PR spec (body sections, `gh` command), use the `pr` skill in `.opencode/skills/pr/SKILL.md`. `gh` is always available.
-- An issue with both `ai-ready` and `auto` is picked up by `.github/workflows/issue-agent.yml`, which opens the PR itself.
+- An issue with both `ai-ready` and `auto` is picked up by `.github/workflows/issue-agent.yml`, which opens the PR itself and enables auto-merge. A maintainer comment `implement` on an open `ai-ready` issue runs `.github/workflows/issue-implement-comment.yml`, which opens the PR without auto-merge. Both call `.github/workflows/issue-implement.yml`.
