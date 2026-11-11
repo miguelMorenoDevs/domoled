@@ -34,3 +34,16 @@ else
   fi
   exit "$status"
 fi
+
+# A green implementation run must leave a PR that closes the issue; the agent can exit 0 without pushing.
+# shortcut: scans the latest 100 PRs, raise the limit if the repo outgrows it.
+if [ "${GITHUB_JOB:-}" = "implement" ]; then
+  n=$(jq -r .issue.number "$GITHUB_EVENT_PATH")
+  prs=$(gh pr list --state all --limit 100 --json number,body |
+    jq -r --arg n "$n" '[.[] | select(.body | test("(close[sd]?|fix(e[sd])?|resolve[sd]?):?\\s+#" + $n + "\\b"; "i"))] | map(.number) | join(" ")')
+  if [ -z "$prs" ]; then
+    echo "no PR closes #$n: the agent did not open one" >&2
+    exit 1
+  fi
+  echo "PR(s) closing #$n: $prs" >&2
+fi
