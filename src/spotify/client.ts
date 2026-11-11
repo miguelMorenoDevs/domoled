@@ -45,6 +45,8 @@ class SpotifyClient {
     body.append("grant_type", grant_type);
     body.append("client_id", this.client_id);
 
+    let storedRefreshToken: string | undefined;
+
     switch (grant_type) {
       case "authorization_code":
         body.append("redirect_uri", this.redirect_uri);
@@ -62,6 +64,7 @@ class SpotifyClient {
         if (!userTokens || !userTokens.refresh_token)
           throw Error("No refresh token available");
 
+        storedRefreshToken = userTokens.refresh_token;
         body.append("refresh_token", userTokens.refresh_token);
         break;
     }
@@ -83,12 +86,15 @@ class SpotifyClient {
 
     const { access_token, refresh_token } = (await res.json()) as {
       access_token: string;
-      refresh_token: string;
+      refresh_token?: string;
     };
 
     if (grant_type === "authorization_code") this.active_user = "temp";
 
-    this.users_map.set(this.active_user!, { access_token, refresh_token });
+    this.users_map.set(this.active_user!, {
+      access_token,
+      refresh_token: refresh_token ?? storedRefreshToken!,
+    });
 
     if (grant_type === "authorization_code") await this.assingTokensToEmail();
   }
