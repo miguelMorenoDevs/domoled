@@ -37,9 +37,12 @@ pnpm build   # tsc -> dist/
 
 ## Issue and PR agents
 
-`.github/workflows/issue-agent.yml` runs OpenCode when an issue gets both the `ai-ready` and `auto` labels. It implements the issue with `.opencode/skills/issue/SKILL.md` and opens a PR that closes it.
+Two triggers implement an issue. Both run the reusable `.github/workflows/issue-implement.yml`, which runs OpenCode with `.opencode/skills/issue/SKILL.md` and opens a PR that closes the issue:
 
-- The reviewer runs when a member, owner or collaborator comments `@miguelmoreno-reviewer` on a PR (`.github/workflows/pr-review.yml`), or on manual dispatch. It skips drafts and forks, and comments on the PR when the review starts. The PR author enables auto-merge when opening the PR. The reviewer only decides: it approves and GitHub merges, or it requests changes with the problem in the review body.
+- `.github/workflows/issue-agent.yml` runs when an issue gets both the `ai-ready` and `auto` labels. The PR enables auto-merge.
+- `.github/workflows/issue-implement-comment.yml` runs when a member, owner or collaborator comments exactly `implement` on an open `ai-ready` issue. The PR does not enable auto-merge; a human merges it.
+
+- The reviewer runs when a member, owner or collaborator comments `@miguelmoreno-reviewer` on a PR (`.github/workflows/pr-review.yml`), or on manual dispatch. It skips drafts and forks, and comments on the PR when the review starts. The PR author enables auto-merge only when the implementation run asks for it. The reviewer only decides: it approves, and GitHub merges if auto-merge is enabled, or it requests changes with the problem in the review body.
 - `GITHUB_TOKEN` events do not trigger workflows, so `.opencode/skills/issue/SKILL.md` makes the agent request the review itself with `gh workflow run pr-review.yml -f pr=<n>` after opening the PR. Commenting `@miguelmoreno-reviewer` on a PR also works for people.
 - Both workflows need the `OPENCODE_CLIENT_ID` secret: they exchange their GitHub Actions OIDC token for a short-lived OpenCode token (`id-token: write`). They install OpenCode V2 with `npm install -g @opencode/cli`. The implementation job runs `opencode-go/claude-haiku-5-5` and the reviewer runs `opencode-go/deepseek-v4.1-flash`. The implementation model is selected in `opencode-run.sh` for the `implement` job because the agent token cannot edit workflow files; change that selection or the `--model` flag to use another provider/model.
 - Both workflows run OpenCode through `.github/scripts/opencode-run.sh`. It captures the JSON stream and prints only the final assistant message in the step log, or the error and exit status when the run fails. For the `implement` job it also fails when no PR closes the issue (`Closes #N` in a PR body), so a green run always means a PR exists.

@@ -113,7 +113,7 @@ jobs:
                and stop. Do not merge, disable auto-merge, or approve.
             5. Otherwise submit a real approving review, using the app token:
                `GH_TOKEN="$REVIEW_TOKEN" gh pr review ${{ steps.pr.outputs.number }} --approve --body "Review passed: <one-line reason>"`.
-               Auto-merge was enabled by the PR author when it was opened; do not touch it.
+               Do not touch auto-merge, whether or not the PR has it enabled.
 
             Only review and decide: submit the review with `$REVIEW_TOKEN`; use `GH_TOKEN` only to
             read. Do not push commits, edit files, or ask questions. Work non-interactively.

@@ -1,0 +1,78 @@
+name: issue implement
+
+# Reusable: callers pass the issue number and whether the PR is auto-merged.
+on:
+  workflow_call:
+    inputs:
+      issue:
+        description: Issue number to implement
+        required: true
+        type: number
+      automerge:
+        description: Enable auto-merge on the PR the agent opens
+        required: true
+        type: boolean
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      issues: write
+      pull-requests: write
+      actions: write
+      # GITHUB_TOKEN has no workflows permission; `workflows: write` would invalidate this file.
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      # tsc only needs the types; native modules are not built in CI.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Install OpenCode
+        run: npm install -g @opencode/cli
+
+      - name: Sign in to OpenCode
+        env:
+          AUDIENCE: https://opencode.ai/console
+          OPENCODE_CLIENT_ID: ${{ secrets.OPENCODE_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          : "${OPENCODE_CLIENT_ID:?missing OPENCODE_CLIENT_ID secret}"
+          oidc=$(curl -sS --fail-with-body --oauth2-bearer "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUDIENCE" | jq -er .value)
+          token=$(curl -sS --fail-with-body https://opencode.ai/console/auth/oauth/token \
+            -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
+            -d subject_token_type=urn:ietf:params:oauth:token-type:jwt \
+            -d client_id="$OPENCODE_CLIENT_ID" \
+            -d subject_token="$oidc" | jq -er .access_token)
+          echo "::add-mask::$token"
+          echo "OPENCODE_API_KEY=$token" >> "$GITHUB_ENV"
+
+      - name: Implement issue
+        run: bash .github/scripts/opencode-run.sh --model opencode-go/deepseek-v4.1-flash "$PROMPT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROMPT: |
+            Implement GitHub issue #${{ inputs.issue }} end to end and open a PR that closes it.
+            Read the issue with `gh issue view ${{ inputs.issue }}`.
+            Follow `.opencode/skills/issue/SKILL.md` and `.opencode/skills/pr/SKILL.md`.
+            Work non-interactively: never ask questions; make a reasonable call and note assumptions in the PR.
+            Do not use web search or fetch URLs; local files and `gh` are enough.
+            Run `pnpm build` before committing. Skip live Spotify and simulator checks that need `.env` or hardware,
+            and state what you did not verify under `## Verification`.
+            ${{ inputs.automerge && 'Enable auto-merge on the PR as the pr skill describes.' || 'Do not enable auto-merge: a human merges this PR.' }}
+            After opening the PR, request the review yourself with `gh workflow run pr-review.yml -f pr=<n>`.
