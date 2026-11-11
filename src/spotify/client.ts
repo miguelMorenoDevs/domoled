@@ -57,7 +57,7 @@ class SpotifyClient {
             "base64",
           );
         break;
-      case "refresh_token":
+      case "refresh_token": {
         if (!this.active_user) throw Error("There is no active user");
 
         const userTokens = this.users_map.get(this.active_user);
@@ -67,6 +67,7 @@ class SpotifyClient {
         storedRefreshToken = userTokens.refresh_token;
         body.append("refresh_token", userTokens.refresh_token);
         break;
+      }
     }
 
     const res = await fetch(this.auth_url + "/token", {
