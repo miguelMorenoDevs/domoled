@@ -12,10 +12,10 @@ Animates the album art of the Spotify track currently playing on a 64x64 Raspber
 - Automatic Spotify access-token refresh with a single retry when the API returns `401`.
 - Automatic matrix mock on Windows/macOS plus a live WebSocket frame stream for `simulator.html`.
 - Clear `502` response when the Spotify album art cannot be loaded, instead of a generic `400`.
-- Idle calico cat animation while authenticated with nothing playing: it jumps in from the left and lies down with its eyes closing (intro), licks its orange leg with a visible pink tongue (loop), then opens its eyes and jumps out to the right (outro), and pauses 5-10 s before repeating. It replaces the CD animation when a track plays and returns when playback stops or ends.
+- Idle calico cat animation while authenticated with nothing playing: it jumps in from the left and lies down with its eyes closing once (intro), then licks its orange leg with a pink tongue from its mouth until it is replaced (loop). When a track starts or the login QR is shown, it opens its eyes and jumps out to the right once (outro) before the new content appears. It returns when playback stops or ends.
 - Login while nothing is playing returns a `200` message asking the user to start a track and log in again, and shows the idle cat.
 - GitHub issue agent: `ai-ready` + `auto` issues are implemented, reviewed and auto-merged through Actions. A maintainer comment `implement` on an open `ai-ready` issue implements it too, but the PR waits for a human to merge. Merged PRs close their linked issues even when GitHub's native auto-close misses them.
-- Pre-commit hook (`.githooks/pre-commit`, installed by `pnpm install`) runs build, lint, format check and tests before each commit. Bypass with `git commit --no-verify`.
+- Pre-commit hook (`.githooks/pre-commit`, installed by `pnpm install`) runs build, lint, format check and tests before each commit. On Windows it checks CRLF line endings (`pnpm format:check:crlf`); elsewhere it checks LF (`pnpm format:check`). Bypass with `git commit --no-verify`.
 
 ## Docs
 
