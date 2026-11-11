@@ -11,7 +11,8 @@ Animates the album art of the Spotify track currently playing on a 64x64 Raspber
 - Automatic Spotify access-token refresh with a single retry when the API returns `401`.
 - Automatic matrix mock on Windows/macOS plus a live WebSocket frame stream for `simulator.html`.
 - Clear `502` response when the Spotify album art cannot be loaded, instead of a generic `400`.
-- Login while nothing is playing returns a `200` message asking the user to start a track and log in again, and leaves the matrix idle.
+- Idle calico cat animation while authenticated with nothing playing: it jumps to the center, lies down, licks its leg and repeats every 5-10 s. It replaces the CD animation when a track plays and returns when playback stops or ends.
+- Login while nothing is playing returns a `200` message asking the user to start a track and log in again, and shows the idle cat.
 - GitHub issue agent: `ai-ready` + `auto` issues are implemented, reviewed and auto-merged through Actions. A maintainer comment `implement` on an open `ai-ready` issue implements it too, but the PR waits for a human to merge. Merged PRs close their linked issues even when GitHub's native auto-close misses them.
 
 ## Docs
