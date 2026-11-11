@@ -43,17 +43,23 @@ router.get("/callback", async (req: Request, res: Response) => {
 
     const song = await SpotifyClient.getCurrentSong();
     console.log({ song });
-    if (song) {
-      await cdAnimator.setTrack({
-        imageUrl: song.image,
-        durationMs: song.durationMs,
-        progressMs: song.progressMs,
-      });
-      cdAnimator.play();
-      console.info(
-        "Check your animation in: " + process.cwd() + "/simulator.html",
+    if (!song) {
+      cdAnimator.stop();
+      res.send(
+        "Logged in, but no track is playing on Spotify right now. Start a track and log in again to animate it.",
       );
+      return;
     }
+
+    await cdAnimator.setTrack({
+      imageUrl: song.image,
+      durationMs: song.durationMs,
+      progressMs: song.progressMs,
+    });
+    cdAnimator.play();
+    console.info(
+      "Check your animation in: " + process.cwd() + "/simulator.html",
+    );
 
     res.sendFile(path.join(process.cwd(), "public", "success.html"));
   } catch (error) {
