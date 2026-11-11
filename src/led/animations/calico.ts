@@ -8,6 +8,7 @@ export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
   introJumpMs: 1200,
   introSettleMs: 700,
   stretchPeriodMs: 10000,
+  sleepMs: 4000,
   stretchMs: 4000,
   outroDurationMs: 1200,
 };
@@ -90,15 +91,15 @@ export function calicoPhaseAt(
 }
 
 /**
- * Stand and stretch (each 0..1) at loopMs into the loop: every stretchPeriodMs the cat stands up,
- * stretches in the middle of stretchMs, then lies back down to sleep.
+ * Stand and stretch (each 0..1) at loopMs into the loop: every stretchPeriodMs the cat sleeps for
+ * sleepMs, then stands up, stretches in the middle of stretchMs, and lies back down to sleep.
  */
 export function standStretchAt(
   loopMs: number,
   timing: CalicoTimingConfig,
 ): { stand: number; stretch: number } {
-  const t = loopMs % timing.stretchPeriodMs;
-  if (t >= timing.stretchMs) return { stand: 0, stretch: 0 };
+  const t = (loopMs % timing.stretchPeriodMs) - timing.sleepMs;
+  if (t < 0 || t >= timing.stretchMs) return { stand: 0, stretch: 0 };
   const u = t / timing.stretchMs;
   const stand = Math.min(1, u / 0.2, (1 - u) / 0.2);
   const s = (u - 0.25) / 0.5;
@@ -247,6 +248,15 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   fillEllipse(ctx, bodyX + 9, bodyY + 1, 2.5, 2, CAT_ORANGE);
   ctx.restore();
 
+  // Front leg: a limb from the shoulder to the paw, so the paw stays attached while stretching.
+  const pawX = headX + 1 + stretch * 4;
+  ctx.beginPath();
+  ctx.moveTo(bodyX + bodyRx * 0.5, bodyY + bodyRy * 0.5);
+  ctx.lineTo(pawX, floorY);
+  ctx.lineWidth = 2.4;
+  ctx.strokeStyle = CAT_ORANGE;
+  ctx.stroke();
+
   // Ears behind the head.
   fillTriangle(
     ctx,
@@ -290,6 +300,6 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
     ctx.fillRect(eyeX, eyeY - 1, 1, 2);
   }
 
-  // Front leg: orange, resting on the floor and reaching forward while stretching.
-  fillEllipse(ctx, headX + 1 + stretch * 4, floorY, 2.4, 1.8, CAT_ORANGE);
+  // Paw: orange, resting on the floor and reaching forward while stretching.
+  fillEllipse(ctx, pawX, floorY, 2.4, 1.8, CAT_ORANGE);
 }
