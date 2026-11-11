@@ -86,8 +86,9 @@ export class CdAnimator {
   private startTime: number = 0;
   private progressOffsetMs: number = 0;
 
-  private idleAnimation: LedAnimation | null = null;
+  private idleAnimation: CalicoCatAnimation | null = null;
   private idleStartMs: number = 0;
+  private afterIdle: (() => void) | null = null;
 
   private qrModules: boolean[][] = [];
 
@@ -140,7 +141,7 @@ export class CdAnimator {
    * Node Canvas `loadImage` natively supports http/https URLs!
    */
   public async setTrack(track: TrackData): Promise<void> {
-    this.stop(); // Halt any current animation
+    if (!this.idleAnimation) this.stop(); // Halt any current animation
 
     // Never keep the previous track's art/duration when this load fails.
     this.trackLoaded = false;
@@ -176,6 +177,7 @@ export class CdAnimator {
       console.warn("No track loaded. Call setTrack() first.");
       return;
     }
+    if (this.waitForIdleExit(() => this.play())) return;
 
     this.stop(); // Prevent overlapping intervals
 
@@ -189,11 +191,12 @@ export class CdAnimator {
   }
 
   /**
-   * Starts the idle loop: a calico cat jumps in, lies down, licks its leg and jumps out.
-   * Call only for an authenticated user with nothing playing.
+   * Starts the idle cat: it jumps in once, licks its leg in a loop, and jumps out once
+   * when play() or showQr() takes over. Call only for an authenticated user with nothing playing.
    */
   public startIdle(): void {
-    if (this.idleAnimation && this.intervalId) return;
+    if (this.idleAnimation && !this.idleAnimation.exiting) return;
+    if (this.waitForIdleExit(() => this.startIdle())) return;
 
     this.stop(); // Replaces any running CD animation
 
@@ -209,6 +212,8 @@ export class CdAnimator {
    * Shows a login QR code (dark modules on white) until the stream is replaced.
    */
   public showQr(url: string): void {
+    if (this.waitForIdleExit(() => this.showQr(url))) return;
+
     this.stop();
 
     const qr = new QRCode(-1, QRErrorCorrectLevel.L);
@@ -228,10 +233,19 @@ export class CdAnimator {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    this.idleAnimation = null;
     this.exitAnimation();
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.presentFrame();
+  }
+
+  /**
+   * Asks the idle cat to jump out. Returns true when the caller must wait: `next` runs once the outro ends.
+   */
+  private waitForIdleExit(next: () => void): boolean {
+    if (!this.idleAnimation) return false;
+    this.afterIdle = next;
+    this.idleAnimation.exit(Date.now() - this.idleStartMs);
+    return true;
   }
 
   /**
@@ -257,6 +271,13 @@ export class CdAnimator {
       elapsedMs: Date.now() - this.idleStartMs,
     });
     this.presentFrame();
+
+    if (!this.idleAnimation.finished) return;
+    this.idleAnimation = null;
+    this.stop();
+    const next = this.afterIdle;
+    this.afterIdle = null;
+    next?.();
   };
 
   /**

@@ -8,13 +8,10 @@ export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
   introJumpMs: 1200,
   introSettleMs: 700,
   lickPeriodMs: 800,
-  lickCount: 3,
   outroDurationMs: 1200,
-  pauseMinMs: 5000,
-  pauseMaxMs: 10000,
 };
 
-export type CalicoPhase = "intro" | "loop" | "outro" | "pause";
+export type CalicoPhase = "intro" | "loop" | "outro" | "done";
 
 export interface CalicoPhaseState {
   phase: CalicoPhase;
@@ -69,37 +66,27 @@ function fillTriangle(
   ctx.fill();
 }
 
-/** Length of one cycle without its trailing pause. */
-export function calicoActiveMs(timing: CalicoTimingConfig): number {
-  return (
-    timing.introJumpMs +
-    timing.introSettleMs +
-    timing.lickPeriodMs * timing.lickCount +
-    timing.outroDurationMs
-  );
-}
-
 /**
- * Maps a time inside one cycle to its phase: intro (jump in and lie down), loop (lick),
- * outro (open eyes and jump out to the right), then pause until the cycle ends.
+ * Maps time since the cat appeared to its phase: intro once, loop until exitAtMs,
+ * outro once after exitAtMs, then done. exitAtMs is null while the cat stays.
  */
 export function calicoPhaseAt(
-  cycleMs: number,
+  elapsedMs: number,
+  exitAtMs: number | null,
   timing: CalicoTimingConfig,
 ): CalicoPhaseState {
-  const introMs = timing.introJumpMs + timing.introSettleMs;
-  const loopMs = timing.lickPeriodMs * timing.lickCount;
-  const outroStartMs = introMs + loopMs;
-  const activeMs = outroStartMs + timing.outroDurationMs;
+  if (exitAtMs !== null && elapsedMs >= exitAtMs) {
+    const outroMs = elapsedMs - exitAtMs;
+    if (outroMs < timing.outroDurationMs) {
+      return { phase: "outro", elapsedInPhaseMs: outroMs };
+    }
+    return { phase: "done", elapsedInPhaseMs: 0 };
+  }
 
-  if (cycleMs < introMs) return { phase: "intro", elapsedInPhaseMs: cycleMs };
-  if (cycleMs < outroStartMs) {
-    return { phase: "loop", elapsedInPhaseMs: cycleMs - introMs };
-  }
-  if (cycleMs < activeMs) {
-    return { phase: "outro", elapsedInPhaseMs: cycleMs - outroStartMs };
-  }
-  return { phase: "pause", elapsedInPhaseMs: cycleMs - activeMs };
+  const introMs = timing.introJumpMs + timing.introSettleMs;
+  if (elapsedMs < introMs)
+    return { phase: "intro", elapsedInPhaseMs: elapsedMs };
+  return { phase: "loop", elapsedInPhaseMs: elapsedMs - introMs };
 }
 
 function calicoPose(
@@ -149,40 +136,46 @@ function calicoPose(
         eyesClosed: false,
       };
     }
-    case "pause":
-      return { x: center, jump: 0, lie: 1, lick: 0, eyesClosed: true };
+    case "done":
+      return { x: width + 12, jump: 0, lie: 0, lick: 0, eyesClosed: false };
   }
 }
 
 /**
- * The calico cat: jumps in from the left, lies down with eyes closing, licks its
- * front leg on a loop, then opens its eyes and jumps out to the right before a pause.
+ * The calico cat: jumps in from the left and lies down once, licks its front leg until
+ * exit() is called, then opens its eyes and jumps out to the right once.
  */
 export class CalicoCatAnimation implements LedAnimation {
   private timing: CalicoTimingConfig;
-  private cycleStartMs: number = 0;
-  private cycleDurationMs: number = 0;
+  private exitAtMs: number | null = null;
+  private phase: CalicoPhase = "intro";
 
   constructor(timing: CalicoTimingConfig = DEFAULT_CALICO_TIMING) {
     this.timing = timing;
   }
 
+  get exiting(): boolean {
+    return this.exitAtMs !== null;
+  }
+
+  get finished(): boolean {
+    return this.phase === "done";
+  }
+
+  /** Starts the outro after the current loop; during the intro it waits for the intro to finish. */
+  exit(elapsedMs: number): void {
+    if (this.exitAtMs !== null) return;
+    const introMs = this.timing.introJumpMs + this.timing.introSettleMs;
+    this.exitAtMs = Math.max(elapsedMs, introMs);
+  }
+
   render({ ctx, width, elapsedMs }: AnimationFrame): void {
-    const { timing } = this;
-
-    if (elapsedMs - this.cycleStartMs >= this.cycleDurationMs) {
-      const pauseMs =
-        timing.pauseMinMs +
-        Math.random() * (timing.pauseMaxMs - timing.pauseMinMs);
-      this.cycleStartMs = elapsedMs;
-      this.cycleDurationMs = calicoActiveMs(timing) + pauseMs;
-    }
-
-    const state = calicoPhaseAt(elapsedMs - this.cycleStartMs, timing);
-    if (state.phase === "pause") return;
+    const state = calicoPhaseAt(elapsedMs, this.exitAtMs, this.timing);
+    this.phase = state.phase;
+    if (state.phase === "done") return;
 
     const breath = Math.sin(elapsedMs / 600) * 0.04;
-    const pose = calicoPose(state, width, timing);
+    const pose = calicoPose(state, width, this.timing);
     drawCat(ctx, pose, breath);
   }
 }
@@ -283,8 +276,8 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   const pawY = lerp(floorY, headY + 4.5, lick);
   fillEllipse(ctx, pawX, pawY, 2.4, 1.8, CAT_ORANGE);
 
-  // Tongue last so it sits on top of the raised leg.
+  // Tongue last so it sits on top of the raised leg, starting at the mouth on the head's edge.
   if (lick > 0.5) {
-    fillEllipse(ctx, headX + 5, headY + 6.5, 1.5, 1.2, CAT_TONGUE);
+    fillEllipse(ctx, headX + 3, headY + 4, 1.3, 1.1, CAT_TONGUE);
   }
 }

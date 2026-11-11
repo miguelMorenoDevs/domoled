@@ -1,47 +1,50 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  calicoActiveMs,
   calicoPhaseAt,
+  CalicoCatAnimation,
   DEFAULT_CALICO_TIMING,
 } from "../../src/led/animations/calico.js";
 
 const timing = DEFAULT_CALICO_TIMING;
+const introEnd = timing.introJumpMs + timing.introSettleMs;
 
-test("calico cycle phases switch at intro, loop and outro boundaries", () => {
-  const introEnd = timing.introJumpMs + timing.introSettleMs;
-  const loopEnd = introEnd + timing.lickPeriodMs * timing.lickCount;
-  const outroEnd = loopEnd + timing.outroDurationMs;
-
-  assert.equal(calicoPhaseAt(0, timing).phase, "intro");
-  assert.equal(calicoPhaseAt(timing.introJumpMs - 1, timing).phase, "intro");
-  assert.deepEqual(calicoPhaseAt(introEnd - 1, timing), {
+test("calico intro plays once, then loops without an exit", () => {
+  assert.deepEqual(calicoPhaseAt(0, null, timing), {
     phase: "intro",
-    elapsedInPhaseMs: introEnd - 1,
+    elapsedInPhaseMs: 0,
   });
-  assert.deepEqual(calicoPhaseAt(introEnd, timing), {
+  assert.equal(calicoPhaseAt(introEnd - 1, null, timing).phase, "intro");
+  assert.deepEqual(calicoPhaseAt(introEnd, null, timing), {
     phase: "loop",
     elapsedInPhaseMs: 0,
   });
-  assert.equal(calicoPhaseAt(loopEnd - 1, timing).phase, "loop");
-  assert.deepEqual(calicoPhaseAt(loopEnd, timing), {
+  assert.equal(calicoPhaseAt(10 * 60_000, null, timing).phase, "loop");
+});
+
+test("calico outro plays once after exit, then the cat is done", () => {
+  const exitAt = introEnd + 3000;
+
+  assert.equal(calicoPhaseAt(exitAt - 1, exitAt, timing).phase, "loop");
+  assert.deepEqual(calicoPhaseAt(exitAt, exitAt, timing), {
     phase: "outro",
     elapsedInPhaseMs: 0,
   });
-  assert.equal(calicoPhaseAt(outroEnd - 1, timing).phase, "outro");
-  assert.deepEqual(calicoPhaseAt(outroEnd, timing), {
-    phase: "pause",
-    elapsedInPhaseMs: 0,
-  });
+  assert.equal(
+    calicoPhaseAt(exitAt + timing.outroDurationMs - 1, exitAt, timing).phase,
+    "outro",
+  );
+  assert.equal(
+    calicoPhaseAt(exitAt + timing.outroDurationMs, exitAt, timing).phase,
+    "done",
+  );
 });
 
-test("calicoActiveMs covers intro, loop and outro without the pause", () => {
-  assert.equal(
-    calicoActiveMs(timing),
-    timing.introJumpMs +
-      timing.introSettleMs +
-      timing.lickPeriodMs * timing.lickCount +
-      timing.outroDurationMs,
-  );
-  assert.equal(calicoPhaseAt(calicoActiveMs(timing), timing).phase, "pause");
+test("calico exit requested during the intro waits for the intro to finish", () => {
+  const cat = new CalicoCatAnimation();
+  cat.exit(100);
+
+  assert.equal(cat.exiting, true);
+  assert.equal(cat.finished, false);
+  assert.equal(calicoPhaseAt(introEnd, introEnd, timing).phase, "outro");
 });
