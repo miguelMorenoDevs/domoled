@@ -2,7 +2,7 @@ import path from "node:path";
 import { Router } from "express";
 import type { Request, Response } from "express";
 import qrcode from "qrcode-terminal";
-import SpotifyClient from "./client.js";
+import SpotifyClient, { UserNotLoggedError } from "./client.js";
 import { getLocalIP } from "../utils/network.js";
 import { AlbumArtLoadError, cdAnimator } from "../led/animator.js";
 
@@ -107,9 +107,9 @@ router.post("/users/active", async (req: Request, res: Response) => {
 
     await SpotifyClient.setActiveUser(email);
     res.sendStatus(200);
-  } catch (error: any) {
+  } catch (error) {
     console.error(error);
-    if ("message" in error && error.message.includes("not logged")) {
+    if (error instanceof UserNotLoggedError) {
       res.status(403).send(error.message);
     } else {
       res.sendStatus(502);

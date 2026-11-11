@@ -38,7 +38,7 @@ public/success.html       Friendly page rendered after a successful OAuth callba
 - `GET /spotify/login`
 - `GET /spotify/callback`
 - `GET /spotify/users`
-- `POST /spotify/users/active`
+- `POST /spotify/users/active` (`SpotifyClient.setActiveUser` throws `UserNotLoggedError` for an unknown email; the route maps it to `403` and any other error to `502`)
 - `DELETE /spotify/users/active`
 
 ## Conventions and gotchas

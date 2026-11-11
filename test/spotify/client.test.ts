@@ -10,7 +10,9 @@ process.env["SPOTIFY_CLIENT_SECRET"] ??= "test-client-secret";
 const storeDir = mkdtempSync(path.join(os.tmpdir(), "domoled-test-"));
 process.chdir(storeDir);
 
-const { default: spotify } = await import("../../src/spotify/client.js");
+const { default: spotify, UserNotLoggedError } = await import(
+  "../../src/spotify/client.js"
+);
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -78,6 +80,16 @@ test("getCurrentSong throws when no user is active", async () => {
   await spotify.clearActiveUser();
 
   await assert.rejects(spotify.getCurrentSong(), /There is no active user/);
+});
+
+test("setActiveUser rejects with UserNotLoggedError for an unknown email", async () => {
+  await assert.rejects(
+    spotify.setActiveUser("nobody@example.com"),
+    (error: unknown) =>
+      error instanceof UserNotLoggedError &&
+      error.message === "User is not logged in" &&
+      error.email === "nobody@example.com",
+  );
 });
 
 test("login stores the user under their email and makes it active", async (t) => {
