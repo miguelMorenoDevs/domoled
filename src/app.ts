@@ -1,4 +1,5 @@
 import express from "express";
+import { pathToFileURL } from "node:url";
 
 import SpotifyClient from "./spotify/client.js";
 import spotifyRouter, { loginQrUrl } from "./spotify/routes.js";
@@ -15,5 +16,7 @@ app.use(express.static("public"));
 app.listen(3000, async () => {
   console.log("Server running on port 3000");
   if (await SpotifyClient.hasActiveUser()) cdAnimator.startIdle();
+  else if (process.platform === "win32" || process.platform === "darwin")
+    console.log(`Simulator: ${pathToFileURL("simulator.html").href}`);
   else cdAnimator.showQr(loginQrUrl());
 });

@@ -5,7 +5,7 @@ Animates the album art of the Spotify track currently playing on a 64x64 Raspber
 ## Features
 
 - Spotify OAuth login via QR code, with the code relayed from GitHub Pages to the local device, followed by a friendly HTML success page.
-- With no active user (on boot or after `DELETE /spotify/users/active`), the matrix and simulator show a login QR (`/spotify/login` on the LAN, which redirects to Spotify), then the idle cat after login, then the song.
+- With no active user (on boot or after `DELETE /spotify/users/active`), the matrix shows a login QR (`/spotify/login` on the LAN, which redirects to Spotify), then the idle cat after login, then the song. In local development (win32/darwin) boot prints the simulator URL to the console instead of showing the QR, and the simulator shows nothing until login.
 - CD-style animation: intro slide-in, rotating album art with silver rim and center hole, floating motion, light sheen, and fade-out.
 - Starts at the track's current playback position, so logging in mid-song continues instead of restarting the animation.
 - Multi-user token store persisted to `data/users.json`, reloaded on startup, with an active-user switch (`/spotify/users`).
