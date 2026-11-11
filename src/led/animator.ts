@@ -7,7 +7,8 @@ import type {
 } from "rpi-led-matrix";
 import { WebSocketServer, WebSocket } from "ws";
 import { createCanvas, loadImage, Canvas, Image } from "@napi-rs/canvas";
-import type { AnimatorConfig, TrackData } from "./types.js";
+import type { AnimatorConfig, LedAnimation, TrackData } from "./types.js";
+import { CdAnimation } from "./animations/cd.js";
 
 /** Raised when the album art URL cannot be fetched or decoded. */
 export class AlbumArtLoadError extends Error {
@@ -112,7 +113,9 @@ export class CdAnimator {
   private matrix: LedMatrixInstance;
   private canvas: Canvas;
   private ctx: ReturnType<Canvas["getContext"]>;
-  private cdImage: Image | null = null;
+  private animation: LedAnimation = new CdAnimation();
+  private trackLoaded: boolean = false;
+  private animationActive: boolean = false;
 
   private config: Required<AnimatorConfig>;
   private intervalId: NodeJS.Timeout | null = null;
@@ -132,8 +135,6 @@ export class CdAnimator {
   constructor(config?: AnimatorConfig) {
     this.config = {
       fps: 30,
-      introDurationMs: 2000,
-      outroDurationMs: 5000,
       matrixDimensions: { rows: 64, cols: 64 },
       ...config,
     };
@@ -180,13 +181,14 @@ export class CdAnimator {
     this.stop(); // Halt any current animation
 
     // Never keep the previous track's art/duration when this load fails.
-    this.cdImage = null;
+    this.trackLoaded = false;
     this.currentDurationMs = 0;
     this.trackProgressMs = 0;
 
     console.log(`[CdAnimator] Loading album art from: ${track.imageUrl}`);
+    let art: Image;
     try {
-      this.cdImage = await loadImage(track.imageUrl);
+      art = await loadImage(track.imageUrl);
     } catch (error) {
       console.error(
         `[CdAnimator] Failed to load album art from: ${track.imageUrl}`,
@@ -197,6 +199,8 @@ export class CdAnimator {
 
     this.currentDurationMs = track.durationMs;
     this.trackProgressMs = track.progressMs;
+    this.trackLoaded = true;
+    this.animation.onLoad?.(track, art);
     console.log(
       `[CdAnimator] Track loaded. Duration: ${track.durationMs}ms, position: ${track.progressMs}ms`,
     );
@@ -206,7 +210,7 @@ export class CdAnimator {
    * Starts or resumes the animation from the track's current playback position.
    */
   public play(): void {
-    if (!this.cdImage) {
+    if (!this.trackLoaded) {
       console.warn("No track loaded. Call setTrack() first.");
       return;
     }
@@ -215,6 +219,7 @@ export class CdAnimator {
 
     this.progressOffsetMs = this.trackProgressMs;
     this.startTime = Date.now();
+    this.animationActive = true;
     const frameDelay = 1000 / this.config.fps;
 
     console.log(`[CdAnimator] Playing from ${this.progressOffsetMs}ms...`);
@@ -249,8 +254,18 @@ export class CdAnimator {
       this.intervalId = null;
     }
     this.idleEnabled = false;
+    this.exitAnimation();
     this.matrix.clear();
     this.matrix.sync();
+  }
+
+  /**
+   * Runs the active animation's onExit once per playback, whether the track ended or was stopped.
+   */
+  private exitAnimation(): void {
+    if (!this.animationActive) return;
+    this.animationActive = false;
+    this.animation.onExit?.();
   }
 
   /**
@@ -410,125 +425,27 @@ export class CdAnimator {
   }
 
   /**
-   * The core rendering loop - Layering textures to build a realistic 32x32 CD
+   * Renders one CD frame: clears the canvas, lets the active animation draw, then pushes it out.
    */
   private renderFrame = (): void => {
-    if (!this.cdImage) return;
+    if (!this.trackLoaded) return;
 
     const elapsed = Date.now() - this.startTime + this.progressOffsetMs;
-    const width = this.canvas.width;
-    const height = this.canvas.height;
 
-    this.ctx.clearRect(0, 0, width, height);
-
-    // --- 1. Sizing Math ---
-    // Create a 6-pixel padding so the CD isn't touching the edges
-    const padding = 6;
-    const cdRadius = width / 2 - padding;
-
-    let yPos = height / 2;
-    const xPos = width / 2;
-    let opacity = 1.0;
-
-    const rotation = (elapsed / 1000) * (Math.PI / 2);
-    let floatOffset = 0;
-
-    const { introDurationMs, outroDurationMs } = this.config;
-
-    // --- 2. Timings & Position Math ---
-    if (elapsed < introDurationMs) {
-      const progress = elapsed / introDurationMs;
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      const startY = height + cdRadius * 2; // Start below the screen
-      yPos = startY - (startY - height / 2) * easeOut;
-    } else if (elapsed > this.currentDurationMs - outroDurationMs) {
-      const timeInOutro = elapsed - (this.currentDurationMs - outroDurationMs);
-      const progress = Math.min(1, timeInOutro / outroDurationMs);
-      opacity = Math.max(0, 1 - progress);
-      floatOffset = Math.sin(elapsed / 500) * 1.5;
-    } else {
-      floatOffset = Math.sin(elapsed / 500) * 1.5;
-    }
-
-    yPos += floatOffset;
-
-    // --- 3. RENDER LAYERS ---
-    this.ctx.save();
-    this.ctx.globalAlpha = opacity;
-    this.ctx.translate(xPos, yPos); // Move origin to center
-
-    this.ctx.save();
-    this.ctx.rotate(rotation); // Rotate the CD
-
-    // A. Outer Silver Rim
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, cdRadius, 0, Math.PI * 2);
-    this.ctx.fillStyle = "#b5b5ba";
-    this.ctx.fill();
-
-    // B. Clip and Draw the Album Art
-    this.ctx.save();
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, cdRadius - 1.5, 0, Math.PI * 2); // Leave a 1.5px silver rim
-    this.ctx.clip();
-
-    const imageScale = 0.9; // 0.75 = 75% of the CD size. Adjust to taste!
-    const scaledSize = cdRadius * 2 * imageScale;
-    const offset = -scaledSize / 2; // Centers the smaller image
-    // -------------------------
-
-    this.ctx.imageSmoothingEnabled = false;
-
-    // Use the scaled variables here
-    this.ctx.drawImage(this.cdImage, offset, offset, scaledSize, scaledSize);
-    this.ctx.restore();
-
-    // C. The Center Hole
-    // LEDs love pure black. Instead of erasing pixels, we just paint them #000 (Off).
-    const holeRadius = 4;
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, holeRadius, 0, Math.PI * 2);
-    this.ctx.fillStyle = "#000000";
-    this.ctx.fill();
-
-    // D. Subtle inner plastic ring
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, holeRadius + 1.5, 0, Math.PI * 2);
-    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-    this.ctx.lineWidth = 1;
-    this.ctx.stroke();
-
-    this.ctx.restore(); // <--- STOP ROTATION HERE
-
-    // E. Static Light Sheen
-    // Reduced from 0.35 to 0.15 so it doesn't wash out the album art
-    const sheenGradient = this.ctx.createLinearGradient(
-      -cdRadius,
-      -cdRadius,
-      cdRadius,
-      cdRadius,
-    );
-    sheenGradient.addColorStop(0.0, "rgba(255, 255, 255, 0.0)");
-    sheenGradient.addColorStop(0.4, "rgba(255, 255, 255, 0.0)");
-    sheenGradient.addColorStop(0.5, "rgba(255, 255, 255, 0.15)"); // The glare
-    sheenGradient.addColorStop(0.6, "rgba(255, 255, 255, 0.0)");
-    sheenGradient.addColorStop(1.0, "rgba(255, 255, 255, 0.0)");
-
-    this.ctx.save();
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, cdRadius, 0, Math.PI * 2);
-    this.ctx.clip();
-    this.ctx.fillStyle = sheenGradient;
-    this.ctx.fillRect(-cdRadius, -cdRadius, cdRadius * 2, cdRadius * 2);
-    this.ctx.restore();
-
-    this.ctx.restore(); // Complete Canvas Cleanup
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.animation.render({
+      ctx: this.ctx,
+      width: this.canvas.width,
+      height: this.canvas.height,
+      elapsedMs: elapsed,
+    });
 
     this.presentFrame();
 
     // End Condition
     if (elapsed >= this.currentDurationMs) {
       console.log("[CdAnimator] Track finished.");
+      this.exitAnimation();
       this.startIdle();
     }
   };
