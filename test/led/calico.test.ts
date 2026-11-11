@@ -4,6 +4,7 @@ import {
   calicoPhaseAt,
   CalicoCatAnimation,
   DEFAULT_CALICO_TIMING,
+  lickAt,
 } from "../../src/led/animations/calico.js";
 
 const timing = DEFAULT_CALICO_TIMING;
@@ -38,6 +39,17 @@ test("calico outro plays once after exit, then the cat is done", () => {
     calicoPhaseAt(exitAt + timing.outroDurationMs, exitAt, timing).phase,
     "done",
   );
+});
+
+test("calico licks twice per cycle, then rests", () => {
+  const cycleMs = timing.lickPeriodMs * timing.lickCount + timing.restMs;
+  const licks: boolean[] = [];
+  for (let ms = 0; ms < cycleMs; ms += 10) licks.push(lickAt(ms, timing) > 0.5);
+
+  const lickRuns = licks.filter((on, i) => on && !licks[i - 1]).length;
+  assert.equal(lickRuns, timing.lickCount);
+  assert.equal(licks.slice(-(timing.restMs / 10)).some(Boolean), false);
+  assert.equal(lickAt(cycleMs, timing), lickAt(0, timing));
 });
 
 test("calico exit requested during the intro waits for the intro to finish", () => {

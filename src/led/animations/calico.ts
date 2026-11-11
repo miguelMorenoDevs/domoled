@@ -8,6 +8,8 @@ export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
   introJumpMs: 1200,
   introSettleMs: 700,
   lickPeriodMs: 800,
+  lickCount: 2,
+  restMs: 5000,
   outroDurationMs: 1200,
 };
 
@@ -21,7 +23,7 @@ export interface CalicoPhaseState {
 const CAT_WHITE = "#f5f1ea";
 const CAT_ORANGE = "#e8892b";
 const CAT_BLACK = "#1c1c1c";
-const CAT_TONGUE = "#ff4f7b";
+const CAT_TONGUE = "#e8838a";
 
 type CanvasContext = AnimationFrame["ctx"];
 
@@ -89,6 +91,14 @@ export function calicoPhaseAt(
   return { phase: "loop", elapsedInPhaseMs: elapsedMs - introMs };
 }
 
+/** Lick amount (0..1) at loopMs into the loop: lickCount licks, then a rest of restMs, repeating. */
+export function lickAt(loopMs: number, timing: CalicoTimingConfig): number {
+  const lickingMs = timing.lickPeriodMs * timing.lickCount;
+  const t = loopMs % (lickingMs + timing.restMs);
+  if (t >= lickingMs) return 0;
+  return Math.max(0, Math.sin((2 * Math.PI * t) / timing.lickPeriodMs));
+}
+
 function calicoPose(
   state: CalicoPhaseState,
   width: number,
@@ -123,7 +133,7 @@ function calicoPose(
         x: center,
         jump: 0,
         lie: 1,
-        lick: Math.max(0, Math.sin((2 * Math.PI * ms) / timing.lickPeriodMs)),
+        lick: lickAt(ms, timing),
         eyesClosed: true,
       };
     case "outro": {

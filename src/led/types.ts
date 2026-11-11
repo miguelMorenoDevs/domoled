@@ -25,6 +25,8 @@ export interface CalicoTimingConfig {
   introJumpMs: number;
   introSettleMs: number;
   lickPeriodMs: number;
+  lickCount: number;
+  restMs: number;
   outroDurationMs: number;
 }
 
