@@ -10,6 +10,11 @@ export interface UserTokens {
   refresh_token: string;
 }
 
+export interface StoredUsers {
+  users: Record<string, UserTokens>;
+  active_user: string | null;
+}
+
 export interface GetCurrentlyPlayedSong {
   title: string;
   image: string;
