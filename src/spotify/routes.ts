@@ -44,7 +44,7 @@ router.get("/callback", async (req: Request, res: Response) => {
     const song = await SpotifyClient.getCurrentSong();
     console.log({ song });
     if (!song) {
-      cdAnimator.stop();
+      cdAnimator.startIdle();
       res.send(
         "Logged in, but no track is playing on Spotify right now. Start a track and log in again to animate it.",
       );
@@ -106,6 +106,7 @@ router.post("/users/active", async (req: Request, res: Response) => {
 
 router.delete("/users/active", async (_req: Request, res: Response) => {
   SpotifyClient.clearActiveUser();
+  cdAnimator.stop();
   res.sendStatus(200);
 });
 

@@ -25,8 +25,9 @@ public/success.html       Friendly page rendered after a successful OAuth callba
 1. `src/app.ts` mounts `spotifyRouter` at `/spotify` and listens on 3000.
 2. `POST /spotify/login` builds the Spotify authorize URL (`state` = `<localIP>:3000`), prints a QR code, returns the URL.
 3. Spotify redirects to the GitHub Pages `index.html`, which forwards to `GET /spotify/callback?code=...` on the local machine.
-4. The callback exchanges the code for tokens, fetches the current song (including `progress_ms`), loads the album art into the shared `cdAnimator`, calls `play()` from that playback position, and renders `public/success.html`. When nothing is playing, it stops the `cdAnimator` (clearing the matrix) and replies `200` with a plain-text message instead.
+4. The callback exchanges the code for tokens, fetches the current song (including `progress_ms`), loads the album art into the shared `cdAnimator`, calls `play()` from that playback position, and renders `public/success.html`. When nothing is playing, it calls `cdAnimator.startIdle()` and replies `200` with a plain-text message instead.
 5. Each frame is drawn with `@napi-rs/canvas` (CD disc, rotating album art, center hole, sheen), pushed to the matrix, then sent as a data URL over WebSocket on non-Pi platforms.
+6. Idle state: `startIdle()` runs a looping calico cat animation (`renderIdleFrame`: jump in, settle lying down, lick the front leg, pause 5-10 s, repeat). It starts on boot when a user is active (`src/app.ts`), after a login with nothing playing, and when a track ends. `play()`/`setTrack()` replace it with the CD animation, and `stop()` (for example `DELETE /spotify/users/active`) clears the matrix.
 
 ## Routes
 
