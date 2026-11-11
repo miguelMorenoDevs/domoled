@@ -45,13 +45,30 @@ jobs:
           fi
 
       - uses: actions/checkout@v6
-        if: steps.target.outputs.skip != 'true' && steps.target.outputs.is_pr == 'true'
+        if: steps.target.outputs.skip != 'true'
 
       - name: Check out PR branch
         if: steps.target.outputs.skip != 'true' && steps.target.outputs.is_pr == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: gh pr checkout ${{ github.event.issue.number }}
+
+      - uses: pnpm/action-setup@v4
+        if: steps.target.outputs.skip != 'true' && steps.target.outputs.is_pr == 'true'
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        if: steps.target.outputs.skip != 'true' && steps.target.outputs.is_pr == 'true'
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      # tsc only needs the types; native modules are not built in CI.
+      - name: Install dependencies
+        if: steps.target.outputs.skip != 'true' && steps.target.outputs.is_pr == 'true'
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Install OpenCode
         if: steps.target.outputs.skip != 'true'
@@ -80,6 +97,7 @@ jobs:
         run: bash .github/scripts/opencode-run.sh --model opencode-go/claude-haiku-5-5 "$PROMPT"
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           PROMPT: |
             Apply this change request to pull request #${{ github.event.issue.number }} in ${{ github.repository }}.
             The request is the text after `change:` in this comment:
@@ -101,6 +119,7 @@ jobs:
         run: bash .github/scripts/opencode-run.sh --model opencode-go/claude-haiku-5-5 "$PROMPT"
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           PROMPT: |
             Apply this change request to issue #${{ github.event.issue.number }} in ${{ github.repository }}.
             The request is the text after `change:` in this comment:
