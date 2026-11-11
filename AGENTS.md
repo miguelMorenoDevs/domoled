@@ -21,6 +21,7 @@ Raspberry Pi LED matrix that animates the Spotify track currently playing. Expre
 ## Git and PRs
 
 - "commit" means commit **and push** the branch unless told otherwise.
+- "ask for a review" means comment `miguelmoreno-review` on the open PR (`gh pr comment <n> --body "miguelmoreno-review"`); do not request a reviewer.
 - Branch from `main`: `fix/<slug>` for bugs, `feat/<slug>` for features. One issue or feature per branch and PR.
 - Every issue carries one label from each group: `ai-ready`/`needs-plan`, `complexity: low|mid|high`, `auto`/`review`.
 - Conventional commits, lowercase subject, scope when useful: `chore(spotify): ...`, `fix(led): ...`. One logical commit, no tool attribution.
