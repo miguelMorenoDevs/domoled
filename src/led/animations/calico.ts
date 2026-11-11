@@ -7,9 +7,8 @@ import type {
 export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
   introJumpMs: 1200,
   introSettleMs: 700,
-  lickPeriodMs: 1200,
-  lickCount: 2,
-  restMs: 5000,
+  stretchPeriodMs: 10000,
+  stretchMs: 1500,
   outroDurationMs: 1200,
 };
 
@@ -23,7 +22,6 @@ export interface CalicoPhaseState {
 const CAT_WHITE = "#f5f1ea";
 const CAT_ORANGE = "#e8892b";
 const CAT_BLACK = "#1c1c1c";
-const CAT_TONGUE = "#e8838a";
 
 type CanvasContext = AnimationFrame["ctx"];
 
@@ -31,7 +29,7 @@ interface CatPose {
   x: number;
   jump: number;
   lie: number;
-  lick: number;
+  stretch: number;
   eyesClosed: boolean;
 }
 
@@ -91,12 +89,11 @@ export function calicoPhaseAt(
   return { phase: "loop", elapsedInPhaseMs: elapsedMs - introMs };
 }
 
-/** Lick amount (0..1) at loopMs into the loop: lickCount licks, then a rest of restMs, repeating. */
-export function lickAt(loopMs: number, timing: CalicoTimingConfig): number {
-  const lickingMs = timing.lickPeriodMs * timing.lickCount;
-  const t = loopMs % (lickingMs + timing.restMs);
-  if (t >= lickingMs) return 0;
-  return Math.max(0, Math.sin((2 * Math.PI * t) / timing.lickPeriodMs));
+/** Stretch amount (0..1) at loopMs into the loop: one stretch every stretchPeriodMs, then asleep. */
+export function stretchAt(loopMs: number, timing: CalicoTimingConfig): number {
+  const t = loopMs % timing.stretchPeriodMs;
+  if (t >= timing.stretchMs) return 0;
+  return Math.sin((Math.PI * t) / timing.stretchMs);
 }
 
 function calicoPose(
@@ -115,7 +112,7 @@ function calicoPose(
           x: lerp(6, center, progress),
           jump: Math.sin(Math.PI * progress) * 16,
           lie: 0,
-          lick: 0,
+          stretch: 0,
           eyesClosed: false,
         };
       }
@@ -124,7 +121,7 @@ function calicoPose(
         x: center,
         jump: 0,
         lie: 1 - Math.pow(1 - progress, 2),
-        lick: 0,
+        stretch: 0,
         eyesClosed: progress >= 0.5,
       };
     }
@@ -133,8 +130,8 @@ function calicoPose(
         x: center,
         jump: 0,
         lie: 1,
-        lick: lickAt(ms, timing),
-        eyesClosed: true,
+        stretch: stretchAt(ms, timing),
+        eyesClosed: stretchAt(ms, timing) < 0.3,
       };
     case "outro": {
       const progress = ms / timing.outroDurationMs;
@@ -142,17 +139,17 @@ function calicoPose(
         x: lerp(center, width + 12, progress * progress),
         jump: Math.sin(Math.PI * progress) * 16,
         lie: Math.max(0, 1 - progress * 4),
-        lick: 0,
+        stretch: 0,
         eyesClosed: false,
       };
     }
     case "done":
-      return { x: width + 12, jump: 0, lie: 0, lick: 0, eyesClosed: false };
+      return { x: width + 12, jump: 0, lie: 0, stretch: 0, eyesClosed: false };
   }
 }
 
 /**
- * The calico cat: jumps in from the left and lies down once, licks its front leg until
+ * The calico cat: jumps in from the left and lies down once, stretches every 10 s while asleep, until
  * exit() is called, then opens its eyes and jumps out to the right once.
  */
 export class CalicoCatAnimation implements LedAnimation {
@@ -191,20 +188,20 @@ export class CalicoCatAnimation implements LedAnimation {
 }
 
 function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
-  const { x, lie, lick, eyesClosed } = pose;
+  const { x, lie, stretch, eyesClosed } = pose;
   const y = -pose.jump;
   const lerpPose = (standing: number, lying: number) =>
     lerp(standing, lying, lie);
 
-  // Body: upright oval when standing, flat loaf when lying.
+  // Body: upright oval when standing, flat loaf when lying; lengthens while stretching.
   const bodyX = lerpPose(x - 1, x);
   const bodyY = lerpPose(40, 44) + y;
-  const bodyRx = lerpPose(9, 13);
+  const bodyRx = lerpPose(9, 13) + stretch * 2;
   const bodyRy = lerpPose(8, 4.5) * (1 + breath);
 
-  // Head: rests on the front paws and tilts down while licking.
-  const headX = lerpPose(x + 8, x + 13) + lick * 1;
-  const headY = lerpPose(31, 42) + y + lick * 2;
+  // Head: rests on the front paws and lifts forward while stretching.
+  const headX = lerpPose(x + 8, x + 13) + stretch * 2;
+  const headY = lerpPose(31, 42) + y - stretch * 3;
   const headR = 5.5;
 
   // Tail: curls along the floor when lying down.
@@ -281,13 +278,6 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
     ctx.fillRect(eyeX, eyeY - 1, 1, 2);
   }
 
-  // Front leg: orange, resting on the floor, raised to the mouth while licking.
-  const pawX = lerp(headX + 1, headX + 3.5, lick);
-  const pawY = lerp(floorY, headY + 4.5, lick);
-  fillEllipse(ctx, pawX, pawY, 2.4, 1.8, CAT_ORANGE);
-
-  // Tongue last so it sits on top of the raised leg, starting at the mouth on the head's edge.
-  if (lick > 0.5) {
-    fillEllipse(ctx, headX + 3, headY + 4, 1.3, 1.1, CAT_TONGUE);
-  }
+  // Front leg: orange, resting on the floor and reaching forward while stretching.
+  fillEllipse(ctx, headX + 1 + stretch * 4, floorY, 2.4, 1.8, CAT_ORANGE);
 }

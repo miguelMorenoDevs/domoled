@@ -4,7 +4,7 @@ import {
   calicoPhaseAt,
   CalicoCatAnimation,
   DEFAULT_CALICO_TIMING,
-  lickAt,
+  stretchAt,
 } from "../../src/led/animations/calico.js";
 
 const timing = DEFAULT_CALICO_TIMING;
@@ -41,15 +41,19 @@ test("calico outro plays once after exit, then the cat is done", () => {
   );
 });
 
-test("calico licks twice per cycle, then rests", () => {
-  const cycleMs = timing.lickPeriodMs * timing.lickCount + timing.restMs;
-  const licks: boolean[] = [];
-  for (let ms = 0; ms < cycleMs; ms += 10) licks.push(lickAt(ms, timing) > 0.5);
+test("calico stretches once every 10 s, then sleeps", () => {
+  const stretched: boolean[] = [];
+  for (let ms = 0; ms < timing.stretchPeriodMs; ms += 10)
+    stretched.push(stretchAt(ms, timing) > 0.5);
 
-  const lickRuns = licks.filter((on, i) => on && !licks[i - 1]).length;
-  assert.equal(lickRuns, timing.lickCount);
-  assert.equal(licks.slice(-(timing.restMs / 10)).some(Boolean), false);
-  assert.equal(lickAt(cycleMs, timing), lickAt(0, timing));
+  const runs = stretched.filter((on, i) => on && !stretched[i - 1]).length;
+  assert.equal(runs, 1);
+  assert.equal(stretchAt(0, timing), 0);
+  assert.equal(stretchAt(timing.stretchPeriodMs, timing), 0);
+  assert.equal(
+    stretchAt(timing.stretchPeriodMs + timing.stretchMs / 2, timing),
+    1,
+  );
 });
 
 test("calico exit requested during the intro waits for the intro to finish", () => {

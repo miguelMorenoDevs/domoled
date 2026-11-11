@@ -191,7 +191,7 @@ export class CdAnimator {
   }
 
   /**
-   * Starts the idle cat: it jumps in once, licks its leg in a loop, and jumps out once
+   * Starts the idle cat: it jumps in once, stretches every 10 s in a loop, and jumps out once
    * when play() or showQr() takes over. Call only for an authenticated user with nothing playing.
    */
   public startIdle(): void {
