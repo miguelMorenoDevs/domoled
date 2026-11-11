@@ -9,6 +9,16 @@ import type {
 } from "./types/api.js";
 import type { GetCurrentSongResponse } from "./types/service.js";
 
+export class UserNotLoggedError extends Error {
+  readonly email: string;
+
+  constructor(email: string) {
+    super("User is not logged in");
+    this.name = "UserNotLoggedError";
+    this.email = email;
+  }
+}
+
 class SpotifyClient {
   private readonly auth_url: string;
   private readonly api_url: string;
@@ -199,7 +209,7 @@ class SpotifyClient {
   async setActiveUser(email: string) {
     const loggedUsers = await this.getLoggedUsers();
 
-    if (!loggedUsers.includes(email)) throw Error("User is not logged in");
+    if (!loggedUsers.includes(email)) throw new UserNotLoggedError(email);
 
     this.active_user = email;
     this.saveStore();
