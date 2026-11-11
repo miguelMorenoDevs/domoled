@@ -11,8 +11,9 @@ src/
     types/api.ts          App-facing types (tokens, current song)
     types/service.ts      Spotify API response shapes
   led/
-    animator.ts           Canvas rendering, matrix output, WS simulator stream (singleton `cdAnimator`)
-    types.ts              AnimatorConfig, TrackData, matrix dimensions
+    animator.ts           Matrix output, WS simulator stream, active-animation selection, idle cat (singleton `cdAnimator`)
+    animations/cd.ts      CD animation: intro slide-in, rotating art, sheen, outro fade (`CdAnimation`, `DEFAULT_CD_TIMING`)
+    types.ts              AnimatorConfig, TrackData, matrix dimensions, LedAnimation interface, CdTimingConfig
   utils/network.ts        getLocalIP() for the OAuth state round-trip
 test/                      node:test suites (spotify client, network utils), run by `pnpm test`
 simulator.html            Standalone browser view of the 8080 frame stream
@@ -26,7 +27,8 @@ public/success.html       Friendly page rendered after a successful OAuth callba
 2. `POST /spotify/login` builds the Spotify authorize URL (`state` = `<localIP>:3000`), prints a QR code, returns the URL.
 3. Spotify redirects to the GitHub Pages `index.html`, which forwards to `GET /spotify/callback?code=...` on the local machine.
 4. The callback exchanges the code for tokens, fetches the current song (including `progress_ms`), loads the album art into the shared `cdAnimator`, calls `play()` from that playback position, and renders `public/success.html`. When nothing is playing, it calls `cdAnimator.startIdle()` and replies `200` with a plain-text message instead.
-5. Each frame is drawn with `@napi-rs/canvas` (CD disc, rotating album art, center hole, sheen), pushed to the matrix, then sent as a data URL over WebSocket on non-Pi platforms.
+5. Each CD frame: `renderFrame` clears the canvas, calls `animation.render()` (the active `LedAnimation`, currently `CdAnimation` in `animations/cd.ts`, which draws the disc, rotating album art, center hole, sheen, and owns the intro/outro timing), pushes the canvas to the matrix, then sends it as a data URL over WebSocket on non-Pi platforms.
+   5a. Animation hooks: `setTrack()` calls `onLoad(track, art)` after the album art loads; `play()` marks playback active; `stop()` and the track-end branch of `renderFrame` call `onExit()` once per playback. `onExit` is skipped when nothing was playing.
 6. Idle state: `startIdle()` runs a looping calico cat animation (`renderIdleFrame`: jump in, settle lying down, lick the front leg, pause 5-10 s, repeat). It starts on boot when a user is active (`src/app.ts`), after a login with nothing playing, and when a track ends. `play()`/`setTrack()` replace it with the CD animation, and `stop()` (for example `DELETE /spotify/users/active`) clears the matrix.
 
 ## Routes
@@ -48,3 +50,4 @@ public/success.html       Friendly page rendered after a successful OAuth callba
 - Spotify `401` handling lives in `SpotifyClient.fetch`: it refreshes the user token and retries the request once with the new token.
 - `TrackData` carries `imageUrl`, `durationMs` and `progressMs`; `CdAnimator.play()` starts from `progressMs` (Spotify `progress_ms`, `0` when null) so a mid-song track skips the intro instead of restarting at 0.
 - `CdAnimator.setTrack` clears the previous art/duration/progress and throws `AlbumArtLoadError` when `loadImage` rejects; `GET /spotify/callback` maps that to a `502` retry message while other callback failures stay `400`.
+- New animations implement `LedAnimation` (`src/led/types.ts`): `render` is required; `onLoad` and `onExit` are optional. Intro/outro timing belongs to the animation (`CdTimingConfig`), not `AnimatorConfig`.
