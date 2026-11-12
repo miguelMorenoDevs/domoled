@@ -115,6 +115,7 @@ jobs:
                `GH_TOKEN="$REVIEW_TOKEN" gh pr review ${{ steps.pr.outputs.number }} --approve --body "Review passed: <one-line reason>"`.
                Do not touch auto-merge, whether or not the PR has it enabled.
 
+            Judge the diff with `.opencode/skills/ponytail/SKILL.md`: flag only what is wrong, unsafe or unneeded.
             Only review and decide: submit the review with `$REVIEW_TOKEN`; use `GH_TOKEN` only to
             read. Do not push commits, edit files, or ask questions. Work non-interactively.
             Do not use web search or fetch URLs; local files and `gh` are enough.
