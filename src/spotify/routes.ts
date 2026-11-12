@@ -46,13 +46,13 @@ router.post("/login", (_req: Request, res: Response) => {
   res.json({ url });
 });
 
-// Short target for the matrix QR: the phone opens it on the LAN and gets redirected to Spotify.
+// Target of the landing page's "Connect my Spotify" button: redirects to Spotify.
 router.get("/login", (_req: Request, res: Response) => {
   res.redirect(spotifyAuthorizeUrl());
 });
 
 export function loginQrUrl(): string {
-  return `http://${getLocalIP()}:3000/spotify/login`;
+  return `http://${getLocalIP()}:3000/connect.html`;
 }
 
 router.get("/callback", async (req: Request, res: Response) => {
