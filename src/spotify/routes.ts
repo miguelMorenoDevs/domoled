@@ -12,12 +12,16 @@ import { requireLoopback } from "./guard.js";
 const router: Router = Router();
 
 function spotifyAuthorizeUrl(): string {
-  const state = getLocalIP()! + ":3000";
+  const clientId = process.env["SPOTIFY_CLIENT_ID"];
+  if (!clientId)
+    throw Error("Cannot build Spotify login URL, missing SPOTIFY_CLIENT_ID");
+
+  const state = getLocalIP() + ":3000";
   const scope = "user-read-currently-playing user-read-email";
 
   const params = new URLSearchParams();
   params.append("response_type", "code");
-  params.append("client_id", process.env["SPOTIFY_CLIENT_ID"]!);
+  params.append("client_id", clientId);
   params.append("scope", scope);
   params.append("state", state);
   params.append("redirect_uri", "https://miguelmorenodevs.github.io/domoled");
@@ -41,7 +45,7 @@ router.get("/login", (_req: Request, res: Response) => {
 });
 
 export function loginQrUrl(): string {
-  return `http://${getLocalIP()!}:3000/spotify/login`;
+  return `http://${getLocalIP()}:3000/spotify/login`;
 }
 
 router.get("/callback", async (req: Request, res: Response) => {

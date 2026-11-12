@@ -5,7 +5,6 @@ import {
   isTokenResponse,
   type GetCurrentlyPlayedSong,
   type GetUserTokenOptions,
-  type GrantTypes,
   type StoredUsers,
   type UserTokens,
 } from "./types/api.js";
@@ -82,26 +81,23 @@ class SpotifyClient {
     }
   }
 
-  async getUserToken<T extends GrantTypes>({
-    grant_type,
-    token,
-  }: GetUserTokenOptions<T>) {
-    console.info("Token retrieval started on type " + grant_type);
+  async getUserToken(options: GetUserTokenOptions) {
+    console.info("Token retrieval started on type " + options.grant_type);
 
     const headers: Record<string, string> = {
       "Content-Type": "application/x-www-form-urlencoded",
     };
 
     const body = new URLSearchParams();
-    body.append("grant_type", grant_type);
+    body.append("grant_type", options.grant_type);
     body.append("client_id", this.client_id);
 
     let storedRefreshToken: string | undefined;
 
-    switch (grant_type) {
+    switch (options.grant_type) {
       case "authorization_code":
         body.append("redirect_uri", this.redirect_uri);
-        body.append("code", token);
+        body.append("code", options.token);
         headers["Authorization"] =
           "Basic " +
           Buffer.from(this.client_id + ":" + this.client_secret).toString(
@@ -131,7 +127,7 @@ class SpotifyClient {
       console.error({ res });
       throw Error(
         "Something went wrong getting Spotify access token in " +
-          grant_type +
+          options.grant_type +
           " flow",
       );
     }
@@ -140,15 +136,22 @@ class SpotifyClient {
     if (!isTokenResponse(payload)) throw new SpotifyResponseError("/token");
     const { access_token, refresh_token } = payload;
 
+    // Spotify may omit refresh_token on refresh; the code grant has no stored token to fall back to.
+    const nextRefreshToken = refresh_token ?? storedRefreshToken;
+    if (nextRefreshToken === undefined)
+      throw new SpotifyResponseError("/token");
+
     const tokens: UserTokens = {
       access_token,
-      refresh_token: refresh_token ?? storedRefreshToken!,
+      refresh_token: nextRefreshToken,
     };
 
-    if (grant_type === "authorization_code") {
+    if (options.grant_type === "authorization_code") {
       await this.assingTokensToEmail(tokens);
     } else {
-      this.users_map.set(this.active_user!, tokens);
+      const activeUser = this.active_user;
+      if (!activeUser) throw Error("There is no active user");
+      this.users_map.set(activeUser, tokens);
     }
 
     this.saveStore();
@@ -172,10 +175,7 @@ class SpotifyClient {
     });
 
     if (res.status === 401 && retryOnUnauthorized) {
-      await this.getUserToken({
-        grant_type: "refresh_token",
-        token: userTokens.refresh_token,
-      });
+      await this.getUserToken({ grant_type: "refresh_token" });
       return this.fetch<T>(path, isExpected, false);
     }
 
@@ -251,7 +251,8 @@ class SpotifyClient {
     const size = (i: { width?: number | null; height?: number | null }) =>
       Math.max(i.width ?? 0, i.height ?? 0);
 
-    const bestImage = [...candidates].sort((a, b) => size(b) - size(a))[0]!;
+    const bestImage = [...candidates].sort((a, b) => size(b) - size(a))[0];
+    if (!bestImage) return;
 
     return {
       title: track.item.name,

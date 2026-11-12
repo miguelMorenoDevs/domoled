@@ -1,9 +1,6 @@
-export type GrantTypes = "authorization_code" | "refresh_token";
-
-export interface GetUserTokenOptions<T extends GrantTypes> {
-  grant_type: T;
-  token: string;
-}
+export type GetUserTokenOptions =
+  | { grant_type: "authorization_code"; token: string }
+  | { grant_type: "refresh_token" };
 
 export interface UserTokens {
   access_token: string;
