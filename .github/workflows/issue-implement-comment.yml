@@ -6,7 +6,26 @@ on:
     types: [created]
 
 jobs:
+  acknowledge:
+    if: >-
+      !github.event.issue.pull_request &&
+      github.event.issue.state == 'open' &&
+      github.event.comment.body == 'implement' &&
+      contains(github.event.issue.labels.*.name, 'ai-ready') &&
+      contains(fromJSON('["MEMBER","OWNER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Reply to implement comment
+        run: gh issue comment "$ISSUE" --body "Altoque mi rey"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+
   implement:
+    needs: acknowledge
     if: >-
       !github.event.issue.pull_request &&
       github.event.issue.state == 'open' &&
