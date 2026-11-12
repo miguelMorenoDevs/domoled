@@ -21,6 +21,7 @@ jobs:
         run: gh issue comment "$ISSUE" --body "Altoque mi rey"
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           ISSUE: ${{ github.event.issue.number }}
 
   implement:
