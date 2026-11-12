@@ -7,6 +7,7 @@ src/
   app.ts                  Express bootstrap, port 3000, static "public"
   spotify/
     routes.ts             HTTP routes, OAuth callback, QR code
+    guard.ts              `requireLoopback` middleware: user admin routes accept only loopback sockets (403 otherwise)
     client.ts             Spotify OAuth + API client (singleton; tokens persisted to data/users.json)
     types/api.ts          App-facing types (tokens, current song)
     types/service.ts      Spotify API response shapes
@@ -37,9 +38,11 @@ public/success.html       Friendly page rendered after a successful OAuth callba
 - `POST /spotify/login`
 - `GET /spotify/login`
 - `GET /spotify/callback`
-- `GET /spotify/users`
-- `POST /spotify/users/active` (`SpotifyClient.setActiveUser` throws `UserNotLoggedError` for an unknown email; the route maps it to `403` and any other error to `502`)
-- `DELETE /spotify/users/active`
+- `GET /spotify/users` (loopback only)
+- `POST /spotify/users/active` (loopback only; `SpotifyClient.setActiveUser` throws `UserNotLoggedError` for an unknown email; the route maps it to `403` and any other error to `502`)
+- `DELETE /spotify/users/active` (loopback only)
+
+User admin routes go through `requireLoopback` (`src/spotify/guard.ts`), which checks `req.socket.remoteAddress` and answers `403` for anything that is not `127.0.0.0/8`, `::1` or their IPv4-mapped forms. Login and callback routes stay open to the LAN.
 
 ## Conventions and gotchas
 

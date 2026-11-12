@@ -8,7 +8,7 @@ Animates the album art of the Spotify track currently playing on a 64x64 Raspber
 - With no active user (on boot or after `DELETE /spotify/users/active`), the matrix shows a login QR (`/spotify/login` on the LAN, which redirects to Spotify), then the idle cat after login, then the song. In local development (win32/darwin) boot prints the simulator URL to the console instead of showing the QR, and the simulator shows nothing until login.
 - CD-style animation: intro slide-in, rotating album art with silver rim and center hole, floating motion, light sheen, and fade-out.
 - Starts at the track's current playback position, so logging in mid-song continues instead of restarting the animation.
-- Multi-user token store persisted to `data/users.json`, reloaded on startup, with an active-user switch (`/spotify/users`).
+- Multi-user token store persisted to `data/users.json`, reloaded on startup, with an active-user switch (`/spotify/users`). The user admin routes accept only requests from the local machine (`403` otherwise); login and callback stay reachable from the LAN.
 - Automatic Spotify access-token refresh with a single retry when the API returns `401`.
 - Automatic matrix mock on Windows/macOS plus a live WebSocket frame stream for `simulator.html`.
 - Clear `502` response when the Spotify album art cannot be loaded, instead of a generic `400`.
