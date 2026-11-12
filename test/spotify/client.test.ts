@@ -157,6 +157,48 @@ test("getCurrentSong returns the largest square album image", async (t) => {
   });
 });
 
+test("getCurrentSong returns the largest image when no album image is square", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () =>
+      jsonResponse(
+        track({
+          item: {
+            ...(track().item as object),
+            album: {
+              images: [
+                { url: "https://img/small-wide", height: 100, width: 200 },
+                { url: "https://img/big-wide", height: 300, width: 640 },
+                { url: "https://img/tall", height: 500, width: 250 },
+              ],
+            },
+          },
+        }),
+      ),
+  });
+
+  const song = await spotify.getCurrentSong();
+
+  assert.equal(song?.image, "https://img/big-wide");
+});
+
+test("getCurrentSong returns undefined when the album has no images", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () =>
+      jsonResponse(
+        track({
+          item: {
+            ...(track().item as object),
+            album: { images: [] },
+          },
+        }),
+      ),
+  });
+
+  assert.equal(await spotify.getCurrentSong(), undefined);
+});
+
 test("getCurrentSong defaults progressMs to 0 when Spotify returns null", async (t) => {
   await login(t);
   mockSpotify(t, {

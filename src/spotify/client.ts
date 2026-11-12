@@ -228,19 +228,21 @@ class SpotifyClient {
 
     const { images } = track.item.album;
 
+    // No art to draw: report nothing playing so the idle animation runs.
     if (!images.length) return;
 
     const squareImages = images.filter(
       (i) => i.height && i.width && i.height === i.width,
     );
+    const candidates = squareImages.length ? squareImages : images;
+    const size = (i: { width?: number | null; height?: number | null }) =>
+      Math.max(i.width ?? 0, i.height ?? 0);
 
-    const bestImage = squareImages
-      ? squareImages.sort((a, b) => b.height! - a.height!)[0]
-      : images[0];
+    const bestImage = [...candidates].sort((a, b) => size(b) - size(a))[0]!;
 
     return {
       title: track.item.name,
-      image: bestImage!.url,
+      image: bestImage.url,
       durationMs: track.item.duration_ms,
       progressMs: track.progress_ms ?? 0,
     };
