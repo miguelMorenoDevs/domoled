@@ -17,7 +17,7 @@ Repo commands and code conventions live in `AGENTS.md`; read only the docs the c
 
 ## 2. Commit
 
-- `pnpm build` must pass before committing.
+- Before committing, these must all pass, in this order: `pnpm build`, `pnpm lint`, `pnpm format:check`, `pnpm test`. These are the checks `ci` runs; a PR that passes only the build can fail CI. If `format:check` fails, run `pnpm exec prettier --write <changed files>` and commit the result.
 - Conventional commits, lowercase subject, scope when useful: `chore(spotify): ...`, `fix(led): ...`.
 - One logical commit per PR. No tool attribution.
 - "commit" means commit **and push** the branch unless told otherwise.

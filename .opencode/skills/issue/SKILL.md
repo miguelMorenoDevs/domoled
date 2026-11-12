@@ -31,7 +31,7 @@ Follow the code conventions in `AGENTS.md` and `docs/codebase.md`. Non-trivial n
 
 ## 5. Verify
 
-Run the build command from `AGENTS.md`, then check behavior for the area you touched:
+Run the same checks CI runs, in this order, and fix failures before committing: `pnpm build`, `pnpm lint`, `pnpm format:check`, `pnpm test`. Then check behavior for the area you touched:
 
 - `spotify/` routes or client: run the dev server (needs `.env`), then `curl` or the `.bruno` collection. `POST /spotify/login` must return a URL; the callback needs a real Spotify login.
 - `led/animator.ts`: run the dev server, open `simulator.html`, confirm frames arrive on `ws://localhost:8080`. On win32/darwin the matrix is mocked.
