@@ -11,7 +11,7 @@ src/
     client.ts             Spotify OAuth + API client (singleton; tokens persisted to data/users.json); re-exports the error classes
     errors.ts             `UserNotLoggedError`, `SpotifyResponseError`
     types/api.ts          App-facing types (tokens, current song) and runtime guards for the token store and token response
-    types/service.ts      Spotify API response shapes and the `isGetCurrentSongResponse` guard for the fields the app reads
+    types/service.ts      Spotify API response shapes and the `isGetCurrentSongResponse` guard for the fields the app reads (tracks use the album images, episodes their own images)
   led/
     animator.ts           Matrix output, WS simulator stream, active-animation selection, idle start/stop, login QR (singleton `cdAnimator`)
     errors.ts             `AlbumArtLoadError`
