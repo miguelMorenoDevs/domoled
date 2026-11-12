@@ -5,6 +5,7 @@ import qrcode from "qrcode-terminal";
 import SpotifyClient, { UserNotLoggedError } from "./client.js";
 import { getLocalIP } from "../utils/network.js";
 import { AlbumArtLoadError, cdAnimator } from "../led/animator.js";
+import { requireLoopback } from "./guard.js";
 
 const router: Router = Router();
 
@@ -89,38 +90,67 @@ router.get("/callback", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/users", async (_req: Request, res: Response) => {
+router.get("/users", requireLoopback, async (_req: Request, res: Response) => {
   const users = await SpotifyClient.getLoggedUsers();
   res.send({
     users,
   });
 });
 
-router.post("/users/active", async (req: Request, res: Response) => {
-  try {
-    const { email } = req.body;
+router.post(
+  "/users/active",
+  requireLoopback,
+  async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
 
-    if (!email) {
-      res.status(400).send("Email is mandatory");
-      return;
+      if (!email) {
+        res.status(400).send("Email is mandatory");
+        return;
+      }
+
+      await SpotifyClient.setActiveUser(email);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error(error);
+      if (error instanceof UserNotLoggedError) {
+        res.status(403).send(error.message);
+      } else {
+        res.sendStatus(502);
+      }
     }
+  },
+);
 
-    await SpotifyClient.setActiveUser(email);
+router.delete(
+  "/users/active",
+  requireLoopback,
+  async (_req: Request, res: Response) => {
+    SpotifyClient.clearActiveUser();
+    cdAnimator.showQr(loginQrUrl());
     res.sendStatus(200);
-  } catch (error) {
-    console.error(error);
-    if (error instanceof UserNotLoggedError) {
-      res.status(403).send(error.message);
-    } else {
-      res.sendStatus(502);
-    }
-  }
-});
+  },
+);
 
-router.delete("/users/active", async (_req: Request, res: Response) => {
-  SpotifyClient.clearActiveUser();
-  cdAnimator.showQr(loginQrUrl());
-  res.sendStatus(200);
-});
+router.delete(
+  "/users/:email",
+  requireLoopback,
+  async (req: Request, res: Response) => {
+    try {
+      const wasActive = await SpotifyClient.removeUser(
+        String(req.params["email"]),
+      );
+      if (wasActive) cdAnimator.showQr(loginQrUrl());
+      res.sendStatus(200);
+    } catch (error) {
+      console.error(error);
+      if (error instanceof UserNotLoggedError) {
+        res.status(404).send(error.message);
+      } else {
+        res.sendStatus(502);
+      }
+    }
+  },
+);
 
 export default router;

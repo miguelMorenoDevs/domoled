@@ -237,6 +237,17 @@ class SpotifyClient {
     this.saveStore();
   }
 
+  async removeUser(email: string) {
+    if (!this.users_map.has(email)) throw new UserNotLoggedError(email);
+
+    const wasActive = this.active_user === email;
+    this.users_map.delete(email);
+    if (wasActive) this.active_user = undefined;
+    this.saveStore();
+
+    return wasActive;
+  }
+
   async getCurrentSong(): Promise<GetCurrentlyPlayedSong | undefined> {
     const track = await this.fetch(
       "/me/player/currently-playing",
