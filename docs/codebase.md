@@ -16,8 +16,8 @@ src/
     animator.ts           Matrix output, WS simulator stream, active-animation selection, idle start/stop, login QR (singleton `cdAnimator`)
     errors.ts             `AlbumArtLoadError`
     animations/cd.ts      CD animation: intro slide-in, rotating art, sheen, outro fade (`CdAnimation`, `DEFAULT_CD_TIMING`)
-    animations/calico.ts  Calico cat idle animation: intro jump and lie down once, sleep and stand-and-stretch loop until exit, outro jump out once (`CalicoCatAnimation`, `DEFAULT_CALICO_TIMING`, `calicoPhaseAt`, calico phase and pose types)
-    types.ts              AnimatorConfig, TrackData, matrix dimensions, LedAnimation interface, CdTimingConfig, CalicoTimingConfig
+    animations/calico.ts  Calico cat idle animation: intro jump and lie down once, sleep and stand-and-stretch loop until exit, outro jump out once (`CalicoCatAnimation`, `DEFAULT_CALICO_TIMING`, `calicoPhaseAt`)
+    types.ts              AnimatorConfig, TrackData, matrix dimensions, LedAnimation interface, CdTimingConfig, CalicoTimingConfig, CanvasContext, calico phase and pose types
   utils/
     network.ts            getLocalIP() for the OAuth state round-trip
     math.ts               lerp()
@@ -56,6 +56,7 @@ User admin routes go through `requireLoopback` (`src/spotify/guard.ts`), which c
 - `verbatimModuleSyntax` is on: type-only imports must use `import type`.
 - Strict TS extras: `noUncheckedIndexedAccess` (indexed reads are possibly undefined; the code uses `!`), `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature` (hence `process.env["X"]`), plus `noUnusedLocals`/`noUnusedParameters`.
 - `src/led/animator.ts` mocks the matrix on win32/darwin and loads `rpi-led-matrix` through `eval("require")` on Linux so bundlers skip the native module. Keep this pattern; do not turn it into a normal import.
+- Types live in a types module, never in a logic file: LED types in `src/led/types.ts`, Spotify types in `src/spotify/types/`. Animation, client and route files import them with `import type`. Error classes live in the feature's `errors.ts`, and pure helpers in `src/utils/`. Do not declare a type, interface or type alias inside an animation, client or route file, even when only one module uses it.
 - `tsconfig.json` only includes `src/`; `tsconfig.test.json` compiles `src/` and `test/` into `dist-test/` for `pnpm test`.
 - `src/spotify/client.ts` exports a singleton instance. User tokens live in a `Map<email, UserTokens>`, loaded from `data/users.json` (resolved from the working directory) in the constructor and rewritten by `saveStore()` after login, refresh and active-user changes. A new `authorization_code` login keeps its tokens in a local value until `/me` resolves the email; only then does it enter the map and become active, so a failed login leaves the previous active user and the store unchanged.
 - Spotify and store payloads are checked with hand-written guards before use. A token store that does not match `StoredUsers` is logged and ignored as a whole; a Spotify response that fails its guard throws `SpotifyResponseError` (the callback maps it to `400`).

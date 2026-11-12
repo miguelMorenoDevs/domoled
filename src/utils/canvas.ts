@@ -1,6 +1,4 @@
-import type { Canvas } from "@napi-rs/canvas";
-
-type CanvasContext = ReturnType<Canvas["getContext"]>;
+import type { CanvasContext } from "../led/types.js";
 
 export function fillEllipse(
   ctx: CanvasContext,
