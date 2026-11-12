@@ -1,14 +1,20 @@
 // 1. THE IMPORT CLOAK: 'type' MUST be outside the brackets!
 // This guarantees the compiler completely erases this line from the final code.
 import type {
-  LedMatrixInstance,
+  GpioMapping,
   MatrixOptions,
   RuntimeOptions,
 } from "rpi-led-matrix";
 import { createRequire } from "node:module";
 import { WebSocketServer, WebSocket } from "ws";
 import { createCanvas, loadImage, Canvas, Image } from "@napi-rs/canvas";
-import type { AnimatorConfig, LedAnimation, TrackData } from "./types.js";
+import type {
+  AnimatorConfig,
+  LedAnimation,
+  LedMatrixDevice,
+  LedMatrixDriver,
+  TrackData,
+} from "./types.js";
 import { CdAnimation } from "./animations/cd.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
 import { AlbumArtLoadError } from "./errors.js";
@@ -20,7 +26,7 @@ const QRErrorCorrectLevel = requireQr(
   "qrcode-terminal/vendor/QRCode/QRErrorCorrectLevel",
 );
 
-let LedMatrix: any;
+let LedMatrix: LedMatrixDriver;
 
 // 2. Platform Check
 if (process.platform === "win32" || process.platform === "darwin") {
@@ -30,10 +36,14 @@ if (process.platform === "win32" || process.platform === "darwin") {
 
   LedMatrix = class MockLedMatrix {
     static defaultMatrixOptions() {
-      return { rows: 64, cols: 64, hardwareMapping: "regular" };
+      return {
+        rows: 64,
+        cols: 64,
+        hardwareMapping: "regular",
+      } as MatrixOptions;
     }
     static defaultRuntimeOptions() {
-      return { gpioSlowdown: 2 };
+      return { gpioSlowdown: 2 } as RuntimeOptions;
     }
     width() {
       return 64;
@@ -61,7 +71,7 @@ if (process.platform === "win32" || process.platform === "darwin") {
 }
 
 export class CdAnimator {
-  private matrix: LedMatrixInstance;
+  private matrix: LedMatrixDevice;
   private canvas: Canvas;
   private ctx: ReturnType<Canvas["getContext"]>;
   private animation: LedAnimation = new CdAnimation();
@@ -95,7 +105,7 @@ export class CdAnimator {
     const matrixOptions: MatrixOptions = LedMatrix.defaultMatrixOptions();
     matrixOptions.rows = this.config.matrixDimensions.rows;
     matrixOptions.cols = this.config.matrixDimensions.cols;
-    matrixOptions.hardwareMapping = "regular" as any;
+    matrixOptions.hardwareMapping = "regular" as GpioMapping;
 
     const runtimeOptions: RuntimeOptions = LedMatrix.defaultRuntimeOptions();
     runtimeOptions.gpioSlowdown = 2;
