@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
+  isRecord,
   isStoredUsers,
   isTokenResponse,
   type GetCurrentlyPlayedSong,
@@ -9,9 +10,32 @@ import {
   type UserTokens,
 } from "./types/api.js";
 import { isGetCurrentSongResponse } from "./types/service.js";
-import { SpotifyResponseError, UserNotLoggedError } from "./errors.js";
+import {
+  SpotifyApiError,
+  SpotifyAuthRevokedError,
+  SpotifyRequestError,
+  SpotifyResponseError,
+  UserNotLoggedError,
+} from "./errors.js";
+import { parseRetryAfter } from "../utils/http.js";
 
-export { SpotifyResponseError, UserNotLoggedError };
+export {
+  SpotifyApiError,
+  SpotifyAuthRevokedError,
+  SpotifyRequestError,
+  SpotifyResponseError,
+  UserNotLoggedError,
+};
+
+const SPOTIFY_TIMEOUT_MS = 10_000;
+
+async function readBody<T>(path: string, read: () => Promise<T>): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    throw new SpotifyRequestError(path, error);
+  }
+}
 
 class SpotifyClient {
   private readonly auth_url: string;
@@ -93,6 +117,7 @@ class SpotifyClient {
     body.append("client_id", this.client_id);
 
     let storedRefreshToken: string | undefined;
+    let refreshingUser: string | undefined;
 
     switch (options.grant_type) {
       case "authorization_code":
@@ -111,28 +136,33 @@ class SpotifyClient {
         if (!userTokens || !userTokens.refresh_token)
           throw Error("No refresh token available");
 
+        refreshingUser = this.active_user;
         storedRefreshToken = userTokens.refresh_token;
         body.append("refresh_token", userTokens.refresh_token);
         break;
       }
     }
 
-    const res = await fetch(this.auth_url + "/token", {
+    const res = await this.send("/token", this.auth_url + "/token", {
       method: "POST",
       headers,
       body,
     });
 
-    if (!res.ok || res.status !== 200) {
-      console.error({ res });
-      throw Error(
-        "Something went wrong getting Spotify access token in " +
-          options.grant_type +
-          " flow",
-      );
+    if (!res.ok) {
+      const failure: unknown = await res.json().catch(() => undefined);
+      if (
+        refreshingUser &&
+        isRecord(failure) &&
+        failure["error"] === "invalid_grant"
+      ) {
+        this.forgetUser(refreshingUser);
+        throw new SpotifyAuthRevokedError(refreshingUser);
+      }
+      throw new SpotifyApiError("/token", res.status, parseRetryAfter(res));
     }
 
-    const payload: unknown = await res.json();
+    const payload: unknown = await readBody("/token", () => res.json());
     if (!isTokenResponse(payload)) throw new SpotifyResponseError("/token");
     const { access_token, refresh_token } = payload;
 
@@ -168,7 +198,7 @@ class SpotifyClient {
     if (!userTokens || !userTokens.access_token)
       throw Error("Cannot fetch without access token");
 
-    const res = await fetch(this.api_url + path, {
+    const res = await this.send(path, this.api_url + path, {
       headers: {
         Authorization: "Bearer " + userTokens.access_token,
       },
@@ -179,6 +209,9 @@ class SpotifyClient {
       return this.fetch<T>(path, isExpected, false);
     }
 
+    if (!res.ok)
+      throw new SpotifyApiError(path, res.status, parseRetryAfter(res));
+
     const contentType = res.headers.get("content-type");
 
     if (!contentType) {
@@ -187,15 +220,36 @@ class SpotifyClient {
 
     let payload: unknown;
     if (contentType.includes("application/json")) {
-      payload = await res.json();
+      payload = await readBody(path, () => res.json());
     } else if (contentType.includes("text/")) {
-      payload = await res.text();
+      payload = await readBody(path, () => res.text());
     } else {
       throw Error("Non supported response type");
     }
 
     if (!isExpected(payload)) throw new SpotifyResponseError(path);
     return payload;
+  }
+
+  private async send(
+    path: string,
+    url: string,
+    init: RequestInit,
+  ): Promise<Response> {
+    try {
+      return await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(SPOTIFY_TIMEOUT_MS),
+      });
+    } catch (error) {
+      throw new SpotifyRequestError(path, error);
+    }
+  }
+
+  private forgetUser(email: string) {
+    this.users_map.delete(email);
+    if (this.active_user === email) this.active_user = undefined;
+    this.saveStore();
   }
 
   async getLoggedUsers() {
@@ -264,14 +318,14 @@ class SpotifyClient {
   }
 
   private async assingTokensToEmail(tokens: UserTokens) {
-    const res = await fetch(this.api_url + "/me", {
+    const res = await this.send("/me", this.api_url + "/me", {
       headers: {
         Authorization: "Bearer " + tokens.access_token,
       },
     });
 
     const data = res.ok
-      ? ((await res.json()) as { email?: string })
+      ? ((await readBody("/me", () => res.json())) as { email?: string })
       : undefined;
 
     if (!data || !data.email) throw Error("Fetching user email failed");

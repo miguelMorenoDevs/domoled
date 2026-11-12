@@ -12,6 +12,9 @@ process.chdir(storeDir);
 
 const {
   default: spotify,
+  SpotifyApiError,
+  SpotifyAuthRevokedError,
+  SpotifyRequestError,
   SpotifyResponseError,
   UserNotLoggedError,
 } = await import("../../src/spotify/client.js");
@@ -500,5 +503,136 @@ test("removeUser rejects with UserNotLoggedError for an unknown email", async ()
     (error: unknown) =>
       error instanceof UserNotLoggedError &&
       error.email === "nobody@example.com",
+  );
+});
+
+function statusResponse(
+  status: number,
+  body?: unknown,
+  headers?: Record<string, string>,
+) {
+  return body === undefined
+    ? new Response(null, { status, ...(headers && { headers }) })
+    : new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json", ...headers },
+      });
+}
+
+test("getCurrentSong throws SpotifyApiError with status on a 500 instead of reporting nothing playing", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () =>
+      statusResponse(500, { error: { status: 500, message: "boom" } }),
+  });
+
+  await assert.rejects(
+    spotify.getCurrentSong(),
+    (error: unknown) =>
+      error instanceof SpotifyApiError &&
+      error.status === 500 &&
+      error.retryAfterSeconds === undefined,
+  );
+});
+
+test("getCurrentSong surfaces a 429 with Retry-After seconds", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () =>
+      statusResponse(429, { error: { status: 429 } }, { "retry-after": "7" }),
+  });
+
+  await assert.rejects(
+    spotify.getCurrentSong(),
+    (error: unknown) =>
+      error instanceof SpotifyApiError &&
+      error.status === 429 &&
+      error.retryAfterSeconds === 7,
+  );
+});
+
+test("getCurrentSong sends a request timeout signal", async (t) => {
+  await login(t);
+
+  let signal: AbortSignal | null | undefined;
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (_input: string | URL | Request, init?: RequestInit) => {
+      signal = init?.signal;
+      throw new DOMException("The operation timed out.", "TimeoutError");
+    },
+  );
+
+  await assert.rejects(spotify.getCurrentSong(), SpotifyRequestError);
+  assert.ok(signal instanceof AbortSignal);
+});
+
+test("a stalled Spotify body read surfaces as SpotifyRequestError", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () =>
+      ({
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => {
+          throw new DOMException("The operation timed out.", "TimeoutError");
+        },
+      }) as unknown as Response,
+  });
+
+  await assert.rejects(spotify.getCurrentSong(), SpotifyRequestError);
+});
+
+test("an invalid_grant refresh removes the user's tokens and throws SpotifyAuthRevokedError", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () => statusResponse(401),
+    "/token": () =>
+      statusResponse(400, {
+        error: "invalid_grant",
+        error_description: "Refresh token revoked",
+      }),
+  });
+
+  await assert.rejects(
+    spotify.getCurrentSong(),
+    (error: unknown) =>
+      error instanceof SpotifyAuthRevokedError &&
+      error.email === "user@example.com",
+  );
+
+  assert.equal(
+    (await spotify.getLoggedUsers()).includes("user@example.com"),
+    false,
+  );
+  assert.equal(await spotify.hasActiveUser(), false);
+  const stored = JSON.parse(
+    readFileSync(path.join(storeDir, "data", "users.json"), "utf8"),
+  );
+  assert.equal("user@example.com" in stored.users, false);
+  assert.equal(stored.active_user, null);
+});
+
+test("a 500 on refresh keeps the user's tokens for a later retry", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () => statusResponse(401),
+    "/token": () => statusResponse(500),
+  });
+
+  await assert.rejects(
+    spotify.getCurrentSong(),
+    (error: unknown) =>
+      error instanceof SpotifyApiError &&
+      error.path === "/token" &&
+      error.status === 500,
+  );
+
+  assert.equal(await spotify.hasActiveUser(), true);
+  assert.deepEqual(
+    (await spotify.getLoggedUsers()).includes("user@example.com"),
+    true,
   );
 });

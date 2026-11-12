@@ -3,7 +3,13 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import qrcode from "qrcode-terminal";
 import SpotifyClient from "./client.js";
-import { UserNotLoggedError } from "./errors.js";
+import {
+  SpotifyApiError,
+  SpotifyAuthRevokedError,
+  SpotifyRequestError,
+  SpotifyResponseError,
+  UserNotLoggedError,
+} from "./errors.js";
 import { getLocalIP } from "../utils/network.js";
 import { cdAnimator } from "../led/animator.js";
 import { AlbumArtLoadError } from "../led/errors.js";
@@ -90,6 +96,30 @@ router.get("/callback", async (req: Request, res: Response) => {
         .send(
           "Logged in, but the album art could not be loaded from Spotify. Please try again.",
         );
+      return;
+    }
+    if (error instanceof SpotifyAuthRevokedError) {
+      cdAnimator.showQr(loginQrUrl());
+      res
+        .status(502)
+        .send(
+          "Spotify rejected the saved login. Scan the QR code to log in again.",
+        );
+      return;
+    }
+    if (
+      error instanceof SpotifyApiError ||
+      error instanceof SpotifyRequestError ||
+      error instanceof SpotifyResponseError
+    ) {
+      if (
+        error instanceof SpotifyApiError &&
+        error.retryAfterSeconds !== undefined
+      )
+        res.set("Retry-After", String(error.retryAfterSeconds));
+      res
+        .status(502)
+        .send("Spotify could not complete the request. Please try again.");
       return;
     }
     res.status(400).send("Something went wrong.");
