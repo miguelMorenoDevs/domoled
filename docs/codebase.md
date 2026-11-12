@@ -28,12 +28,13 @@ test/                      node:test suites (spotify client, network utils), run
 simulator.html            Standalone browser view of the 8080 frame stream
 index.html                GitHub Pages OAuth relay
 public/success.html       Friendly page rendered after a successful OAuth callback
+public/connect.html       Landing page the matrix QR opens; its button goes to `/spotify/login`
 ```
 
 ## Execution flow
 
-1. `src/app.ts` mounts `spotifyRouter` at `/spotify` and listens on 3000. With no active user it calls `cdAnimator.showQr()` for `http://<localIP>:3000/spotify/login` (on win32/darwin it logs the `simulator.html` URL instead).
-2. `POST /spotify/login` builds the Spotify authorize URL (`state` = `<random nonce>.<localIP>:3000`, the nonce stored in memory for 10 min), prints a QR code, returns the URL. `GET /spotify/login` redirects to that same URL; it is the short target of the matrix QR.
+1. `src/app.ts` mounts `spotifyRouter` at `/spotify` and listens on 3000. With no active user it calls `cdAnimator.showQr()` for `http://<localIP>:3000/connect.html` (on win32/darwin it logs the `simulator.html` URL instead). The static `public/connect.html` page has a "Connect my Spotify" button that goes to `/spotify/login`.
+2. `POST /spotify/login` builds the Spotify authorize URL (`state` = `<random nonce>.<localIP>:3000`, the nonce stored in memory for 10 min), prints a QR code, returns the URL. `GET /spotify/login` redirects to that same URL; the landing page button targets it.
 3. Spotify redirects to the GitHub Pages `index.html`, which forwards `code` and `state` unchanged to `GET /spotify/callback` on the host named in `state`.
 4. The callback first consumes `state`: a missing, unknown, expired or reused value gets `400` and no code exchange. Otherwise it exchanges the code for tokens, fetches the current song (including `progress_ms`), loads the album art into the shared `cdAnimator`, calls `play()` from that playback position, and renders `public/success.html`. When nothing is playing, it calls `cdAnimator.startIdle()` and replies `200` with a plain-text message instead.
 5. Each frame: `renderFrame` clears the canvas, calls `animation.render()` on the active `LedAnimation` (the CD or the idle cat), pushes the canvas to the matrix, then sends it as a data URL over WebSocket on non-Pi platforms. When the animation reports `finished`, `renderFrame` stops it and runs the pending `afterExit` callback.
