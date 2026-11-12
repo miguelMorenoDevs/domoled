@@ -106,7 +106,7 @@ jobs:
 
             1. Read the PR with `gh pr view ${{ github.event.issue.number }}` and `gh pr diff ${{ github.event.issue.number }}`.
                You are already on the PR branch.
-            2. Make only the requested change, following AGENTS.md. If the request is unclear or unsafe, change nothing.
+            2. Make only the requested change, following AGENTS.md and `.opencode/skills/ponytail/SKILL.md`. If the request is unclear or unsafe, change nothing.
             3. Run `pnpm build` if `src/` changed.
             4. Commit with a conventional commit subject and push to the PR branch, with
                `git -c user.name="opencode-agent[bot]" -c user.email="opencode-agent[bot]@users.noreply.github.com" commit ...`.
@@ -130,6 +130,7 @@ jobs:
             2. Apply the requested change to the issue body only. Keep the sections Summary, Current behavior, Expected,
                Scope and Verification in that order. Write the new body to a file under $RUNNER_TEMP and run
                `gh issue edit ${{ github.event.issue.number }} --body-file <file>`.
-            3. Do not change labels, state, or assignees, and do not write code or open PRs.
+            3. Do not change labels, state, or assignees, and do not write code or open PRs. Keep the issue to the
+               smallest complete change, following `.opencode/skills/ponytail/SKILL.md`.
             4. Comment on the issue with `gh issue comment ${{ github.event.issue.number }} --body "<one line: what changed, or why nothing changed>"`.
             Work non-interactively: never ask questions.
