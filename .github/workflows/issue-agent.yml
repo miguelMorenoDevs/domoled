@@ -2,15 +2,14 @@ name: issue agent
 
 on:
   issues:
-    types: [labeled]
+    types: [opened]
 
 jobs:
   implement:
-    # Both labels, in any order, mean "the agent may take this one unattended".
-    # Only the last-added one triggers, so later label edits do not rerun it.
+    # Only on creation: labels set at creation mean "the agent may take this one unattended".
+    # Labeling an existing issue does not start a run; use the `implement` comment instead.
     if: >-
       github.event.issue.state == 'open' &&
-      (github.event.label.name == 'ai-ready' || github.event.label.name == 'auto') &&
       contains(github.event.issue.labels.*.name, 'ai-ready') &&
       contains(github.event.issue.labels.*.name, 'auto')
     permissions:
