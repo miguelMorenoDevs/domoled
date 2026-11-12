@@ -42,9 +42,11 @@
                 return;
             }
 
-            const piCallbackUrl = `http://${state}/spotify/callback?code=${code}`;
+            // The host is only a routing hint: the device checks the nonce part of state.
+            const host = state.slice(state.indexOf('.') + 1);
+            const piCallbackUrl = `http://${host}/spotify/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
             
-            statusEl.innerText = `Redirecting to local device (${state})...`;
+            statusEl.innerText = `Redirecting to local device (${host})...`;
             
             window.location.replace(piCallbackUrl);
 
