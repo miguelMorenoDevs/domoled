@@ -25,6 +25,9 @@ jobs:
       # GITHUB_TOKEN has no workflows permission; `workflows: write` would invalidate this file.
     steps:
       - uses: actions/checkout@v6
+        with:
+          # Full history so the agent's branch from main pushes against the real base.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
