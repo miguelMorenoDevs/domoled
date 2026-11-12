@@ -14,6 +14,7 @@ import { getLocalIP } from "../utils/network.js";
 import { cdAnimator } from "../led/animator.js";
 import { AlbumArtLoadError } from "../led/errors.js";
 import { requireLoopback } from "./guard.js";
+import { consumeOAuthState, createOAuthState } from "./oauth-state.js";
 
 const router: Router = Router();
 
@@ -22,7 +23,7 @@ function spotifyAuthorizeUrl(): string {
   if (!clientId)
     throw Error("Cannot build Spotify login URL, missing SPOTIFY_CLIENT_ID");
 
-  const state = getLocalIP() + ":3000";
+  const state = createOAuthState(getLocalIP() + ":3000");
   const scope = "user-read-currently-playing user-read-email";
 
   const params = new URLSearchParams();
@@ -56,7 +57,14 @@ export function loginQrUrl(): string {
 
 router.get("/callback", async (req: Request, res: Response) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
+
+    if (typeof state !== "string" || !consumeOAuthState(state)) {
+      res
+        .status(400)
+        .send("Login expired or invalid. Scan the QR code to log in again.");
+      return;
+    }
 
     if (!code) throw Error("No code arrived");
 
