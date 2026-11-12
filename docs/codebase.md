@@ -41,6 +41,7 @@ public/success.html       Friendly page rendered after a successful OAuth callba
 - `GET /spotify/users` (loopback only)
 - `POST /spotify/users/active` (loopback only; `SpotifyClient.setActiveUser` throws `UserNotLoggedError` for an unknown email; the route maps it to `403` and any other error to `502`)
 - `DELETE /spotify/users/active` (loopback only)
+- `DELETE /spotify/users/:email` (loopback only; `SpotifyClient.removeUser` drops that user's tokens and persists the store, and clears the active user if it was that user. The route then calls `showQr()`, as `DELETE /spotify/users/active` does. Unknown emails get `404`.)
 
 User admin routes go through `requireLoopback` (`src/spotify/guard.ts`), which checks `req.socket.remoteAddress` and answers `403` for anything that is not `127.0.0.0/8`, `::1` or their IPv4-mapped forms. Login and callback routes stay open to the LAN.
 
@@ -51,7 +52,7 @@ User admin routes go through `requireLoopback` (`src/spotify/guard.ts`), which c
 - Strict TS extras: `noUncheckedIndexedAccess` (indexed reads are possibly undefined; the code uses `!`), `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature` (hence `process.env["X"]`), plus `noUnusedLocals`/`noUnusedParameters`.
 - `src/led/animator.ts` mocks the matrix on win32/darwin and loads `rpi-led-matrix` through `eval("require")` on Linux so bundlers skip the native module. Keep this pattern; do not turn it into a normal import.
 - `tsconfig.json` only includes `src/`; `tsconfig.test.json` compiles `src/` and `test/` into `dist-test/` for `pnpm test`.
-- `src/spotify/client.ts` exports a singleton instance. User tokens live in a `Map<email, UserTokens>`, loaded from `data/users.json` (resolved from the working directory) in the constructor and rewritten by `saveStore()` after login, refresh and active-user changes. A new `authorization_code` login keeps its tokens in a local value until `/me` resolves the email; only then does it enter the map and become active, so a failed login leaves the previous active user and the store unchanged.
+- `src/spotify/client.ts` exports a singleton instance. User tokens live in a `Map<email, UserTokens>`, loaded from `data/users.json` (resolved from the working directory) in the constructor and rewritten by `saveStore()` after login, refresh, active-user changes and user removal. A new `authorization_code` login keeps its tokens in a local value until `/me` resolves the email; only then does it enter the map and become active, so a failed login leaves the previous active user and the store unchanged.
 - Spotify `401` handling lives in `SpotifyClient.fetch`: it refreshes the user token and retries the request once with the new token.
 - `TrackData` carries `imageUrl`, `durationMs` and `progressMs`; `CdAnimator.play()` starts from `progressMs` (Spotify `progress_ms`, `0` when null) so a mid-song track skips the intro instead of restarting at 0.
 - `CdAnimator.setTrack` clears the previous art/duration/progress and throws `AlbumArtLoadError` when `loadImage` rejects; `GET /spotify/callback` maps that to a `502` retry message while other callback failures stay `400`.

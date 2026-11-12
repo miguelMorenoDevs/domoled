@@ -132,4 +132,25 @@ router.delete(
   },
 );
 
+router.delete(
+  "/users/:email",
+  requireLoopback,
+  async (req: Request, res: Response) => {
+    try {
+      const wasActive = await SpotifyClient.removeUser(
+        String(req.params["email"]),
+      );
+      if (wasActive) cdAnimator.showQr(loginQrUrl());
+      res.sendStatus(200);
+    } catch (error) {
+      console.error(error);
+      if (error instanceof UserNotLoggedError) {
+        res.status(404).send(error.message);
+      } else {
+        res.sendStatus(502);
+      }
+    }
+  },
+);
+
 export default router;

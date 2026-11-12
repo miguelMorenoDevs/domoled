@@ -315,3 +315,50 @@ test("logged users, active user and refresh token survive a restart", async (t) 
   assert.equal((await restarted.getCurrentSong())?.title, "Song");
   assert.equal(playingCalls, 2);
 });
+
+test("removeUser clears the active user and removes its tokens from the store", async (t) => {
+  await login(t);
+
+  assert.equal(await spotify.removeUser("user@example.com"), true);
+
+  assert.equal(
+    (await spotify.getLoggedUsers()).includes("user@example.com"),
+    false,
+  );
+  assert.equal(await spotify.hasActiveUser(), false);
+  const stored = JSON.parse(
+    readFileSync(path.join(storeDir, "data", "users.json"), "utf8"),
+  );
+  assert.equal("user@example.com" in stored.users, false);
+  assert.equal(stored.active_user, null);
+});
+
+test("removeUser keeps the active user when another user is removed", async (t) => {
+  await login(t);
+  mockSpotify(t, loginRoutes("other@example.com"));
+  await spotify.getUserToken({
+    grant_type: "authorization_code",
+    token: "other",
+  });
+
+  assert.equal(await spotify.removeUser("user@example.com"), false);
+
+  assert.equal(
+    (await spotify.getLoggedUsers()).includes("user@example.com"),
+    false,
+  );
+  assert.equal(await spotify.hasActiveUser(), true);
+  const stored = JSON.parse(
+    readFileSync(path.join(storeDir, "data", "users.json"), "utf8"),
+  );
+  assert.equal(stored.active_user, "other@example.com");
+});
+
+test("removeUser rejects with UserNotLoggedError for an unknown email", async () => {
+  await assert.rejects(
+    spotify.removeUser("nobody@example.com"),
+    (error: unknown) =>
+      error instanceof UserNotLoggedError &&
+      error.email === "nobody@example.com",
+  );
+});
