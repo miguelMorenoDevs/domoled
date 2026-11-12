@@ -1,6 +1,6 @@
 # domo-led
 
-Animates the album art of the Spotify track currently playing on a 64x64 Raspberry Pi LED matrix, with a browser simulator for development on non-Pi machines.
+Animates the album art of the Spotify track or podcast episode currently playing on a 64x64 Raspberry Pi LED matrix, with a browser simulator for development on non-Pi machines.
 
 ## Features
 

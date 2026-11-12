@@ -237,9 +237,10 @@ class SpotifyClient {
       isGetCurrentSongResponse,
     );
 
-    if (!track || !track.item || track.item.type !== "track") return;
+    const item = track?.item;
+    if (!item || (item.type !== "track" && item.type !== "episode")) return;
 
-    const { images } = track.item.album;
+    const images = item.type === "track" ? item.album.images : item.images;
 
     // No art to draw: report nothing playing so the idle animation runs.
     if (!images.length) return;
@@ -255,9 +256,9 @@ class SpotifyClient {
     if (!bestImage) return;
 
     return {
-      title: track.item.name,
+      title: item.name,
       image: bestImage.url,
-      durationMs: track.item.duration_ms,
+      durationMs: item.duration_ms,
       progressMs: track.progress_ms ?? 0,
     };
   }

@@ -213,19 +213,69 @@ test("getCurrentSong defaults progressMs to 0 when Spotify returns null", async 
   assert.equal(song?.progressMs, 0);
 });
 
-test("getCurrentSong returns undefined for episodes", async (t) => {
+test("getCurrentSong returns the episode cover, duration and progress", async (t) => {
   await login(t);
   mockSpotify(t, {
     "/me/player/currently-playing": () =>
       jsonResponse(
         track({
-          item: { type: "episode", name: "Episode" },
+          item: {
+            type: "episode",
+            id: "episode-id",
+            uri: "spotify:episode:episode-id",
+            name: "Episode",
+            duration_ms: 3600000,
+            images: [
+              { url: "https://img/wide", height: 300, width: 640 },
+              { url: "https://img/episode", height: 640, width: 640 },
+            ],
+          },
+          currently_playing_type: "episode",
+        }),
+      ),
+  });
+
+  assert.deepEqual(await spotify.getCurrentSong(), {
+    title: "Episode",
+    image: "https://img/episode",
+    durationMs: 3600000,
+    progressMs: 42000,
+  });
+});
+
+test("getCurrentSong returns undefined for episodes without images", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () =>
+      jsonResponse(
+        track({
+          item: {
+            type: "episode",
+            name: "Episode",
+            duration_ms: 1,
+            images: [],
+          },
           currently_playing_type: "episode",
         }),
       ),
   });
 
   assert.equal(await spotify.getCurrentSong(), undefined);
+});
+
+test("a currently-playing episode without images array throws a SpotifyResponseError", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () =>
+      jsonResponse(
+        track({
+          item: { type: "episode", name: "Episode", duration_ms: 1 },
+          currently_playing_type: "episode",
+        }),
+      ),
+  });
+
+  await assert.rejects(spotify.getCurrentSong(), SpotifyResponseError);
 });
 
 test("getCurrentSong returns undefined when nothing is playing", async (t) => {

@@ -46,13 +46,13 @@ export interface ContextObject {
   uri: string;
 }
 
-// Reusing TrackObject from previous block, stubbing EpisodeObject
 export interface EpisodeObject {
   type: "episode";
   id: string;
   uri: string;
   name: string;
-  // ... rest of episode fields if needed
+  duration_ms: number;
+  images: ImageObject[];
 }
 
 export interface DisallowsObject {
@@ -144,6 +144,14 @@ function isImageObject(value: unknown): value is ImageObject {
 function isCurrentlyPlayingItem(value: unknown): boolean {
   if (value === null) return true;
   if (!isRecord(value) || typeof value["type"] !== "string") return false;
+  if (value["type"] === "episode") {
+    return (
+      typeof value["name"] === "string" &&
+      typeof value["duration_ms"] === "number" &&
+      Array.isArray(value["images"]) &&
+      value["images"].every(isImageObject)
+    );
+  }
   if (value["type"] !== "track") return true;
 
   const album = value["album"];
