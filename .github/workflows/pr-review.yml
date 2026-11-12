@@ -77,20 +77,8 @@ jobs:
       - name: Sign in to OpenCode
         if: steps.pr.outputs.skip != 'true'
         env:
-          AUDIENCE: https://opencode.ai/console
           OPENCODE_CLIENT_ID: ${{ secrets.OPENCODE_CLIENT_ID }}
-        run: |
-          set -euo pipefail
-          : "${OPENCODE_CLIENT_ID:?missing OPENCODE_CLIENT_ID secret}"
-          oidc=$(curl -sS --fail-with-body --oauth2-bearer "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUDIENCE" | jq -er .value)
-          token=$(curl -sS --fail-with-body https://opencode.ai/console/auth/oauth/token \
-            -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
-            -d subject_token_type=urn:ietf:params:oauth:token-type:jwt \
-            -d client_id="$OPENCODE_CLIENT_ID" \
-            -d subject_token="$oidc" | jq -er .access_token)
-          echo "::add-mask::$token"
-          echo "OPENCODE_API_KEY=$token" >> "$GITHUB_ENV"
+        run: bash .github/scripts/opencode-login.sh
 
       - name: Review PR
         if: steps.pr.outputs.skip != 'true'
