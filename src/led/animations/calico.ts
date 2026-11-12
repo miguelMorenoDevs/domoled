@@ -1,8 +1,14 @@
 import type {
   AnimationFrame,
+  CalicoPhase,
+  CalicoPhaseState,
   CalicoTimingConfig,
+  CanvasContext,
+  CatPose,
   LedAnimation,
 } from "../types.js";
+import { fillEllipse, fillTriangle } from "../../utils/canvas.js";
+import { lerp } from "../../utils/math.js";
 
 export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
   introJumpMs: 1200,
@@ -12,59 +18,9 @@ export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
   outroDurationMs: 1200,
 };
 
-export type CalicoPhase = "intro" | "loop" | "outro" | "done";
-
-export interface CalicoPhaseState {
-  phase: CalicoPhase;
-  elapsedInPhaseMs: number;
-}
-
 const CAT_WHITE = "#f5f1ea";
 const CAT_ORANGE = "#e8892b";
 const CAT_BLACK = "#1c1c1c";
-
-type CanvasContext = AnimationFrame["ctx"];
-
-interface CatPose {
-  x: number;
-  jump: number;
-  lie: number;
-  stretch: number;
-  eyesClosed: boolean;
-}
-
-function lerp(from: number, to: number, progress: number): number {
-  return from + (to - from) * progress;
-}
-
-function fillEllipse(
-  ctx: CanvasContext,
-  x: number,
-  y: number,
-  rx: number,
-  ry: number,
-  color: string,
-): void {
-  ctx.beginPath();
-  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
-}
-
-function fillTriangle(
-  ctx: CanvasContext,
-  points: readonly (readonly [number, number])[],
-  color: string,
-): void {
-  const [first, ...rest] = points;
-  if (!first) return;
-  ctx.beginPath();
-  ctx.moveTo(first[0], first[1]);
-  for (const [px, py] of rest) ctx.lineTo(px, py);
-  ctx.closePath();
-  ctx.fillStyle = color;
-  ctx.fill();
-}
 
 /**
  * Maps time since the cat appeared to its phase: intro once, loop until exitAtMs,
