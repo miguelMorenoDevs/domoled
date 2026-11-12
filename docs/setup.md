@@ -46,7 +46,7 @@ pnpm format        # prettier --write .
 
 Two triggers implement an issue. Both run the reusable `.github/workflows/issue-implement.yml`, which runs OpenCode with `.opencode/skills/issue/SKILL.md` and opens a PR that closes the issue:
 
-- `.github/workflows/issue-agent.yml` runs when an issue gets both the `ai-ready` and `auto` labels. The PR enables auto-merge.
+- `.github/workflows/issue-agent.yml` runs when an issue is created with both the `ai-ready` and `auto` labels. Labeling an existing issue does not start it. The PR enables auto-merge.
 - `.github/workflows/issue-implement-comment.yml` runs when a member, owner or collaborator comments exactly `implement` on an open `ai-ready` issue. The PR does not enable auto-merge; a human merges it.
 
 - `.github/workflows/ai-change.yml` runs when a member, owner or collaborator comments `change: <request>` on an open PR labelled `ai-developed` (the agent pushes a commit to the PR branch) or on an open `ai-ready` issue (the agent rewrites the issue body).
