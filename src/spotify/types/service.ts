@@ -1,3 +1,5 @@
+import { isRecord } from "./api.js";
+
 export interface Device {
   id: string | null;
   is_active: boolean;
@@ -128,4 +130,41 @@ export interface GetCurrentSongResponse {
   item: TrackObject | EpisodeObject | null; // TrackObject from previous step
   currently_playing_type: "track" | "episode" | "ad" | "unknown";
   actions: ActionsObject;
+}
+
+function isImageObject(value: unknown): value is ImageObject {
+  return (
+    isRecord(value) &&
+    typeof value["url"] === "string" &&
+    (value["height"] === null || typeof value["height"] === "number") &&
+    (value["width"] === null || typeof value["width"] === "number")
+  );
+}
+
+function isCurrentlyPlayingItem(value: unknown): boolean {
+  if (value === null) return true;
+  if (!isRecord(value) || typeof value["type"] !== "string") return false;
+  if (value["type"] !== "track") return true;
+
+  const album = value["album"];
+
+  return (
+    typeof value["name"] === "string" &&
+    typeof value["duration_ms"] === "number" &&
+    isRecord(album) &&
+    Array.isArray(album["images"]) &&
+    album["images"].every(isImageObject)
+  );
+}
+
+// Checks only the fields the app reads from the currently-playing response.
+export function isGetCurrentSongResponse(
+  value: unknown,
+): value is GetCurrentSongResponse {
+  return (
+    isRecord(value) &&
+    (value["progress_ms"] === null ||
+      typeof value["progress_ms"] === "number") &&
+    isCurrentlyPlayingItem(value["item"])
+  );
 }

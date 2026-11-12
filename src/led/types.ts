@@ -24,11 +24,9 @@ export interface CdTimingConfig {
 export interface CalicoTimingConfig {
   introJumpMs: number;
   introSettleMs: number;
-  lickPeriodMs: number;
-  lickCount: number;
+  sleepMs: number;
+  stretchMs: number;
   outroDurationMs: number;
-  pauseMinMs: number;
-  pauseMaxMs: number;
 }
 
 export interface AnimationFrame {

@@ -1,13 +1,35 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type {
-  GetCurrentlyPlayedSong,
-  GetUserTokenOptions,
-  GrantTypes,
-  StoredUsers,
-  UserTokens,
+import {
+  isStoredUsers,
+  isTokenResponse,
+  type GetCurrentlyPlayedSong,
+  type GetUserTokenOptions,
+  type GrantTypes,
+  type StoredUsers,
+  type UserTokens,
 } from "./types/api.js";
-import type { GetCurrentSongResponse } from "./types/service.js";
+import { isGetCurrentSongResponse } from "./types/service.js";
+
+export class UserNotLoggedError extends Error {
+  readonly email: string;
+
+  constructor(email: string) {
+    super("User is not logged in");
+    this.name = "UserNotLoggedError";
+    this.email = email;
+  }
+}
+
+export class SpotifyResponseError extends Error {
+  readonly path: string;
+
+  constructor(path: string) {
+    super("Unexpected response shape from Spotify");
+    this.name = "SpotifyResponseError";
+    this.path = path;
+  }
+}
 
 class SpotifyClient {
   private readonly auth_url: string;
@@ -48,7 +70,9 @@ class SpotifyClient {
     }
 
     try {
-      const store = JSON.parse(raw) as StoredUsers;
+      const store: unknown = JSON.parse(raw);
+      if (!isStoredUsers(store))
+        throw new TypeError("Token store does not match the expected shape");
       for (const [email, tokens] of Object.entries(store.users))
         this.users_map.set(email, tokens);
       if (store.active_user && this.users_map.has(store.active_user))
@@ -60,11 +84,8 @@ class SpotifyClient {
   }
 
   private saveStore() {
-    const users = Object.fromEntries(
-      Array.from(this.users_map).filter(([email]) => email !== "temp"),
-    );
     const store: StoredUsers = {
-      users,
+      users: Object.fromEntries(this.users_map),
       active_user: this.active_user ?? null,
     };
 
@@ -132,25 +153,27 @@ class SpotifyClient {
       );
     }
 
-    const { access_token, refresh_token } = (await res.json()) as {
-      access_token: string;
-      refresh_token?: string;
-    };
+    const payload: unknown = await res.json();
+    if (!isTokenResponse(payload)) throw new SpotifyResponseError("/token");
+    const { access_token, refresh_token } = payload;
 
-    if (grant_type === "authorization_code") this.active_user = "temp";
-
-    this.users_map.set(this.active_user!, {
+    const tokens: UserTokens = {
       access_token,
       refresh_token: refresh_token ?? storedRefreshToken!,
-    });
+    };
 
-    if (grant_type === "authorization_code") await this.assingTokensToEmail();
+    if (grant_type === "authorization_code") {
+      await this.assingTokensToEmail(tokens);
+    } else {
+      this.users_map.set(this.active_user!, tokens);
+    }
 
     this.saveStore();
   }
 
-  private async fetch<T extends object | string>(
+  private async fetch<T>(
     path: string,
+    isExpected: (value: unknown) => value is T,
     retryOnUnauthorized = true,
   ): Promise<T | undefined> {
     if (!this.active_user) throw Error("There is no active user");
@@ -170,7 +193,7 @@ class SpotifyClient {
         grant_type: "refresh_token",
         token: userTokens.refresh_token,
       });
-      return this.fetch<T>(path, false);
+      return this.fetch<T>(path, isExpected, false);
     }
 
     const contentType = res.headers.get("content-type");
@@ -179,13 +202,17 @@ class SpotifyClient {
       return;
     }
 
+    let payload: unknown;
     if (contentType.includes("application/json")) {
-      return (await res.json()) as T;
+      payload = await res.json();
     } else if (contentType.includes("text/")) {
-      return (await res.text()) as T;
+      payload = await res.text();
     } else {
       throw Error("Non supported response type");
     }
+
+    if (!isExpected(payload)) throw new SpotifyResponseError(path);
+    return payload;
   }
 
   async getLoggedUsers() {
@@ -199,7 +226,7 @@ class SpotifyClient {
   async setActiveUser(email: string) {
     const loggedUsers = await this.getLoggedUsers();
 
-    if (!loggedUsers.includes(email)) throw Error("User is not logged in");
+    if (!loggedUsers.includes(email)) throw new UserNotLoggedError(email);
 
     this.active_user = email;
     this.saveStore();
@@ -211,41 +238,50 @@ class SpotifyClient {
   }
 
   async getCurrentSong(): Promise<GetCurrentlyPlayedSong | undefined> {
-    const track = await this.fetch<GetCurrentSongResponse>(
+    const track = await this.fetch(
       "/me/player/currently-playing",
+      isGetCurrentSongResponse,
     );
 
     if (!track || !track.item || track.item.type !== "track") return;
 
     const { images } = track.item.album;
 
+    // No art to draw: report nothing playing so the idle animation runs.
     if (!images.length) return;
 
     const squareImages = images.filter(
       (i) => i.height && i.width && i.height === i.width,
     );
+    const candidates = squareImages.length ? squareImages : images;
+    const size = (i: { width?: number | null; height?: number | null }) =>
+      Math.max(i.width ?? 0, i.height ?? 0);
 
-    const bestImage = squareImages
-      ? squareImages.sort((a, b) => b.height! - a.height!)[0]
-      : images[0];
+    const bestImage = [...candidates].sort((a, b) => size(b) - size(a))[0]!;
 
     return {
       title: track.item.name,
-      image: bestImage!.url,
+      image: bestImage.url,
       durationMs: track.item.duration_ms,
       progressMs: track.progress_ms ?? 0,
     };
   }
 
-  private async assingTokensToEmail() {
-    const data = await this.fetch<{ email: string }>("/me");
+  private async assingTokensToEmail(tokens: UserTokens) {
+    const res = await fetch(this.api_url + "/me", {
+      headers: {
+        Authorization: "Bearer " + tokens.access_token,
+      },
+    });
+
+    const data = res.ok
+      ? ((await res.json()) as { email?: string })
+      : undefined;
 
     if (!data || !data.email) throw Error("Fetching user email failed");
 
-    const userTokens = this.users_map.get("temp");
-    this.users_map.set(data.email, userTokens!);
-    this.users_map.delete("temp");
-    await this.setActiveUser(data.email);
+    this.users_map.set(data.email, tokens);
+    this.active_user = data.email;
   }
 }
 

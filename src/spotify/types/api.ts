@@ -15,6 +15,45 @@ export interface StoredUsers {
   active_user: string | null;
 }
 
+export interface TokenResponse {
+  access_token: string;
+  refresh_token?: string;
+}
+
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function isUserTokens(value: unknown): value is UserTokens {
+  return (
+    isRecord(value) &&
+    typeof value["access_token"] === "string" &&
+    typeof value["refresh_token"] === "string"
+  );
+}
+
+export function isStoredUsers(value: unknown): value is StoredUsers {
+  if (!isRecord(value)) return false;
+
+  const users = value["users"];
+  const activeUser = value["active_user"];
+
+  return (
+    isRecord(users) &&
+    Object.values(users).every(isUserTokens) &&
+    (activeUser === null || typeof activeUser === "string")
+  );
+}
+
+export function isTokenResponse(value: unknown): value is TokenResponse {
+  return (
+    isRecord(value) &&
+    typeof value["access_token"] === "string" &&
+    (value["refresh_token"] === undefined ||
+      typeof value["refresh_token"] === "string")
+  );
+}
+
 export interface GetCurrentlyPlayedSong {
   title: string;
   image: string;

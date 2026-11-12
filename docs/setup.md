@@ -107,4 +107,5 @@ JSON
 - That GitHub Pages URL serves `index.html`, which forwards `code` + `state` to `http://<state>/spotify/callback`; `state` is the machine's local IP from `src/utils/network.ts`.
 - The redirect URI appears in both `src/spotify/client.ts` and `src/spotify/routes.ts`; changing it means updating both files and the Spotify dashboard.
 - `POST /spotify/login` returns the authorize URL and prints a QR code to the terminal. Scan it, approve, and the callback starts the animation.
+- With no active user (at boot or after `DELETE /spotify/users/active`), the matrix shows a short login QR pointing to `http://<localIP>:3000/spotify/login` (phone must be on the same LAN as the Pi). On win32/darwin, boot logs the `simulator.html` file URL instead of showing the QR; `DELETE /spotify/users/active` still shows the QR in the simulator.
 - Tokens are saved to `data/users.json` (relative to the working directory, created with mode `0600`, gitignored) on login, refresh and active-user changes, and reloaded on startup. Delete that file to log every user out.

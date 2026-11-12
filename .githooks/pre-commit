@@ -6,5 +6,9 @@ cd "$(git rev-parse --show-toplevel)"
 
 pnpm build
 pnpm lint
-pnpm format:check
+# Windows checkouts use CRLF (core.autocrlf), so Prettier must accept CRLF there.
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) pnpm format:check:crlf ;;
+  *) pnpm format:check ;;
+esac
 pnpm test
