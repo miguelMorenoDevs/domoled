@@ -8,15 +8,20 @@ src/
   spotify/
     routes.ts             HTTP routes, OAuth callback, QR code
     guard.ts              `requireLoopback` middleware: user admin routes accept only loopback sockets (403 otherwise)
-    client.ts             Spotify OAuth + API client (singleton; tokens persisted to data/users.json)
+    client.ts             Spotify OAuth + API client (singleton; tokens persisted to data/users.json); re-exports the error classes
+    errors.ts             `UserNotLoggedError`, `SpotifyResponseError`
     types/api.ts          App-facing types (tokens, current song) and runtime guards for the token store and token response
     types/service.ts      Spotify API response shapes and the `isGetCurrentSongResponse` guard for the fields the app reads
   led/
     animator.ts           Matrix output, WS simulator stream, active-animation selection, idle start/stop, login QR (singleton `cdAnimator`)
+    errors.ts             `AlbumArtLoadError`
     animations/cd.ts      CD animation: intro slide-in, rotating art, sheen, outro fade (`CdAnimation`, `DEFAULT_CD_TIMING`)
     animations/calico.ts  Calico cat idle animation: intro jump and lie down once, sleep and stand-and-stretch loop until exit, outro jump out once (`CalicoCatAnimation`, `DEFAULT_CALICO_TIMING`, `calicoPhaseAt`)
-    types.ts              AnimatorConfig, TrackData, matrix dimensions, LedAnimation interface, CdTimingConfig, CalicoTimingConfig
-  utils/network.ts        getLocalIP() for the OAuth state round-trip
+    types.ts              AnimatorConfig, TrackData, matrix dimensions, LedAnimation interface, CdTimingConfig, CalicoTimingConfig, calico phase and pose types
+  utils/
+    network.ts            getLocalIP() for the OAuth state round-trip
+    math.ts               lerp()
+    canvas.ts             fillEllipse(), fillTriangle() for canvas drawing
 test/                      node:test suites (spotify client, network utils), run by `pnpm test`
 simulator.html            Standalone browser view of the 8080 frame stream
 index.html                GitHub Pages OAuth relay

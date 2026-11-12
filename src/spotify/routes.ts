@@ -2,9 +2,11 @@ import path from "node:path";
 import { Router } from "express";
 import type { Request, Response } from "express";
 import qrcode from "qrcode-terminal";
-import SpotifyClient, { UserNotLoggedError } from "./client.js";
+import SpotifyClient from "./client.js";
+import { UserNotLoggedError } from "./errors.js";
 import { getLocalIP } from "../utils/network.js";
-import { AlbumArtLoadError, cdAnimator } from "../led/animator.js";
+import { cdAnimator } from "../led/animator.js";
+import { AlbumArtLoadError } from "../led/errors.js";
 import { requireLoopback } from "./guard.js";
 
 const router: Router = Router();

@@ -11,6 +11,7 @@ import { createCanvas, loadImage, Canvas, Image } from "@napi-rs/canvas";
 import type { AnimatorConfig, LedAnimation, TrackData } from "./types.js";
 import { CdAnimation } from "./animations/cd.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
+import { AlbumArtLoadError } from "./errors.js";
 
 // qrcode-terminal's encoder returns the module grid; its public API only prints text.
 const requireQr = createRequire(import.meta.url);
@@ -18,17 +19,6 @@ const QRCode = requireQr("qrcode-terminal/vendor/QRCode");
 const QRErrorCorrectLevel = requireQr(
   "qrcode-terminal/vendor/QRCode/QRErrorCorrectLevel",
 );
-
-/** Raised when the album art URL cannot be fetched or decoded. */
-export class AlbumArtLoadError extends Error {
-  readonly imageUrl: string;
-
-  constructor(imageUrl: string, cause: unknown) {
-    super(`Failed to load album art from ${imageUrl}`, { cause });
-    this.name = "AlbumArtLoadError";
-    this.imageUrl = imageUrl;
-  }
-}
 
 let LedMatrix: any;
 
