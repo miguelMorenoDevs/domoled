@@ -1,13 +1,15 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type {
-  GetCurrentlyPlayedSong,
-  GetUserTokenOptions,
-  GrantTypes,
-  StoredUsers,
-  UserTokens,
+import {
+  isStoredUsers,
+  isTokenResponse,
+  type GetCurrentlyPlayedSong,
+  type GetUserTokenOptions,
+  type GrantTypes,
+  type StoredUsers,
+  type UserTokens,
 } from "./types/api.js";
-import type { GetCurrentSongResponse } from "./types/service.js";
+import { isGetCurrentSongResponse } from "./types/service.js";
 
 export class UserNotLoggedError extends Error {
   readonly email: string;
@@ -16,6 +18,16 @@ export class UserNotLoggedError extends Error {
     super("User is not logged in");
     this.name = "UserNotLoggedError";
     this.email = email;
+  }
+}
+
+export class SpotifyResponseError extends Error {
+  readonly path: string;
+
+  constructor(path: string) {
+    super("Unexpected response shape from Spotify");
+    this.name = "SpotifyResponseError";
+    this.path = path;
   }
 }
 
@@ -58,7 +70,9 @@ class SpotifyClient {
     }
 
     try {
-      const store = JSON.parse(raw) as StoredUsers;
+      const store: unknown = JSON.parse(raw);
+      if (!isStoredUsers(store))
+        throw new TypeError("Token store does not match the expected shape");
       for (const [email, tokens] of Object.entries(store.users))
         this.users_map.set(email, tokens);
       if (store.active_user && this.users_map.has(store.active_user))
@@ -139,10 +153,9 @@ class SpotifyClient {
       );
     }
 
-    const { access_token, refresh_token } = (await res.json()) as {
-      access_token: string;
-      refresh_token?: string;
-    };
+    const payload: unknown = await res.json();
+    if (!isTokenResponse(payload)) throw new SpotifyResponseError("/token");
+    const { access_token, refresh_token } = payload;
 
     const tokens: UserTokens = {
       access_token,
@@ -158,8 +171,9 @@ class SpotifyClient {
     this.saveStore();
   }
 
-  private async fetch<T extends object | string>(
+  private async fetch<T>(
     path: string,
+    isExpected: (value: unknown) => value is T,
     retryOnUnauthorized = true,
   ): Promise<T | undefined> {
     if (!this.active_user) throw Error("There is no active user");
@@ -179,7 +193,7 @@ class SpotifyClient {
         grant_type: "refresh_token",
         token: userTokens.refresh_token,
       });
-      return this.fetch<T>(path, false);
+      return this.fetch<T>(path, isExpected, false);
     }
 
     const contentType = res.headers.get("content-type");
@@ -188,13 +202,17 @@ class SpotifyClient {
       return;
     }
 
+    let payload: unknown;
     if (contentType.includes("application/json")) {
-      return (await res.json()) as T;
+      payload = await res.json();
     } else if (contentType.includes("text/")) {
-      return (await res.text()) as T;
+      payload = await res.text();
     } else {
       throw Error("Non supported response type");
     }
+
+    if (!isExpected(payload)) throw new SpotifyResponseError(path);
+    return payload;
   }
 
   async getLoggedUsers() {
@@ -231,8 +249,9 @@ class SpotifyClient {
   }
 
   async getCurrentSong(): Promise<GetCurrentlyPlayedSong | undefined> {
-    const track = await this.fetch<GetCurrentSongResponse>(
+    const track = await this.fetch(
       "/me/player/currently-playing",
+      isGetCurrentSongResponse,
     );
 
     if (!track || !track.item || track.item.type !== "track") return;
