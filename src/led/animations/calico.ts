@@ -1,10 +1,6 @@
 import type {
   AnimationFrame,
-  CalicoPhase,
-  CalicoPhaseState,
   CalicoTimingConfig,
-  CanvasContext,
-  CatPose,
   LedAnimation,
 } from "../types.js";
 import { fillEllipse, fillTriangle } from "../../utils/canvas.js";
@@ -17,6 +13,23 @@ export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
   stretchMs: 4000,
   outroDurationMs: 1200,
 };
+
+type CanvasContext = AnimationFrame["ctx"];
+
+export type CalicoPhase = "intro" | "loop" | "outro" | "done";
+
+export interface CalicoPhaseState {
+  phase: CalicoPhase;
+  elapsedInPhaseMs: number;
+}
+
+interface CatPose {
+  x: number;
+  jump: number;
+  lie: number;
+  stretch: number;
+  eyesClosed: boolean;
+}
 
 const CAT_WHITE = "#f5f1ea";
 const CAT_ORANGE = "#e8892b";

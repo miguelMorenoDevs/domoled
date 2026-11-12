@@ -36,23 +36,6 @@ export interface AnimationFrame {
   elapsedMs: number;
 }
 
-export type CanvasContext = AnimationFrame["ctx"];
-
-export type CalicoPhase = "intro" | "loop" | "outro" | "done";
-
-export interface CalicoPhaseState {
-  phase: CalicoPhase;
-  elapsedInPhaseMs: number;
-}
-
-export interface CatPose {
-  x: number;
-  jump: number;
-  lie: number;
-  stretch: number;
-  eyesClosed: boolean;
-}
-
 export interface LedAnimation {
   /** Runs once per loaded track, after its album art has loaded. */
   onLoad?(track: TrackData, art: Image): void;

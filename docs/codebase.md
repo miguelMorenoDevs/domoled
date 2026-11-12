@@ -16,8 +16,8 @@ src/
     animator.ts           Matrix output, WS simulator stream, active-animation selection, idle start/stop, login QR (singleton `cdAnimator`)
     errors.ts             `AlbumArtLoadError`
     animations/cd.ts      CD animation: intro slide-in, rotating art, sheen, outro fade (`CdAnimation`, `DEFAULT_CD_TIMING`)
-    animations/calico.ts  Calico cat idle animation: intro jump and lie down once, sleep and stand-and-stretch loop until exit, outro jump out once (`CalicoCatAnimation`, `DEFAULT_CALICO_TIMING`, `calicoPhaseAt`)
-    types.ts              AnimatorConfig, TrackData, matrix dimensions, LedAnimation interface, CdTimingConfig, CalicoTimingConfig, calico phase and pose types
+    animations/calico.ts  Calico cat idle animation: intro jump and lie down once, sleep and stand-and-stretch loop until exit, outro jump out once (`CalicoCatAnimation`, `DEFAULT_CALICO_TIMING`, `calicoPhaseAt`, calico phase and pose types)
+    types.ts              AnimatorConfig, TrackData, matrix dimensions, LedAnimation interface, CdTimingConfig, CalicoTimingConfig
   utils/
     network.ts            getLocalIP() for the OAuth state round-trip
     math.ts               lerp()
