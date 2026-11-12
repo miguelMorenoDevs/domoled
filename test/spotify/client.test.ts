@@ -10,9 +10,8 @@ process.env["SPOTIFY_CLIENT_SECRET"] ??= "test-client-secret";
 const storeDir = mkdtempSync(path.join(os.tmpdir(), "domoled-test-"));
 process.chdir(storeDir);
 
-const { default: spotify, UserNotLoggedError } = await import(
-  "../../src/spotify/client.js"
-);
+const { default: spotify, UserNotLoggedError } =
+  await import("../../src/spotify/client.js");
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
