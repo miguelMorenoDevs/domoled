@@ -9,7 +9,8 @@ Animates the album art of the Spotify track or podcast episode currently playing
 - CD-style animation: intro slide-in, rotating album art with silver rim and center hole, floating motion, light sheen, and fade-out.
 - Starts at the track's current playback position, so logging in mid-song continues instead of restarting the animation.
 - Multi-user token store persisted to `data/users.json`, reloaded on startup, with an active-user switch (`/spotify/users`) and removal of a stored user (`DELETE /spotify/users/:email`, which shows the login QR if that user was active). The user admin routes accept only requests from the local machine (`403` otherwise); login and callback stay reachable from the LAN.
-- Automatic Spotify access-token refresh with a single retry when the API returns `401`.
+- Automatic Spotify access-token refresh with a single retry when the API returns `401`. A refresh token that Spotify rejects (`invalid_grant`) is removed from the store and the login QR is shown again.
+- Spotify API failures are reported as errors, not as "nothing playing": non-2xx responses, timeouts (10 s per request) and malformed payloads make the callback return `502`, and a `429` forwards `Retry-After`.
 - Automatic matrix mock on Windows/macOS plus a live WebSocket frame stream for `simulator.html`.
 - Clear `502` response when the Spotify album art cannot be loaded, instead of a generic `400`.
 - Idle calico cat animation while authenticated with nothing playing: it jumps in from the left and lies down with its eyes closing once (intro), then sleeps; it loops by sleeping 10 s, standing up, stretching for 4 s and lying back down to sleep, until it is replaced (loop). When a track starts or the login QR is shown, it opens its eyes and jumps out to the right once (outro) before the new content appears. It returns when playback stops or ends.
