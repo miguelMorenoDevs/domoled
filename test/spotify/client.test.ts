@@ -318,6 +318,94 @@ test("logged users, active user and refresh token survive a restart", async (t) 
   assert.equal(playingCalls, 2);
 });
 
+test("a token store with the wrong shape is ignored on load", async () => {
+  mkdirSync(path.join(storeDir, "data"), { recursive: true });
+  writeFileSync(
+    path.join(storeDir, "data", "users.json"),
+    JSON.stringify({
+      users: {
+        "good@example.com": { access_token: "a", refresh_token: "r" },
+        "bad@example.com": { access_token: 1 },
+      },
+      active_user: "good@example.com",
+    }),
+  );
+
+  const restartedModule = "../../src/spotify/client.js?restart=bad-shape";
+  const { default: restarted } = await import(restartedModule);
+
+  assert.deepEqual(await restarted.getLoggedUsers(), []);
+  assert.equal(await restarted.hasActiveUser(), false);
+});
+
+test("a token store that is not an object is ignored on load", async () => {
+  writeFileSync(
+    path.join(storeDir, "data", "users.json"),
+    JSON.stringify(["not", "a", "store"]),
+  );
+
+  const restartedModule = "../../src/spotify/client.js?restart=array-store";
+  const { default: restarted } = await import(restartedModule);
+
+  assert.deepEqual(await restarted.getLoggedUsers(), []);
+  assert.equal(await restarted.hasActiveUser(), false);
+});
+
+test("a token response without an access token is rejected", async (t) => {
+  mockSpotify(t, {
+    "/token": () => jsonResponse({ refresh_token: "refresh" }),
+  });
+
+  await assert.rejects(
+    spotify.getUserToken({ grant_type: "authorization_code", token: "code" }),
+    SpotifyResponseError,
+  );
+});
+
+test("a currently-playing track without album images throws a SpotifyResponseError", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () =>
+      jsonResponse(
+        track({
+          item: { type: "track", name: "Song", duration_ms: 1, album: {} },
+        }),
+      ),
+  });
+
+  await assert.rejects(spotify.getCurrentSong(), SpotifyResponseError);
+});
+
+test("a currently-playing response with malformed fields throws a SpotifyResponseError", async (t) => {
+  await login(t);
+
+  const withoutItem: Record<string, unknown> = { ...track() };
+  delete withoutItem["item"];
+  const bodies: Record<string, unknown>[] = [
+    withoutItem,
+    track({ progress_ms: "42000" }),
+    track({
+      item: { type: "track", name: 5, duration_ms: 1, album: { images: [] } },
+    }),
+    track({
+      item: {
+        type: "track",
+        name: "Song",
+        duration_ms: 1,
+        album: { images: [{ url: 7, height: 1, width: 1 }] },
+      },
+    }),
+  ];
+
+  for (const body of bodies) {
+    mockSpotify(t, {
+      "/me/player/currently-playing": () => jsonResponse(body),
+    });
+
+    await assert.rejects(spotify.getCurrentSong(), SpotifyResponseError);
+  }
+});
+
 test("removeUser clears the active user and removes its tokens from the store", async (t) => {
   await login(t);
 
