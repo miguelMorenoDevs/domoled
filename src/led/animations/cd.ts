@@ -1,10 +1,11 @@
 import type { Image } from "@napi-rs/canvas";
 import type {
   AnimationFrame,
+  AnimationPhaseState,
   CdTimingConfig,
-  LedAnimation,
   TrackData,
 } from "../types.js";
+import { BaseLedAnimation } from "./base.js";
 
 export const DEFAULT_CD_TIMING: CdTimingConfig = {
   introDurationMs: 2000,
@@ -13,28 +14,33 @@ export const DEFAULT_CD_TIMING: CdTimingConfig = {
 
 /**
  * The spinning CD: album art on a silver disc, with a slide-in intro and a fade-out outro.
+ * The outro starts at the end of the track unless exit() ends it earlier.
  */
-export class CdAnimation implements LedAnimation {
-  private art: Image | null = null;
-  private durationMs: number = 0;
-  private timing: CdTimingConfig;
+export class CdAnimation extends BaseLedAnimation {
+  private readonly art: Image;
+  private readonly durationMs: number;
+  private readonly timing: CdTimingConfig;
 
-  constructor(timing: CdTimingConfig = DEFAULT_CD_TIMING) {
+  constructor(
+    track: TrackData,
+    art: Image,
+    timing: CdTimingConfig = DEFAULT_CD_TIMING,
+  ) {
+    super(timing.introDurationMs, timing.outroDurationMs);
+    this.art = art;
+    this.durationMs = track.durationMs;
     this.timing = timing;
   }
 
-  onLoad(track: TrackData, art: Image): void {
-    this.art = art;
-    this.durationMs = track.durationMs;
+  protected override scheduledExitMs(): number {
+    return this.durationMs - this.timing.outroDurationMs;
   }
 
-  onExit(): void {
-    this.art = null;
-  }
-
-  render({ ctx, width, height, elapsedMs: elapsed }: AnimationFrame): void {
+  protected draw(
+    { ctx, width, height, elapsedMs: elapsed }: AnimationFrame,
+    state: AnimationPhaseState,
+  ): void {
     const art = this.art;
-    if (!art) return;
 
     // --- 1. Sizing Math ---
     // Create a 6-pixel padding so the CD isn't touching the edges
@@ -48,18 +54,17 @@ export class CdAnimation implements LedAnimation {
     const rotation = (elapsed / 1000) * (Math.PI / 2);
     let floatOffset = 0;
 
-    const { introDurationMs, outroDurationMs } = this.timing;
-
     // --- 2. Timings & Position Math ---
-    if (elapsed < introDurationMs) {
-      const progress = elapsed / introDurationMs;
+    if (state.phase === "intro") {
+      const progress = state.elapsedInPhaseMs / this.timing.introDurationMs;
       const easeOut = 1 - Math.pow(1 - progress, 3);
       const startY = height + cdRadius * 2; // Start below the screen
       yPos = startY - (startY - height / 2) * easeOut;
-    } else if (elapsed > this.durationMs - outroDurationMs) {
-      const timeInOutro = elapsed - (this.durationMs - outroDurationMs);
-      const progress = Math.min(1, timeInOutro / outroDurationMs);
-      opacity = Math.max(0, 1 - progress);
+    } else if (state.phase === "outro") {
+      opacity = Math.max(
+        0,
+        1 - state.elapsedInPhaseMs / this.timing.outroDurationMs,
+      );
       floatOffset = Math.sin(elapsed / 500) * 1.5;
     } else {
       floatOffset = Math.sin(elapsed / 500) * 1.5;

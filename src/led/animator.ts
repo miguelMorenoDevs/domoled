@@ -74,21 +74,15 @@ export class CdAnimator {
   private matrix: LedMatrixDevice;
   private canvas: Canvas;
   private ctx: ReturnType<Canvas["getContext"]>;
-  private animation: LedAnimation = new CdAnimation();
-  private trackLoaded: boolean = false;
-  private animationActive: boolean = false;
+  private animation: LedAnimation | null = null;
+  private loadedTrack: { track: TrackData; art: Image } | null = null;
 
   private config: Required<AnimatorConfig>;
   private intervalId: NodeJS.Timeout | null = null;
 
-  private currentDurationMs: number = 0;
-  private trackProgressMs: number = 0;
   private startTime: number = 0;
   private progressOffsetMs: number = 0;
-
-  private idleAnimation: CalicoCatAnimation | null = null;
-  private idleStartMs: number = 0;
-  private afterIdle: (() => void) | null = null;
+  private afterExit: (() => void) | null = null;
 
   private qrModules: boolean[][] = [];
 
@@ -141,12 +135,8 @@ export class CdAnimator {
    * Node Canvas `loadImage` natively supports http/https URLs!
    */
   public async setTrack(track: TrackData): Promise<void> {
-    if (!this.idleAnimation) this.stop(); // Halt any current animation
-
     // Never keep the previous track's art/duration when this load fails.
-    this.trackLoaded = false;
-    this.currentDurationMs = 0;
-    this.trackProgressMs = 0;
+    this.loadedTrack = null;
 
     console.log(`[CdAnimator] Loading album art from: ${track.imageUrl}`);
     let art: Image;
@@ -160,10 +150,7 @@ export class CdAnimator {
       throw new AlbumArtLoadError(track.imageUrl, error);
     }
 
-    this.currentDurationMs = track.durationMs;
-    this.trackProgressMs = track.progressMs;
-    this.trackLoaded = true;
-    this.animation.onLoad?.(track, art);
+    this.loadedTrack = { track, art };
     console.log(
       `[CdAnimator] Track loaded. Duration: ${track.durationMs}ms, position: ${track.progressMs}ms`,
     );
@@ -173,21 +160,17 @@ export class CdAnimator {
    * Starts or resumes the animation from the track's current playback position.
    */
   public play(): void {
-    if (!this.trackLoaded) {
+    if (!this.loadedTrack) {
       console.warn("No track loaded. Call setTrack() first.");
       return;
     }
-    if (this.waitForIdleExit(() => this.play())) return;
+    if (this.waitForExit(() => this.play())) return;
 
-    this.stop(); // Prevent overlapping intervals
-
-    this.progressOffsetMs = this.trackProgressMs;
-    this.startTime = Date.now();
-    this.animationActive = true;
-    const frameDelay = 1000 / this.config.fps;
-
-    console.log(`[CdAnimator] Playing from ${this.progressOffsetMs}ms...`);
-    this.intervalId = setInterval(this.renderFrame, frameDelay);
+    const { track, art } = this.loadedTrack;
+    console.log(`[CdAnimator] Playing from ${track.progressMs}ms...`);
+    this.run(new CdAnimation(track, art), track.progressMs, () =>
+      this.startIdle(),
+    );
   }
 
   /**
@@ -195,24 +178,19 @@ export class CdAnimator {
    * when play() or showQr() takes over. Call only for an authenticated user with nothing playing.
    */
   public startIdle(): void {
-    if (this.idleAnimation && !this.idleAnimation.exiting) return;
-    if (this.waitForIdleExit(() => this.startIdle())) return;
-
-    this.stop(); // Replaces any running CD animation
-
-    this.idleAnimation = new CalicoCatAnimation();
-    this.idleStartMs = Date.now();
+    if (this.animation instanceof CalicoCatAnimation && !this.animation.exiting)
+      return;
+    if (this.waitForExit(() => this.startIdle())) return;
 
     console.log("[CdAnimator] Idle cat animation started.");
-    const frameDelay = 1000 / this.config.fps;
-    this.intervalId = setInterval(this.renderIdleFrame, frameDelay);
+    this.run(new CalicoCatAnimation(), 0, null);
   }
 
   /**
    * Shows a login QR code (dark modules on white) until the stream is replaced.
    */
   public showQr(url: string): void {
-    if (this.waitForIdleExit(() => this.showQr(url))) return;
+    if (this.waitForExit(() => this.showQr(url))) return;
 
     this.stop();
 
@@ -233,52 +211,44 @@ export class CdAnimator {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    this.exitAnimation();
+    this.animation = null;
+    this.afterExit = null;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.presentFrame();
   }
 
   /**
-   * Asks the idle cat to jump out. Returns true when the caller must wait: `next` runs once the outro ends.
+   * Replaces the running animation: it runs its outro, then `next` runs. Returns false when nothing
+   * is running, so the caller can start right away.
    */
-  private waitForIdleExit(next: () => void): boolean {
-    if (!this.idleAnimation) return false;
-    this.afterIdle = next;
-    this.idleAnimation.exit(Date.now() - this.idleStartMs);
+  private waitForExit(next: () => void): boolean {
+    if (!this.animation) return false;
+    this.afterExit = next;
+    this.animation.exit(this.elapsedMs());
     return true;
   }
 
   /**
-   * Runs the active animation's onExit once per playback, whether the track ended or was stopped.
+   * Starts an animation on the shared interval. `afterExit` runs once it has finished.
    */
-  private exitAnimation(): void {
-    if (!this.animationActive) return;
-    this.animationActive = false;
-    this.animation.onExit?.();
+  private run(
+    animation: LedAnimation,
+    progressOffsetMs: number,
+    afterExit: (() => void) | null,
+  ): void {
+    this.stop(); // Prevent overlapping intervals
+
+    this.animation = animation;
+    this.afterExit = afterExit;
+    this.progressOffsetMs = progressOffsetMs;
+    this.startTime = Date.now();
+    const frameDelay = 1000 / this.config.fps;
+    this.intervalId = setInterval(this.renderFrame, frameDelay);
   }
 
-  /**
-   * Renders one idle frame by drawing the calico cat animation.
-   */
-  private renderIdleFrame = (): void => {
-    if (!this.idleAnimation) return;
-
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.idleAnimation.render({
-      ctx: this.ctx,
-      width: this.canvas.width,
-      height: this.canvas.height,
-      elapsedMs: Date.now() - this.idleStartMs,
-    });
-    this.presentFrame();
-
-    if (!this.idleAnimation.finished) return;
-    this.idleAnimation = null;
-    this.stop();
-    const next = this.afterIdle;
-    this.afterIdle = null;
-    next?.();
-  };
+  private elapsedMs(): number {
+    return Date.now() - this.startTime + this.progressOffsetMs;
+  }
 
   /**
    * Renders the login QR: white background, black modules, one quiet-zone module around the code.
@@ -302,29 +272,27 @@ export class CdAnimator {
   };
 
   /**
-   * Renders one CD frame: clears the canvas, lets the active animation draw, then pushes it out.
+   * Renders one frame: clears the canvas, lets the active animation draw, then pushes it out.
+   * When the animation finishes, the next content starts.
    */
   private renderFrame = (): void => {
-    if (!this.trackLoaded) return;
-
-    const elapsed = Date.now() - this.startTime + this.progressOffsetMs;
+    const animation = this.animation;
+    if (!animation) return;
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.animation.render({
+    animation.render({
       ctx: this.ctx,
       width: this.canvas.width,
       height: this.canvas.height,
-      elapsedMs: elapsed,
+      elapsedMs: this.elapsedMs(),
     });
 
     this.presentFrame();
 
-    // End Condition
-    if (elapsed >= this.currentDurationMs) {
-      console.log("[CdAnimator] Track finished.");
-      this.exitAnimation();
-      this.startIdle();
-    }
+    if (!animation.finished) return;
+    const next = this.afterExit;
+    this.stop();
+    next?.();
   };
 
   /**
