@@ -14,7 +14,7 @@ Raspberry Pi LED matrix that animates the Spotify track currently playing. Expre
 - Don't read, search or edit `.env`, `dist/` or `node_modules/`: they are gitignored and only matter when the task needs them.
 - Use `pnpm` (version enforced by `devEngines`). `pnpm dev` runs with `.env`; `pnpm build` is `tsc`; `pnpm test` compiles `test/` with `tsconfig.test.json` and runs `node --test`. Run `pnpm build` and `pnpm test` before committing only when the change touches `src/`; docs, skills and workflow-only changes skip both.
 - Match the existing ESM conventions: relative imports end in `.js`, type-only imports use `import type`, env access uses `process.env["X"]`.
-- Types go in the feature's types module (`src/led/types.ts`, `src/spotify/types/`), never in animation, client or route logic files, even when only one file uses them. Error classes go in `errors.ts`; pure helpers go in `src/utils/`.
+- Types go in a `types.ts` file next to the module or domain that owns them (e.g. `src/led/types.ts`), never in a generic shared types file and never inline in animation, client or route logic files, even when only one file uses them. Error classes go in `errors.ts`; pure helpers go in `src/utils/`.
 - Keep the `eval("require")` platform shim in `src/led/animator.ts`; do not turn it into a normal import.
 - Record new bugs, gaps and deferred work as GitHub issues with the `issue-create` skill; do not add a local TODO list.
 - Never commit, or mention in PR descriptions, issues or comments, where this project is being run (machine, OS, host, paths, local IPs) or any personal information (names, emails, account IDs, tokens). Describe the behavior, not the environment.
