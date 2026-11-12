@@ -1,12 +1,11 @@
 import type {
   AnimationFrame,
-  CalicoPhase,
-  CalicoPhaseState,
+  AnimationPhaseState,
   CalicoTimingConfig,
   CanvasContext,
   CatPose,
-  LedAnimation,
 } from "../types.js";
+import { BaseLedAnimation } from "./base.js";
 import { fillEllipse, fillTriangle } from "../../utils/canvas.js";
 import { lerp } from "../../utils/math.js";
 
@@ -21,29 +20,6 @@ export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
 const CAT_WHITE = "#f5f1ea";
 const CAT_ORANGE = "#e8892b";
 const CAT_BLACK = "#1c1c1c";
-
-/**
- * Maps time since the cat appeared to its phase: intro once, loop until exitAtMs,
- * outro once after exitAtMs, then done. exitAtMs is null while the cat stays.
- */
-export function calicoPhaseAt(
-  elapsedMs: number,
-  exitAtMs: number | null,
-  timing: CalicoTimingConfig,
-): CalicoPhaseState {
-  if (exitAtMs !== null && elapsedMs >= exitAtMs) {
-    const outroMs = elapsedMs - exitAtMs;
-    if (outroMs < timing.outroDurationMs) {
-      return { phase: "outro", elapsedInPhaseMs: outroMs };
-    }
-    return { phase: "done", elapsedInPhaseMs: 0 };
-  }
-
-  const introMs = timing.introJumpMs + timing.introSettleMs;
-  if (elapsedMs < introMs)
-    return { phase: "intro", elapsedInPhaseMs: elapsedMs };
-  return { phase: "loop", elapsedInPhaseMs: elapsedMs - introMs };
-}
 
 /**
  * Stand and stretch (each 0..1) at loopMs into the loop: the cat sleeps for sleepMs, then stands up,
@@ -63,7 +39,7 @@ export function standStretchAt(
 }
 
 function calicoPose(
-  state: CalicoPhaseState,
+  state: AnimationPhaseState,
   width: number,
   timing: CalicoTimingConfig,
 ): CatPose {
@@ -120,35 +96,18 @@ function calicoPose(
  * The calico cat: jumps in from the left and lies down once, then sleeps 10 s and stands up to stretch in a loop, until
  * exit() is called, then opens its eyes and jumps out to the right once.
  */
-export class CalicoCatAnimation implements LedAnimation {
+export class CalicoCatAnimation extends BaseLedAnimation {
   private timing: CalicoTimingConfig;
-  private exitAtMs: number | null = null;
-  private phase: CalicoPhase = "intro";
 
   constructor(timing: CalicoTimingConfig = DEFAULT_CALICO_TIMING) {
+    super(timing.introJumpMs + timing.introSettleMs, timing.outroDurationMs);
     this.timing = timing;
   }
 
-  get exiting(): boolean {
-    return this.exitAtMs !== null;
-  }
-
-  get finished(): boolean {
-    return this.phase === "done";
-  }
-
-  /** Starts the outro after the current loop; during the intro it waits for the intro to finish. */
-  exit(elapsedMs: number): void {
-    if (this.exitAtMs !== null) return;
-    const introMs = this.timing.introJumpMs + this.timing.introSettleMs;
-    this.exitAtMs = Math.max(elapsedMs, introMs);
-  }
-
-  render({ ctx, width, elapsedMs }: AnimationFrame): void {
-    const state = calicoPhaseAt(elapsedMs, this.exitAtMs, this.timing);
-    this.phase = state.phase;
-    if (state.phase === "done") return;
-
+  protected override draw(
+    { ctx, width, elapsedMs }: AnimationFrame,
+    state: AnimationPhaseState,
+  ): void {
     const breath = Math.sin(elapsedMs / 600) * 0.04;
     const pose = calicoPose(state, width, this.timing);
     drawCat(ctx, pose, breath);

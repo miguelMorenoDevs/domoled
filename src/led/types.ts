@@ -1,4 +1,4 @@
-import type { Canvas, Image } from "@napi-rs/canvas";
+import type { Canvas } from "@napi-rs/canvas";
 import type { Color, MatrixOptions, RuntimeOptions } from "rpi-led-matrix";
 
 // The subset of rpi-led-matrix's LedMatrix the animator uses, so the hardware and mock matrices share one shape.
@@ -58,10 +58,10 @@ export interface AnimationFrame {
 
 export type CanvasContext = AnimationFrame["ctx"];
 
-export type CalicoPhase = "intro" | "loop" | "outro" | "done";
+export type AnimationPhase = "intro" | "loop" | "outro" | "done";
 
-export interface CalicoPhaseState {
-  phase: CalicoPhase;
+export interface AnimationPhaseState {
+  phase: AnimationPhase;
   elapsedInPhaseMs: number;
 }
 
@@ -74,10 +74,11 @@ export interface CatPose {
 }
 
 export interface LedAnimation {
-  /** Runs once per loaded track, after its album art has loaded. */
-  onLoad?(track: TrackData, art: Image): void;
-  /** Runs when the track ends or playback is stopped. */
-  onExit?(): void;
+  /** Starts the outro once the intro has ended; idempotent. */
+  exit(elapsedMs: number): void;
+  readonly exiting: boolean;
+  /** True once the outro has ended; the animator then starts the next content. */
+  readonly finished: boolean;
   /** Draws one frame into the canvas context. The animator clears the canvas first. */
   render(frame: AnimationFrame): void;
 }
