@@ -1,12 +1,12 @@
 import { createCanvas } from "@napi-rs/canvas";
 import type { Image } from "@napi-rs/canvas";
+import type { CanvasContext, TrackData } from "../types.js";
 import type {
   AnimationFrame,
   AnimationPhaseState,
-  TrackData,
-} from "../types.js";
-import { BaseLedAnimation } from "./base.js";
-import { DEFAULT_CD_TIMING } from "./cd.js";
+} from "../../animator/types.js";
+import { BaseAnimation } from "../../animator/base.js";
+import { DEFAULT_CD_TIMING } from "../../animator/timing.js";
 import { dominantColor } from "../../utils/color.js";
 import { lerp } from "../../utils/math.js";
 
@@ -20,7 +20,7 @@ const WAVE_AMPLITUDE = 4;
  * rises from the bottom edge, ripples across the matrix and sinks back. Same intro, loop and outro as the CD.
  * The outro starts at the end of the episode unless exit() ends it earlier.
  */
-export class PodcastAnimation extends BaseLedAnimation {
+export class PodcastAnimation extends BaseAnimation<CanvasContext> {
   private readonly art: Image;
   private readonly durationMs: number;
   private readonly shadowColor: string;
@@ -45,7 +45,7 @@ export class PodcastAnimation extends BaseLedAnimation {
   }
 
   protected draw(
-    { ctx, width, height, elapsedMs: elapsed }: AnimationFrame,
+    { ctx, width, height, elapsedMs: elapsed }: AnimationFrame<CanvasContext>,
     state: AnimationPhaseState,
   ): void {
     ctx.imageSmoothingEnabled = false;

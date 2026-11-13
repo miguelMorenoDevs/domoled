@@ -6,7 +6,7 @@
   "scripts": {
     "test": "tsc -p tsconfig.test.json && node --test \"dist-test/test/**/*.test.js\"",
     "build": "tsc",
-    "lg:build": "tsc -p lg-app && node lg-app/copy-static.mjs",
+    "lg:build": "tsc -p lg-app && esbuild lg-app/src/main.ts --bundle --format=iife --target=es2017 --outfile=lg-app/dist/app.js && node lg-app/copy-static.mjs",
     "lg:package": "pnpm lg:build && ares-package lg-app/dist --outdir lg-app/out",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -32,6 +32,7 @@
     "@types/node": "^26.0.1",
     "@types/qrcode-terminal": "^0.12.2",
     "@types/ws": "^8.18.1",
+    "esbuild": "^0.28.2",
     "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.10",

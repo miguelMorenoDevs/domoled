@@ -1,21 +1,13 @@
+import type { CanvasContext, CatPose } from "../types.js";
 import type {
   AnimationFrame,
   AnimationPhaseState,
   CalicoTimingConfig,
-  CanvasContext,
-  CatPose,
-} from "../types.js";
-import { BaseLedAnimation } from "./base.js";
+} from "../../animator/types.js";
+import { BaseAnimation } from "../../animator/base.js";
+import { DEFAULT_CALICO_TIMING } from "../../animator/timing.js";
 import { fillEllipse, fillTriangle } from "../../utils/canvas.js";
 import { lerp } from "../../utils/math.js";
-
-export const DEFAULT_CALICO_TIMING: CalicoTimingConfig = {
-  introJumpMs: 1200,
-  introSettleMs: 700,
-  sleepMs: 10000,
-  stretchMs: 4000,
-  outroDurationMs: 1200,
-};
 
 const CAT_WHITE = "#f5f1ea";
 const CAT_ORANGE = "#e8892b";
@@ -96,7 +88,7 @@ function calicoPose(
  * The calico cat: jumps in from the left and lies down once, then sleeps 10 s and stands up to stretch in a loop, until
  * exit() is called, then opens its eyes and jumps out to the right once.
  */
-export class CalicoCatAnimation extends BaseLedAnimation {
+export class CalicoCatAnimation extends BaseAnimation<CanvasContext> {
   private timing: CalicoTimingConfig;
 
   constructor(timing: CalicoTimingConfig = DEFAULT_CALICO_TIMING) {
@@ -105,7 +97,7 @@ export class CalicoCatAnimation extends BaseLedAnimation {
   }
 
   protected override draw(
-    { ctx, width, elapsedMs }: AnimationFrame,
+    { ctx, width, elapsedMs }: AnimationFrame<CanvasContext>,
     state: AnimationPhaseState,
   ): void {
     const breath = Math.sin(elapsedMs / 600) * 0.04;

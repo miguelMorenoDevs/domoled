@@ -1,30 +1,16 @@
-/**
- * Maps time since the animation started to its phase: intro once, loop until exitAtMs,
- * outro once after exitAtMs, then done. exitAtMs is null while the animation stays.
- */
-function animationPhaseAt(
-  elapsedMs: number,
-  exitAtMs: number | null,
-  introMs: number,
-  outroMs: number,
-): AnimationPhaseState {
-  if (exitAtMs !== null && elapsedMs >= exitAtMs) {
-    const outroElapsedMs = elapsedMs - exitAtMs;
-    if (outroElapsedMs < outroMs) {
-      return { phase: "outro", elapsedInPhaseMs: outroElapsedMs };
-    }
-    return { phase: "done", elapsedInPhaseMs: 0 };
-  }
-  if (elapsedMs < introMs)
-    return { phase: "intro", elapsedInPhaseMs: elapsedMs };
-  return { phase: "loop", elapsedInPhaseMs: elapsedMs - introMs };
-}
+import type {
+  Animation,
+  AnimationFrame,
+  AnimationPhase,
+  AnimationPhaseState,
+} from "./types.js";
+import { animationPhaseAt } from "./timing.js";
 
 /**
- * Shared lifecycle for LED animations: intro once, loop until exit(), outro once, then finished.
+ * Shared lifecycle for animations on every target: intro once, loop until exit(), outro once, then finished.
  * Subclasses draw each phase; they never track the phase themselves.
  */
-abstract class BaseLedAnimation implements LedAnimation {
+export abstract class BaseAnimation<Ctx> implements Animation<Ctx> {
   private readonly introMs: number;
   private readonly outroMs: number;
   private exitAtMs: number | null = null;
@@ -50,7 +36,7 @@ abstract class BaseLedAnimation implements LedAnimation {
     this.exitAtMs = Math.max(this.introMs, Math.min(elapsedMs, scheduledMs));
   }
 
-  render(frame: AnimationFrame): void {
+  render(frame: AnimationFrame<Ctx>): void {
     const exitAtMs = this.exitAtMs ?? this.scheduledExitMs();
     const state = animationPhaseAt(
       frame.elapsedMs,
@@ -69,7 +55,7 @@ abstract class BaseLedAnimation implements LedAnimation {
   }
 
   protected abstract draw(
-    frame: AnimationFrame,
+    frame: AnimationFrame<Ctx>,
     state: AnimationPhaseState,
   ): void;
 }

@@ -1,3 +1,12 @@
+import type {
+  AnimationFrame,
+  AnimationPhaseState,
+} from "../../../../src/animator/types.js";
+import { BaseAnimation } from "../../../../src/animator/base.js";
+import { DEFAULT_CD_TIMING } from "../../../../src/animator/timing.js";
+import { dominantColor } from "../../utils/color.js";
+import { lerp } from "../../utils/math.js";
+
 const PODCAST_SAMPLE_SIZE = 16;
 const PODCAST_SHADOW_BRIGHTNESS = 0.25;
 const PODCAST_SHADOW_MAX_RISE = 0.55;
@@ -8,7 +17,7 @@ const PODCAST_WAVE_AMPLITUDE = 4;
  * rises from the bottom edge, ripples across the matrix and sinks back. Same intro, loop and outro as the CD.
  * The outro starts at the end of the episode unless exit() ends it earlier.
  */
-class PodcastAnimation extends BaseLedAnimation {
+export class PodcastAnimation extends BaseAnimation<CanvasContext> {
   private readonly art: HTMLImageElement;
   private readonly durationMs: number;
   private readonly shadowColor: string;
@@ -37,7 +46,7 @@ class PodcastAnimation extends BaseLedAnimation {
   }
 
   protected draw(
-    { ctx, width, height, elapsedMs: elapsed }: AnimationFrame,
+    { ctx, width, height, elapsedMs: elapsed }: AnimationFrame<CanvasContext>,
     state: AnimationPhaseState,
   ): void {
     ctx.imageSmoothingEnabled = false;

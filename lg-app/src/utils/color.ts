@@ -13,7 +13,7 @@ interface ColorBucket extends Rgb {
  * each group is averaged, and saturated groups win over grey ones of similar size. Transparent
  * pixels are skipped.
  */
-function dominantColor(rgba: ArrayLike<number>): Rgb {
+export function dominantColor(rgba: ArrayLike<number>): Rgb {
   const buckets = new Map<number, ColorBucket>();
   for (let i = 0; i + 3 < rgba.length; i += 4) {
     if (rgba[i + 3] === 0) continue;
