@@ -19,6 +19,7 @@ import type {
 import { CdAnimation } from "./animations/cd.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
 import { AlbumArtLoadError } from "./errors.js";
+import { PlaybackClock } from "../utils/clock.js";
 
 // qrcode-terminal's encoder returns the module grid; its public API only prints text.
 const requireQr = createRequire(import.meta.url);
@@ -81,8 +82,7 @@ export class CdAnimator {
   private config: Required<AnimatorConfig>;
   private intervalId: NodeJS.Timeout | null = null;
 
-  private startTime: number = 0;
-  private progressOffsetMs: number = 0;
+  private clock = new PlaybackClock();
   private afterExit: (() => void) | null = null;
 
   private qrModules: boolean[][] = [];
@@ -179,6 +179,34 @@ export class CdAnimator {
   }
 
   /**
+   * Freezes the running track's animation on its current frame. The matrix keeps the last frame.
+   */
+  public pause(): void {
+    if (!this.animation || this.clock.paused) return;
+    this.clock.pause();
+    if (this.intervalId) clearInterval(this.intervalId);
+    this.intervalId = null;
+  }
+
+  /**
+   * Continues a paused track's animation from where it stopped, without restarting the intro.
+   */
+  public resume(): void {
+    if (!this.animation || !this.clock.paused) return;
+    this.clock.resume();
+    const frameDelay = 1000 / this.config.fps;
+    this.intervalId = setInterval(this.renderFrame, frameDelay);
+  }
+
+  /**
+   * Moves a playing or paused track's animation to `progressMs`, without restarting the intro.
+   */
+  public seek(progressMs: number): void {
+    if (!(this.animation instanceof CdAnimation)) return;
+    this.clock.seek(progressMs);
+  }
+
+  /**
    * Calls `listener` with the current state now and on every change. Returns the unsubscribe function.
    */
   public subscribe(listener: (state: AnimatorState) => void): () => void {
@@ -242,6 +270,8 @@ export class CdAnimator {
   private waitForExit(next: () => void): boolean {
     if (!this.animation) return false;
     this.afterExit = next;
+    // A paused outro would never finish, so a replaced track resumes playback first.
+    this.resume();
     this.animation.exit(this.elapsedMs());
     return true;
   }
@@ -258,14 +288,13 @@ export class CdAnimator {
 
     this.animation = animation;
     this.afterExit = afterExit;
-    this.progressOffsetMs = progressOffsetMs;
-    this.startTime = Date.now();
+    this.clock.start(progressOffsetMs);
     const frameDelay = 1000 / this.config.fps;
     this.intervalId = setInterval(this.renderFrame, frameDelay);
   }
 
   private elapsedMs(): number {
-    return Date.now() - this.startTime + this.progressOffsetMs;
+    return this.clock.elapsedMs();
   }
 
   private show(state: AnimatorState): void {

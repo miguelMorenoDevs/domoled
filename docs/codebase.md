@@ -25,6 +25,7 @@ src/
     network.ts            getLocalIP() for the OAuth state round-trip
     math.ts               lerp()
     canvas.ts             fillEllipse(), fillTriangle() for canvas drawing
+    clock.ts              `PlaybackClock`: track position that pauses, resumes and seeks (used by the animator's `pause()`, `resume()`, `seek()`)
 test/                      node:test suites (spotify client, network utils), run by `pnpm test`
 lg-app/                   LG webOS 5+ TV app: a browser copy of the LED animations, built separately (not part of `pnpm build`)
   tsconfig.json           ES2017 classic-script build (`outFile` dist/app.js); `files` order = concatenation order
