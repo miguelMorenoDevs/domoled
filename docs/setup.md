@@ -53,7 +53,7 @@ Two triggers implement an issue. Both run the reusable `.github/workflows/issue-
 
 - The reviewer runs when a member, owner or collaborator comments `@miguelmoreno-reviewer` on a PR (`.github/workflows/pr-review.yml`), or on manual dispatch. It skips drafts and forks, and comments on the PR when the review starts. The PR author enables auto-merge only when the implementation run asks for it. The reviewer only decides: it approves, and GitHub merges if auto-merge is enabled, or it requests changes with the problem in the review body.
 - `GITHUB_TOKEN` events do not trigger workflows, so `.opencode/skills/issue/SKILL.md` makes the agent request the review itself with `gh workflow run pr-review.yml -f pr=<n>` after opening the PR. Commenting `@miguelmoreno-reviewer` on a PR also works for people.
-- Both workflows need the `OPENCODE_CLIENT_ID` secret: they exchange their GitHub Actions OIDC token for a short-lived OpenCode token (`id-token: write`). They install OpenCode V2 with `npm install -g @opencode/cli`. The implementation job runs `opencode-go/claude-haiku-5-5` and the reviewer runs `opencode-go/deepseek-v4.1-flash`. The implementation model is selected in `opencode-run.sh` for the `implement` job because the agent token cannot edit workflow files; change that selection or the `--model` flag to use another provider/model.
+- Both workflows need the `OPENCODE_CLIENT_ID` secret: they exchange their GitHub Actions OIDC token for a short-lived OpenCode token (`id-token: write`). They install OpenCode V2 with `npm install -g @opencode/cli`. The implementation job runs `opencode-go/claude-haiku-5-5` and the reviewer runs `opencode-go/deepseek-v4.1-flash`. The implementation model is selected in `opencode-run.sh` for the `implement` job; change that selection or the `--model` flag to use another provider/model.
 - The OIDC-to-OpenCode sign-in lives in `.github/scripts/opencode-login.sh`. Both HTTP calls retry up to 3 times with a 5-second delay. It stops with a message naming the failed step (missing secret or OIDC permission, OIDC request, token exchange, or a response without `access_token`) and includes the server's error body.
 - Both workflows run OpenCode through `.github/scripts/opencode-run.sh`. It captures the JSON stream and prints only the final assistant message in the step log, or the error and exit status when the run fails. For the `implement` job it also fails when no PR closes the issue (`Closes #N` in a PR body), so a green run always means a PR exists.
 - The skill commits as `opencode-agent[bot]`, not as the human running it. The PR creator is still the `gh` account that opened it. Every PR the agent opens gets the `ai-developed` label.
@@ -64,7 +64,7 @@ Two triggers implement an issue. Both run the reusable `.github/workflows/issue-
 `GITHUB_TOKEN` cannot approve PRs and a user cannot approve their own, so the reviewer approves as a GitHub App. The official [OpenCode Agent](https://github.com/apps/opencode-agent) app runs OpenCode on issues/PRs but does not expose a token to this workflow; create your own app instead:
 
 1. GitHub **Settings → Developer settings → GitHub Apps → New GitHub App**. Any name works (for example `domoled-reviewer`); set the homepage URL to this repository and uncheck **Webhook → Active**.
-2. Repository permissions: **Contents: Read and write**, **Pull requests: Read and write**. `Contents: write` is required — with read-only contents the app's approval shows as "approved with read-only permissions" and does not count toward required reviews.
+2. Repository permissions: **Actions: Read and write**, **Contents: Read and write**, **Issues: Read and write**, **Pull requests: Read and write**, **Workflows: Read and write**. `Contents: write` is required — with read-only contents the app's approval shows as "approved with read-only permissions" and does not count toward required reviews. `Workflows: write` lets the implementation job push changes under `.github/workflows/`; the implementation job uses the same app token.
 3. Create the app, then **Install App** on this repository.
 4. Generate a private key in the app settings and copy the **App ID** — the numeric id, not the Client ID.
 5. Add the secrets with no quotes or whitespace:
@@ -74,7 +74,7 @@ Two triggers implement an issue. Both run the reusable `.github/workflows/issue-
    gh secret set REVIEW_APP_PRIVATE_KEY < path/to/app.private-key.pem
    ```
 
-`pr-review.yml` mints an installation token with `actions/create-github-app-token@v3` and uses it only for `gh pr review --approve`; comments and auto-merge still use `GITHUB_TOKEN`.
+`pr-review.yml` mints an installation token with `actions/create-github-app-token@v3` and uses it only for `gh pr review --approve`; comments and auto-merge still use `GITHUB_TOKEN`. `issue-implement.yml` mints one the same way and uses it to check out the repo, so the agent's `git push` can update workflow files.
 
 If the token step fails with `'Issuer' claim ('iss') must be an Integer`, `REVIEW_APP_ID` is not the numeric App ID (it is the Client ID, or has a trailing newline). Re-set it with `gh secret set ... --body`.
 
