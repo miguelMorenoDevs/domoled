@@ -3,3 +3,5 @@ node_modules
 .env
 dist-test
 data
+lg-app/config.js
+lg-app/out

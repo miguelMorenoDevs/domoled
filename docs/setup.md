@@ -96,9 +96,30 @@ JSON
 
 `dismiss_stale_reviews` drops the approval on every push, and the `synchronize` run re-approves. `enforce_admins` also stops the repo owner from bypassing the gate. Without this protection, auto-merge still merges immediately once enabled.
 
+## LG TV app
+
+`lg-app/` is a webOS web app that mirrors the matrix animations on the TV. It is a browser copy of the LED animations: it does not run on the Pi, it reads the state the server publishes on `GET /led/state` (Server-Sent Events) and animates it at full screen.
+
+Requirements: an LG webOS TV on webOS 5 or later, the TV and the Pi on the same LAN, and the [webOS CLI](https://webostv.developer.lge.com/develop/tools/cli-dev-guide) (`npm install -g @webos-tools/cli`).
+
+1. On the TV, install **Developer Mode** from the LG Content Store, turn it on, and note the passphrase it shows. Developer Mode turns itself off after about 50 days; re-enable it and reinstall the app when that happens.
+2. Add the TV to the CLI with `ares-setup-device` (name it `tv`), using its address and the passphrase.
+3. Copy `lg-app/config.example.js` to `lg-app/config.js` and set `LED_SERVER_URL` to `http://<pi-address>:3000`. The file is gitignored: it holds your LAN address and must not be committed.
+4. Package and install:
+
+```sh
+pnpm lg:package                       # tsc -p lg-app, copies static files, runs ares-package -> lg-app/out/
+ares-install --device tv lg-app/out/com.domo.led_1.0.0_all.ipk
+ares-launch --device tv com.domo.led
+```
+
+- Only compiled output ships: `lg-app/dist/` holds `app.js`, `index.html`, `config.js`, `appinfo.json` and the icons. The `.ipk` is built from `dist/` only.
+- `lg-app/tsconfig.json` is separate from the server's. It compiles everything into one classic script (`dist/app.js`) with ES2017 output, because webOS 5 rejects `<script type="module">` from `file://`.
+- The server must be running with the TV on, and the TV reconnects on its own when the server restarts.
+
 ## Ports and simulator
 
-- Express listens on **3000**.
+- Express listens on **3000**. `GET /led/state` streams the current animation state to the LG TV app.
 - On win32/darwin the animator starts a WebSocket server on **8080** and streams frames.
 - Open `simulator.html` directly in a browser (double-click or `file://`); it connects to `ws://localhost:8080`. It is not served by Express — `public/` only holds the OAuth success page at `public/success.html`.
 

@@ -1,0 +1,13 @@
+{
+  "id": "com.domo.led",
+  "version": "1.0.0",
+  "vendor": "Domo",
+  "type": "web",
+  "main": "index.html",
+  "title": "Domo LED",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "bgColor": "#000000",
+  "requiredACG": [],
+  "resolution": "1920x1080"
+}

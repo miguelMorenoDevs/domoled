@@ -10,6 +10,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { createCanvas, loadImage, Canvas, Image } from "@napi-rs/canvas";
 import type {
   AnimatorConfig,
+  AnimatorState,
   LedAnimation,
   LedMatrixDevice,
   LedMatrixDriver,
@@ -88,6 +89,9 @@ export class CdAnimator {
 
   private wss: WebSocketServer | null = null;
   private wsClients: Set<WebSocket> = new Set();
+
+  private shown: AnimatorState | null = null;
+  private listeners: Set<(state: AnimatorState) => void> = new Set();
 
   constructor(config?: AnimatorConfig) {
     this.config = {
@@ -171,6 +175,18 @@ export class CdAnimator {
     this.run(new CdAnimation(track, art), track.progressMs, () =>
       this.startIdle(),
     );
+    this.show({ kind: "track", track, positionMs: track.progressMs });
+  }
+
+  /**
+   * Calls `listener` with the current state now and on every change. Returns the unsubscribe function.
+   */
+  public subscribe(listener: (state: AnimatorState) => void): () => void {
+    this.listeners.add(listener);
+    if (this.shown) listener(this.snapshot(this.shown));
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   /**
@@ -184,6 +200,7 @@ export class CdAnimator {
 
     console.log("[CdAnimator] Idle cat animation started.");
     this.run(new CalicoCatAnimation(), 0, null);
+    this.show({ kind: "idle" });
   }
 
   /**
@@ -201,6 +218,7 @@ export class CdAnimator {
 
     const frameDelay = 1000 / this.config.fps;
     this.intervalId = setInterval(this.renderQrFrame, frameDelay);
+    this.show({ kind: "qr", modules: this.qrModules });
   }
 
   /**
@@ -248,6 +266,18 @@ export class CdAnimator {
 
   private elapsedMs(): number {
     return Date.now() - this.startTime + this.progressOffsetMs;
+  }
+
+  private show(state: AnimatorState): void {
+    this.shown = state;
+    for (const listener of this.listeners) listener(this.snapshot(state));
+  }
+
+  /** A track's position is live: it is read when the snapshot is taken, not when the track started. */
+  private snapshot(state: AnimatorState): AnimatorState {
+    return state.kind === "track"
+      ? { ...state, positionMs: this.elapsedMs() }
+      : state;
   }
 
   /**

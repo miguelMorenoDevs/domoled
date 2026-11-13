@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    // webOS 5 (Chromium 68) rejects <script type="module"> from file://, so everything is one classic script.
+    // shortcut: outFile and module none are deprecated in TypeScript 6 and removed in 7; upgrade by bundling or by loading ES modules once webOS allows them.
+    "ignoreDeprecations": "6.0",
+    "target": "es2017",
+    "lib": ["es2017", "dom"],
+    "module": "none",
+    "rootDir": "src",
+    "outFile": "./dist/app.js",
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "skipLibCheck": true
+  },
+  // Order matters: the output is concatenated in this order, so base classes come before their subclasses.
+  "files": [
+    "src/types.ts",
+    "src/utils/math.ts",
+    "src/utils/canvas.ts",
+    "src/animations/base.ts",
+    "src/animations/cd.ts",
+    "src/animations/calico.ts",
+    "src/animator.ts",
+    "src/main.ts"
+  ]
+}
