@@ -14,6 +14,7 @@ function loadTrack(track: TrackData, positionMs: number): void {
   art.onerror = () => {
     if (pendingArt === art) animator.startIdle();
   };
+  art.crossOrigin = "anonymous";
   art.src = track.imageUrl;
 }
 
