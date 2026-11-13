@@ -31,7 +31,8 @@ lg-app/                   LG webOS 5+ TV app: a browser copy of the LED animatio
   tsconfig.json           ES2017 classic-script build (`outFile` dist/app.js); `files` order = concatenation order
   src/types.ts            Global types (no exports) incl. `ScreenState`, mirror of the server's `AnimatorState`; declares `LED_SERVER_URL`
   src/animations/         base.ts, cd.ts, calico.ts: copies of src/led/animations with DOM types; keep in step with the LED versions
-  src/animator.ts         `TvAnimator`: same state machine as `CdAnimator` on a screen-sized canvas (64-unit drawing, scaled)
+  src/animator.ts         `TvAnimator`: same state machine as `CdAnimator` on a screen-sized canvas (64-unit drawing, scaled), incl. pause/resume/seek
+  src/utils/clock.ts      Copy of `src/utils/clock.ts` (`PlaybackClock`), kept in step with it
   src/main.ts             Opens `EventSource(LED_SERVER_URL + "/led/state")` and maps each event to the animator
   static/                 index.html, appinfo.json, icons (copied into dist/)
   config.example.js       Template for config.js (gitignored; holds the server address)
