@@ -34,6 +34,7 @@ export interface TrackData {
   imageUrl: string;
   durationMs: number;
   progressMs: number;
+  contentType: "track" | "episode";
 }
 
 export interface CdTimingConfig {

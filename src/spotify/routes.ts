@@ -89,6 +89,7 @@ router.get("/callback", async (req: Request, res: Response) => {
       imageUrl: song.image,
       durationMs: song.durationMs,
       progressMs: song.progressMs,
+      contentType: song.contentType,
     });
     cdAnimator.play();
     console.info(

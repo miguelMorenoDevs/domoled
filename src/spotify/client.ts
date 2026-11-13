@@ -314,6 +314,8 @@ class SpotifyClient {
       image: bestImage.url,
       durationMs: item.duration_ms,
       progressMs: track.progress_ms ?? 0,
+      contentType:
+        track.currently_playing_type === "episode" ? "episode" : "track",
     };
   }
 

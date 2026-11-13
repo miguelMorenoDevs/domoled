@@ -18,6 +18,7 @@ import type {
 } from "./types.js";
 import { CdAnimation } from "./animations/cd.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
+import { PodcastAnimation } from "./animations/podcast.js";
 import { AlbumArtLoadError } from "./errors.js";
 import { PlaybackClock } from "../utils/clock.js";
 
@@ -172,9 +173,11 @@ export class CdAnimator {
 
     const { track, art } = this.loadedTrack;
     console.log(`[CdAnimator] Playing from ${track.progressMs}ms...`);
-    this.run(new CdAnimation(track, art), track.progressMs, () =>
-      this.startIdle(),
-    );
+    const animation =
+      track.contentType === "episode"
+        ? new PodcastAnimation(track, art)
+        : new CdAnimation(track, art);
+    this.run(animation, track.progressMs, () => this.startIdle());
     this.show({ kind: "track", track, positionMs: track.progressMs });
   }
 
@@ -202,7 +205,11 @@ export class CdAnimator {
    * Moves a playing or paused track's animation to `progressMs`, without restarting the intro.
    */
   public seek(progressMs: number): void {
-    if (!(this.animation instanceof CdAnimation)) return;
+    if (
+      !(this.animation instanceof CdAnimation) &&
+      !(this.animation instanceof PodcastAnimation)
+    )
+      return;
     this.clock.seek(progressMs);
   }
 
