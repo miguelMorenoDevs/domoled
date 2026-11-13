@@ -2,9 +2,8 @@
 # Run OpenCode in CI and print only its final message, or the error on failure.
 set -euo pipefail
 
-# The implementation job runs a cheaper model than the reviewer. The agent token
-# cannot push `.github/workflows/` changes (no `workflows` permission), so select
-# the implementation model here instead of in the caller's `--model` flag.
+# The implementation job runs a cheaper model than the reviewer, so select it here
+# instead of in the caller's `--model` flag.
 if [ "${GITHUB_JOB:-}" = "implement" ]; then
   args=("$@")
   for ((i = 0; i < ${#args[@]} - 1; i++)); do

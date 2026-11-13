@@ -24,7 +24,24 @@ jobs:
       actions: write
       # GITHUB_TOKEN has no workflows permission; `workflows: write` would invalidate this file.
     steps:
+      - name: Create implement app token
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          # The numeric App ID (digits only), not the Client ID.
+          client-id: ${{ secrets.REVIEW_APP_ID }}
+          private-key: ${{ secrets.REVIEW_APP_PRIVATE_KEY }}
+          # Workflows permission lets the agent push changes under .github/workflows/.
+          permission-actions: write
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+          permission-workflows: write
+
       - uses: actions/checkout@v6
+        with:
+          # Checkout persists this token, so the agent's git push uses it.
+          token: ${{ steps.app.outputs.token }}
 
       - uses: pnpm/action-setup@v4
         with:
