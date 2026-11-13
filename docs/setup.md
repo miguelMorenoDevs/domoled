@@ -11,7 +11,7 @@
 pnpm install
 ```
 
-`pnpm-workspace.yaml` sets `allowBuilds`: `rpi-led-matrix: true`, `canvas: false`. Keep this in mind if a native dependency fails to build.
+`pnpm-workspace.yaml` sets `allowBuilds`: `rpi-led-matrix: true`, `canvas: false`, `esbuild: false` (esbuild runs without its install script). Keep this in mind if a native dependency fails to build.
 
 `pnpm install` runs the `prepare` script, which sets `core.hooksPath` to `.githooks` when `.git` exists. The pre-commit hook then runs `pnpm build`, `pnpm lint`, `pnpm format:check` and `pnpm test` before each commit and aborts on the first failure, the same checks as CI. Skip it with `git commit --no-verify`. Installs with `--ignore-scripts` (CI) or without `.git` (tarballs) skip the hook setup.
 
@@ -98,7 +98,7 @@ JSON
 
 ## LG TV app
 
-`lg-app/` is a webOS web app that mirrors the matrix animations on the TV. It is a browser copy of the LED animations: it does not run on the Pi, it reads the state the server publishes on `GET /led/state` (Server-Sent Events) and animates it at full screen.
+`lg-app/` is a webOS web app that mirrors the matrix animations on the TV. It runs the same lifecycle and timing as the LED animations (`src/animator/`) with its own full-screen drawing: it does not run on the Pi, it reads the state the server publishes on `GET /led/state` (Server-Sent Events) and animates it at full screen.
 
 Requirements: an LG webOS TV on webOS 5 or later, the TV and the Pi on the same LAN, and the [webOS CLI](https://webostv.developer.lge.com/develop/tools/cli-dev-guide) (`npm install -g @webos-tools/cli`).
 
@@ -108,13 +108,13 @@ Requirements: an LG webOS TV on webOS 5 or later, the TV and the Pi on the same 
 4. Package and install:
 
 ```sh
-pnpm lg:package                       # tsc -p lg-app, copies static files, runs ares-package -> lg-app/out/
+pnpm lg:package                       # tsc -p lg-app, esbuild bundle, copies static files, runs ares-package -> lg-app/out/
 ares-install --device tv lg-app/out/com.domo.led_1.0.0_all.ipk
 ares-launch --device tv com.domo.led
 ```
 
 - Only compiled output ships: `lg-app/dist/` holds `app.js`, `index.html`, `config.js`, `appinfo.json` and the icons. The `.ipk` is built from `dist/` only.
-- `lg-app/tsconfig.json` is separate from the server's. It compiles everything into one classic script (`dist/app.js`) with ES2017 output, because webOS 5 rejects `<script type="module">` from `file://`.
+- `lg-app/tsconfig.json` is separate from the server's and only type checks. esbuild bundles `lg-app/src/main.ts` and the shared `src/animator/` code into one classic script (`dist/app.js`, IIFE, ES2017), because webOS 5 rejects `<script type="module">` from `file://`.
 - The server must be running with the TV on, and the TV reconnects on its own when the server restarts.
 
 ## Ports and simulator

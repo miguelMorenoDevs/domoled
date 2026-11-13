@@ -1,13 +1,16 @@
-const DEFAULT_CD_TIMING: CdTimingConfig = {
-  introDurationMs: 2000,
-  outroDurationMs: 5000,
-};
+import type {
+  AnimationFrame,
+  AnimationPhaseState,
+  CdTimingConfig,
+} from "../../../../src/animator/types.js";
+import { BaseAnimation } from "../../../../src/animator/base.js";
+import { DEFAULT_CD_TIMING } from "../../../../src/animator/timing.js";
 
 /**
  * The spinning CD: album art on a silver disc, with a slide-in intro and a fade-out outro.
  * The outro starts at the end of the track unless exit() ends it earlier.
  */
-class CdAnimation extends BaseLedAnimation {
+export class CdAnimation extends BaseAnimation<CanvasContext> {
   private readonly art: HTMLImageElement;
   private readonly durationMs: number;
   private readonly timing: CdTimingConfig;
@@ -28,7 +31,7 @@ class CdAnimation extends BaseLedAnimation {
   }
 
   protected draw(
-    { ctx, width, height, elapsedMs: elapsed }: AnimationFrame,
+    { ctx, width, height, elapsedMs: elapsed }: AnimationFrame<CanvasContext>,
     state: AnimationPhaseState,
   ): void {
     const art = this.art;

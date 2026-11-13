@@ -1,19 +1,21 @@
+import type { Animation } from "../../../src/animator/types.js";
+import { AnimationRunner } from "../../../src/animator/runner.js";
+import { CalicoCatAnimation } from "./animations/calico.js";
+import { CdAnimation } from "./animations/cd.js";
+
 // Animations draw in the LED matrix's 64x64 units; the screen scales them up to fill its height.
 const MATRIX_SIZE = 64;
 const FPS = 30;
 
 /**
- * Same state machine as CdAnimator in src/led/animator.ts, drawing to a screen-sized canvas.
+ * Same lifecycle as CdAnimator in src/led/animator.ts (shared AnimationRunner), drawing to a screen-sized canvas.
  */
-class TvAnimator {
+export class LgAnimator {
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasContext;
-  private animation: LedAnimation | null = null;
-  private afterExit: (() => void) | null = null;
+  private readonly runner = new AnimationRunner<CanvasContext>();
   private qrModules: boolean[][] = [];
   private intervalId: number | null = null;
-
-  private clock = new PlaybackClock();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -27,9 +29,34 @@ class TvAnimator {
     this.run(new CdAnimation(track, art), positionMs, () => this.startIdle());
   }
 
+  /**
+   * Freezes the running track's animation on its current frame. The screen keeps the last frame.
+   */
+  pause(): void {
+    if (!this.runner.pause()) return;
+    if (this.intervalId !== null) window.clearInterval(this.intervalId);
+    this.intervalId = null;
+  }
+
+  /**
+   * Continues a paused track's animation from where it stopped, without restarting the intro.
+   */
+  resume(): void {
+    if (!this.runner.resume()) return;
+    this.intervalId = window.setInterval(this.renderFrame, 1000 / FPS);
+  }
+
+  /**
+   * Moves a playing or paused track's animation to `progressMs`, without restarting the intro.
+   */
+  seek(progressMs: number): void {
+    if (!(this.runner.current instanceof CdAnimation)) return;
+    this.runner.seek(progressMs);
+  }
+
   startIdle(): void {
-    if (this.animation instanceof CalicoCatAnimation && !this.animation.exiting)
-      return;
+    const current = this.runner.current;
+    if (current instanceof CalicoCatAnimation && !current.exiting) return;
     if (this.waitForExit(() => this.startIdle())) return;
     this.run(new CalicoCatAnimation(), 0, null);
   }
@@ -41,67 +68,30 @@ class TvAnimator {
     this.intervalId = window.setInterval(this.renderQrFrame, 1000 / FPS);
   }
 
-  /**
-   * Freezes the running track's animation on its current frame. The screen keeps the last frame.
-   */
-  pause(): void {
-    if (!this.animation || this.clock.paused) return;
-    this.clock.pause();
-    if (this.intervalId !== null) window.clearInterval(this.intervalId);
-    this.intervalId = null;
-  }
-
-  /**
-   * Continues a paused track's animation from where it stopped, without restarting the intro.
-   */
-  resume(): void {
-    if (!this.animation || !this.clock.paused) return;
-    this.clock.resume();
-    this.intervalId = window.setInterval(this.renderFrame, 1000 / FPS);
-  }
-
-  /**
-   * Moves a playing or paused track's animation to `progressMs`, without restarting the intro.
-   */
-  seek(progressMs: number): void {
-    if (!(this.animation instanceof CdAnimation)) return;
-    this.clock.seek(progressMs);
-  }
-
   private stop(): void {
     if (this.intervalId !== null) {
       window.clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    this.animation = null;
-    this.afterExit = null;
+    this.runner.clear();
     this.clearScreen("#000");
   }
 
   private waitForExit(next: () => void): boolean {
-    if (!this.animation) return false;
-    this.afterExit = next;
     // A paused outro would never finish, so a replaced track resumes playback first.
     this.resume();
-    this.animation.exit(this.elapsedMs());
-    return true;
+    return this.runner.waitForExit(next);
   }
 
   private run(
-    animation: LedAnimation,
+    animation: Animation<CanvasContext>,
     progressOffsetMs: number,
     afterExit: (() => void) | null,
   ): void {
     this.stop();
 
-    this.animation = animation;
-    this.afterExit = afterExit;
-    this.clock.start(progressOffsetMs);
+    this.runner.start(animation, progressOffsetMs, afterExit);
     this.intervalId = window.setInterval(this.renderFrame, 1000 / FPS);
-  }
-
-  private elapsedMs(): number {
-    return this.clock.elapsedMs();
   }
 
   private clearScreen(color: string): void {
@@ -137,7 +127,7 @@ class TvAnimator {
    * and scaled to the screen height. When the animation finishes, the next content starts.
    */
   private renderFrame = (): void => {
-    const animation = this.animation;
+    const animation = this.runner.current;
     if (!animation) return;
 
     const { ctx, canvas } = this;
@@ -157,11 +147,11 @@ class TvAnimator {
       ctx,
       width: MATRIX_SIZE,
       height: MATRIX_SIZE,
-      elapsedMs: this.elapsedMs(),
+      elapsedMs: this.runner.elapsedMs(),
     });
 
     if (!animation.finished) return;
-    const next = this.afterExit;
+    const next = this.runner.afterExit;
     this.stop();
     next?.();
   };

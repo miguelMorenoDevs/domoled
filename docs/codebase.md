@@ -15,26 +15,30 @@ src/
     types/api.ts          App-facing types (tokens, current song) and runtime guards for the token store and token response
     types/playback.ts     Poller memory of the last reply and the `PlaybackAction` union
     types/service.ts      Spotify API response shapes and the `isGetCurrentSongResponse` guard for the fields the app reads (tracks use the album images, episodes their own images)
+  animator/               Shared by every target: animation lifecycle, state machine and timing
+    base.ts               `BaseAnimation<Ctx>` lifecycle (intro once, loop until `exit()`, outro once, `finished`; subclasses implement `draw`)
+    runner.ts             `AnimationRunner<Ctx>`: the running animation, its `PlaybackClock` and the afterExit callback (`start`, `waitForExit`, `clear`, `pause`, `resume`, `seek`)
+    timing.ts             `animationPhaseAt`, `DEFAULT_CD_TIMING`, `DEFAULT_CALICO_TIMING`
+    types.ts              AnimationFrame, Animation, AnimationPhase(State), CdTimingConfig, CalicoTimingConfig
   led/
-    animator.ts           Matrix output, WS simulator stream, active-animation selection, idle start/stop, login QR (singleton `cdAnimator`)
+    animator.ts           Matrix output, WS simulator stream, active-animation selection, idle start/stop, login QR (singleton `cdAnimator`), runs animations through `AnimationRunner`
     errors.ts             `AlbumArtLoadError`
-    animations/base.ts    `BaseLedAnimation` lifecycle (intro once, loop until `exit()`, outro once, `finished`; subclasses implement `draw`) and `animationPhaseAt`
-    animations/cd.ts      CD animation: intro slide-in, rotating art, sheen, outro fade at track end or when exited (`CdAnimation`, `DEFAULT_CD_TIMING`)
-    animations/calico.ts  Calico cat idle animation: intro jump and lie down once, sleep and stand-and-stretch loop until exit, outro jump out once (`CalicoCatAnimation`, `DEFAULT_CALICO_TIMING`)
+    animations/cd.ts      CD animation: intro slide-in, rotating art, sheen, outro fade at track end or when exited (`CdAnimation`)
+    animations/calico.ts  Calico cat idle animation: intro jump and lie down once, sleep and stand-and-stretch loop until exit, outro jump out once (`CalicoCatAnimation`, pose math)
     routes.ts             `GET /led/state` Server-Sent Events: sends the current `AnimatorState` on connect and on each change (CORS open for the TV app)
-    types.ts              AnimatorConfig, AnimatorState, TrackData, matrix dimensions, LedAnimation interface, CdTimingConfig, CalicoTimingConfig, CanvasContext, animation phase and pose types
+    types.ts              AnimatorConfig, AnimatorState, TrackData, matrix dimensions, LedMatrixDevice, CanvasContext, CatPose
   utils/
     network.ts            getLocalIP() for the OAuth state round-trip
     math.ts               lerp()
     canvas.ts             fillEllipse(), fillTriangle() for canvas drawing
-    clock.ts              `PlaybackClock`: track position that pauses, resumes and seeks (used by the animator's `pause()`, `resume()`, `seek()`)
+    clock.ts              `PlaybackClock`: track position that pauses, resumes and seeks (used by `AnimationRunner`, so both animators share it)
 test/                      node:test suites (spotify client, network utils), run by `pnpm test`
-lg-app/                   LG webOS 5+ TV app: a browser copy of the LED animations, built separately (not part of `pnpm build`)
-  tsconfig.json           ES2017 classic-script build (`outFile` dist/app.js); `files` order = concatenation order
+lg-app/                   LG webOS 5+ TV app: full-screen version of the animations, built separately (not part of `pnpm build`)
+  tsconfig.json           Type check only (`noEmit`); esbuild bundles it into dist/app.js
   src/types.ts            Global types (no exports) incl. `ScreenState`, mirror of the server's `AnimatorState`; declares `LED_SERVER_URL`
-  src/animations/         base.ts, cd.ts, calico.ts: copies of src/led/animations with DOM types; keep in step with the LED versions
-  src/animator.ts         `TvAnimator`: same state machine as `CdAnimator` on a screen-sized canvas (64-unit drawing, scaled), incl. pause/resume/seek
-  src/utils/clock.ts      Copy of `src/utils/clock.ts` (`PlaybackClock`), kept in step with it
+  src/lg/animator.ts      `LgAnimator`: same lifecycle through `AnimationRunner` on a screen-sized canvas (64-unit drawing, scaled), incl. pause/resume/seek
+  src/lg/animations/      cd.ts, calico.ts: TV drawing on `BaseAnimation` from src/animator/; visuals may differ from the LED ones
+  src/utils/              canvas.ts (fillEllipse, fillTriangle), math.ts (lerp) for the TV drawing; the clock comes from the shared src/utils/clock.ts
   src/main.ts             Opens `EventSource(LED_SERVER_URL + "/led/state")` and maps each event to the animator
   static/                 index.html, appinfo.json, icons (copied into dist/)
   config.example.js       Template for config.js (gitignored; holds the server address)
@@ -53,7 +57,7 @@ public/connect.html       Landing page the matrix QR opens; its button goes to `
 3. Spotify redirects to the GitHub Pages `index.html`, which forwards `code` and `state` unchanged to `GET /spotify/callback` on the host named in `state`.
 4. The callback first consumes `state`: a missing, unknown, expired or reused value gets `400` and no code exchange. Otherwise it exchanges the code for tokens, fetches the current song (including `progress_ms`), loads the album art into the shared `cdAnimator`, calls `play()` from that playback position, and renders `public/success.html`. When nothing is playing, it calls `cdAnimator.startIdle()` and replies `200` with a plain-text message instead.
    4a. After a successful token exchange, the callback and `POST /spotify/users/active` call `startPlaybackPoller()`; `src/app.ts` calls it on boot when a user is active. The poller polls `getCurrentSong()` right away, then every 5 s. Each reply goes through `playbackTransition()` (compared with the previous reply): a new track id (or a repeat past the track's end) runs `setTrack()` + `play()`, `is_playing` changes run `pause()` / `resume()`, a progress drift over 2 s runs `seek()`, and nothing playing runs `startIdle()`. A `429` waits `Retry-After` seconds, or doubles the delay up to 60 s. The poller stops itself when no user is active.
-5. Each frame: `renderFrame` clears the canvas, calls `animation.render()` on the active `LedAnimation` (the CD or the idle cat), pushes the canvas to the matrix, then sends it as a data URL over WebSocket on non-Pi platforms. When the animation reports `finished`, `renderFrame` stops it and runs the pending `afterExit` callback.
+5. Each frame: `renderFrame` clears the canvas, calls `animation.render()` on the active `Animation` (the CD or the idle cat), pushes the canvas to the matrix, then sends it as a data URL over WebSocket on non-Pi platforms. When the animation reports `finished`, `renderFrame` stops it and runs the pending `afterExit` callback.
    5a. `setTrack()` stores the track and its loaded art. `play()` starts a `CdAnimation` for it from the playback position, with `startIdle()` as the callback for when it finishes. A `CdAnimation`'s outro starts at the end of the track (`scheduledExitMs`) or earlier when `exit()` is called.
 6. Idle state: `startIdle()` runs a `CalicoCatAnimation`. The cat jumps in from the left and lies down once (eyes close in the second half of the settle), then loops: after sleeping for `sleepMs` (10 s after each stretch ends), it stands up, stretches and lies back down to sleep, until an exit is requested. `play()`, `showQr()` and `startIdle()` call `waitForExit()`, which calls `exit()` on the running animation: its outro (for the cat: eyes open, jump right and leave the matrix) plays once, and the pending call runs after it finishes. The latest request wins. It starts on boot when a user is active (`src/app.ts`), after a login with nothing playing, and when a track ends. `setTrack()` does not interrupt the running animation; `play()` replaces it. `DELETE /spotify/users/active` clears the active user and calls `showQr()` again.
 
@@ -73,8 +77,8 @@ User admin routes go through `requireLoopback` (`src/spotify/guard.ts`), which c
 ## Conventions and gotchas
 
 - ESM project (`"type": "module"`, `module: nodenext`): relative imports must end in `.js` even from `.ts` files.
-- `lg-app/` is excluded from the root `tsconfig.json` and ESLint. It is one classic script (no imports or exports; `lg-app/tsconfig.json` lists the files in order), because webOS 5 blocks module scripts from `file://`. Ship only the compiled `lg-app/dist/` through `pnpm lg:package`.
-- The animator publishes every change of what is shown (`play`, `startIdle`, `showQr`) to `subscribe()` listeners; a track's `positionMs` is read live when a listener is called, so a late TV connection resumes mid-song. `lg-app/` copies the animations rather than sharing them, so a change to `src/led/animations` must be mirrored there.
+- `lg-app/` is excluded from the root `tsconfig.json` and ESLint. It ships as one classic script: `pnpm lg:build` type checks with `tsc -p lg-app` and bundles `lg-app/src/main.ts` with esbuild into `dist/app.js` (IIFE, ES2017), because webOS 5 blocks module scripts from `file://`. Ship only the compiled `lg-app/dist/` through `pnpm lg:package`.
+- The animator publishes every change of what is shown (`play`, `startIdle`, `showQr`) to `subscribe()` listeners; a track's `positionMs` is read live when a listener is called, so a late TV connection resumes mid-song. `lg-app/` bundles the lifecycle, runner and timing from `src/animator/`, so a change there reaches both targets; only drawing is per target.
 - `verbatimModuleSyntax` is on: type-only imports must use `import type`.
 - Strict TS extras: `noUncheckedIndexedAccess` (indexed reads are possibly undefined; the code uses `!`), `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature` (hence `process.env["X"]`), plus `noUnusedLocals`/`noUnusedParameters`.
 - `src/led/animator.ts` mocks the matrix on win32/darwin and loads `rpi-led-matrix` through `eval("require")` on Linux so bundlers skip the native module. Keep this pattern; do not turn it into a normal import.
@@ -85,4 +89,4 @@ User admin routes go through `requireLoopback` (`src/spotify/guard.ts`), which c
 - Spotify `401` handling lives in `SpotifyClient.fetch`: it refreshes the user token and retries the request once with the new token.
 - `TrackData` carries `imageUrl`, `durationMs` and `progressMs`; `CdAnimator.play()` starts from `progressMs` (Spotify `progress_ms`, `0` when null) so a mid-song track skips the intro instead of restarting at 0.
 - `CdAnimator.setTrack` clears the previous art/duration/progress and throws `AlbumArtLoadError` when `loadImage` rejects; `GET /spotify/callback` maps that to a `502` retry message while other callback failures stay `400`. Nothing playing is still reported as `undefined` (a `204` or empty body), so the callback starts the idle cat only for that case, never for API errors.
-- New animations extend `BaseLedAnimation` (`src/led/animations/base.ts`) and implement only `draw(frame, state)`; the base class owns the intro, loop, outro and `finished` phases and the `exit()` request. Intro/outro timing belongs to the animation (`CdTimingConfig`, `CalicoTimingConfig`), not `AnimatorConfig`.
+- New animations extend `BaseAnimation<Ctx>` (`src/animator/base.ts`) and implement only `draw(frame, state)`, once per target (`src/led/animations/`, `lg-app/src/lg/animations/`); the base class owns the intro, loop, outro and `finished` phases and the `exit()` request. Intro/outro timing belongs to the animation (`CdTimingConfig`, `CalicoTimingConfig` in `src/animator/types.ts`), not `AnimatorConfig`.

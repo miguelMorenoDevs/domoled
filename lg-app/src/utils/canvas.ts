@@ -1,4 +1,4 @@
-function fillEllipse(
+export function fillEllipse(
   ctx: CanvasContext,
   x: number,
   y: number,
@@ -12,7 +12,7 @@ function fillEllipse(
   ctx.fill();
 }
 
-function fillTriangle(
+export function fillTriangle(
   ctx: CanvasContext,
   points: readonly (readonly [number, number])[],
   color: string,
