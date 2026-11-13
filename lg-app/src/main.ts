@@ -1,4 +1,6 @@
-const animator = new TvAnimator(
+import { LgAnimator } from "./lg/animator.js";
+
+const animator = new LgAnimator(
   document.getElementById("screen") as HTMLCanvasElement,
 );
 

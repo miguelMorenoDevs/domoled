@@ -1,9 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  DEFAULT_CALICO_TIMING,
-  standStretchAt,
-} from "../../src/led/animations/calico.js";
+import { DEFAULT_CALICO_TIMING } from "../../src/animator/timing.js";
+import { standStretchAt } from "../../src/led/animations/calico.js";
 
 const timing = DEFAULT_CALICO_TIMING;
 

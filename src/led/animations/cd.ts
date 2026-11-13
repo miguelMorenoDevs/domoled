@@ -1,22 +1,19 @@
 import type { Image } from "@napi-rs/canvas";
+import type { TrackData } from "../types.js";
 import type {
   AnimationFrame,
   AnimationPhaseState,
   CdTimingConfig,
-  TrackData,
-} from "../types.js";
-import { BaseLedAnimation } from "./base.js";
-
-export const DEFAULT_CD_TIMING: CdTimingConfig = {
-  introDurationMs: 2000,
-  outroDurationMs: 5000,
-};
+} from "../../animator/types.js";
+import { BaseAnimation } from "../../animator/base.js";
+import { DEFAULT_CD_TIMING } from "../../animator/timing.js";
+import type { CanvasContext } from "../types.js";
 
 /**
  * The spinning CD: album art on a silver disc, with a slide-in intro and a fade-out outro.
  * The outro starts at the end of the track unless exit() ends it earlier.
  */
-export class CdAnimation extends BaseLedAnimation {
+export class CdAnimation extends BaseAnimation<CanvasContext> {
   private readonly art: Image;
   private readonly durationMs: number;
   private readonly timing: CdTimingConfig;
@@ -37,7 +34,7 @@ export class CdAnimation extends BaseLedAnimation {
   }
 
   protected draw(
-    { ctx, width, height, elapsedMs: elapsed }: AnimationFrame,
+    { ctx, width, height, elapsedMs: elapsed }: AnimationFrame<CanvasContext>,
     state: AnimationPhaseState,
   ): void {
     const art = this.art;

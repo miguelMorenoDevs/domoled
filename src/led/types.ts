@@ -36,34 +36,7 @@ export interface TrackData {
   progressMs: number;
 }
 
-export interface CdTimingConfig {
-  introDurationMs: number;
-  outroDurationMs: number;
-}
-
-export interface CalicoTimingConfig {
-  introJumpMs: number;
-  introSettleMs: number;
-  sleepMs: number;
-  stretchMs: number;
-  outroDurationMs: number;
-}
-
-export interface AnimationFrame {
-  ctx: ReturnType<Canvas["getContext"]>;
-  width: number;
-  height: number;
-  elapsedMs: number;
-}
-
-export type CanvasContext = AnimationFrame["ctx"];
-
-export type AnimationPhase = "intro" | "loop" | "outro" | "done";
-
-export interface AnimationPhaseState {
-  phase: AnimationPhase;
-  elapsedInPhaseMs: number;
-}
+export type CanvasContext = ReturnType<Canvas["getContext"]>;
 
 export interface CatPose {
   x: number;
@@ -77,13 +50,3 @@ export type AnimatorState =
   | { kind: "track"; track: TrackData; positionMs: number }
   | { kind: "idle" }
   | { kind: "qr"; modules: boolean[][] };
-
-export interface LedAnimation {
-  /** Starts the outro once the intro has ended; idempotent. */
-  exit(elapsedMs: number): void;
-  readonly exiting: boolean;
-  /** True once the outro has ended; the animator then starts the next content. */
-  readonly finished: boolean;
-  /** Draws one frame into the canvas context. The animator clears the canvas first. */
-  render(frame: AnimationFrame): void;
-}
