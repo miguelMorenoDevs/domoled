@@ -31,12 +31,7 @@ jobs:
           # The numeric App ID (digits only), not the Client ID.
           client-id: ${{ secrets.REVIEW_APP_ID }}
           private-key: ${{ secrets.REVIEW_APP_PRIVATE_KEY }}
-          # Workflows permission lets the agent push changes under .github/workflows/.
-          permission-actions: write
-          permission-contents: write
-          permission-issues: write
-          permission-pull-requests: write
-          permission-workflows: write
+          # No permission-* inputs: the token gets every permission the App is installed with, as in pr-review.yml.
 
       - uses: actions/checkout@v6
         with:
