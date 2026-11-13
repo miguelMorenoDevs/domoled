@@ -24,7 +24,11 @@ class TvAnimator {
 
   play(art: HTMLImageElement, track: TrackData, positionMs: number): void {
     if (this.waitForExit(() => this.play(art, track, positionMs))) return;
-    this.run(new CdAnimation(track, art), positionMs, () => this.startIdle());
+    const animation =
+      track.contentType === "episode"
+        ? new PodcastAnimation(track, art)
+        : new CdAnimation(track, art);
+    this.run(animation, positionMs, () => this.startIdle());
   }
 
   startIdle(): void {
@@ -64,7 +68,11 @@ class TvAnimator {
    * Moves a playing or paused track's animation to `progressMs`, without restarting the intro.
    */
   seek(progressMs: number): void {
-    if (!(this.animation instanceof CdAnimation)) return;
+    if (
+      !(this.animation instanceof CdAnimation) &&
+      !(this.animation instanceof PodcastAnimation)
+    )
+      return;
     this.clock.seek(progressMs);
   }
 

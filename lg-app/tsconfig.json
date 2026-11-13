@@ -26,8 +26,10 @@
     "src/utils/math.ts",
     "src/utils/canvas.ts",
     "src/utils/clock.ts",
+    "src/utils/color.ts",
     "src/animations/base.ts",
     "src/animations/cd.ts",
+    "src/animations/podcast.ts",
     "src/animations/calico.ts",
     "src/animator.ts",
     "src/main.ts"

@@ -7,6 +7,7 @@ interface TrackData {
   imageUrl: string;
   durationMs: number;
   progressMs: number;
+  contentType: "track" | "episode";
 }
 
 // Mirrors AnimatorState in src/led/types.ts on the server; keep the two in sync.
