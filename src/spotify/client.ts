@@ -310,10 +310,12 @@ class SpotifyClient {
     if (!bestImage) return;
 
     return {
+      id: item.id,
       title: item.name,
       image: bestImage.url,
       durationMs: item.duration_ms,
       progressMs: track.progress_ms ?? 0,
+      isPlaying: track.is_playing,
     };
   }
 
