@@ -13,8 +13,7 @@ class TvAnimator {
   private qrModules: boolean[][] = [];
   private intervalId: number | null = null;
 
-  private startTime = 0;
-  private progressOffsetMs = 0;
+  private clock = new PlaybackClock();
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -42,6 +41,33 @@ class TvAnimator {
     this.intervalId = window.setInterval(this.renderQrFrame, 1000 / FPS);
   }
 
+  /**
+   * Freezes the running track's animation on its current frame. The screen keeps the last frame.
+   */
+  pause(): void {
+    if (!this.animation || this.clock.paused) return;
+    this.clock.pause();
+    if (this.intervalId !== null) window.clearInterval(this.intervalId);
+    this.intervalId = null;
+  }
+
+  /**
+   * Continues a paused track's animation from where it stopped, without restarting the intro.
+   */
+  resume(): void {
+    if (!this.animation || !this.clock.paused) return;
+    this.clock.resume();
+    this.intervalId = window.setInterval(this.renderFrame, 1000 / FPS);
+  }
+
+  /**
+   * Moves a playing or paused track's animation to `progressMs`, without restarting the intro.
+   */
+  seek(progressMs: number): void {
+    if (!(this.animation instanceof CdAnimation)) return;
+    this.clock.seek(progressMs);
+  }
+
   private stop(): void {
     if (this.intervalId !== null) {
       window.clearInterval(this.intervalId);
@@ -55,6 +81,8 @@ class TvAnimator {
   private waitForExit(next: () => void): boolean {
     if (!this.animation) return false;
     this.afterExit = next;
+    // A paused outro would never finish, so a replaced track resumes playback first.
+    this.resume();
     this.animation.exit(this.elapsedMs());
     return true;
   }
@@ -68,13 +96,12 @@ class TvAnimator {
 
     this.animation = animation;
     this.afterExit = afterExit;
-    this.progressOffsetMs = progressOffsetMs;
-    this.startTime = Date.now();
+    this.clock.start(progressOffsetMs);
     this.intervalId = window.setInterval(this.renderFrame, 1000 / FPS);
   }
 
   private elapsedMs(): number {
-    return Date.now() - this.startTime + this.progressOffsetMs;
+    return this.clock.elapsedMs();
   }
 
   private clearScreen(color: string): void {
