@@ -1,15 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  animationPhaseAt,
-  BaseLedAnimation,
-} from "../../src/led/animations/base.js";
-import type { AnimationFrame } from "../../src/led/types.js";
+import { BaseAnimation } from "../../src/animator/base.js";
+import { animationPhaseAt } from "../../src/animator/timing.js";
+import type { AnimationFrame } from "../../src/animator/types.js";
 
 const introMs = 1000;
 const outroMs = 500;
 
-class ProbeAnimation extends BaseLedAnimation {
+class ProbeAnimation extends BaseAnimation<null> {
   constructor(private readonly endMs: number | null = null) {
     super(introMs, outroMs);
   }
@@ -21,9 +19,9 @@ class ProbeAnimation extends BaseLedAnimation {
   protected override draw(): void {}
 }
 
-function frameAt(elapsedMs: number): AnimationFrame {
+function frameAt(elapsedMs: number): AnimationFrame<null> {
   return {
-    ctx: null as unknown as AnimationFrame["ctx"],
+    ctx: null,
     width: 64,
     height: 64,
     elapsedMs,

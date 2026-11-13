@@ -11,15 +11,16 @@ import { createCanvas, loadImage, Canvas, Image } from "@napi-rs/canvas";
 import type {
   AnimatorConfig,
   AnimatorState,
-  LedAnimation,
+  CanvasContext,
   LedMatrixDevice,
   LedMatrixDriver,
   TrackData,
 } from "./types.js";
+import type { Animation } from "../animator/types.js";
+import { AnimationRunner } from "../animator/runner.js";
 import { CdAnimation } from "./animations/cd.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
 import { AlbumArtLoadError } from "./errors.js";
-import { PlaybackClock } from "../utils/clock.js";
 
 // qrcode-terminal's encoder returns the module grid; its public API only prints text.
 const requireQr = createRequire(import.meta.url);
@@ -75,15 +76,12 @@ if (process.platform === "win32" || process.platform === "darwin") {
 export class CdAnimator {
   private matrix: LedMatrixDevice;
   private canvas: Canvas;
-  private ctx: ReturnType<Canvas["getContext"]>;
-  private animation: LedAnimation | null = null;
+  private ctx: CanvasContext;
+  private readonly runner = new AnimationRunner<CanvasContext>();
   private loadedTrack: { track: TrackData; art: Image } | null = null;
 
   private config: Required<AnimatorConfig>;
   private intervalId: NodeJS.Timeout | null = null;
-
-  private clock = new PlaybackClock();
-  private afterExit: (() => void) | null = null;
 
   private qrModules: boolean[][] = [];
 
@@ -182,8 +180,7 @@ export class CdAnimator {
    * Freezes the running track's animation on its current frame. The matrix keeps the last frame.
    */
   public pause(): void {
-    if (!this.animation || this.clock.paused) return;
-    this.clock.pause();
+    if (!this.runner.pause()) return;
     if (this.intervalId) clearInterval(this.intervalId);
     this.intervalId = null;
   }
@@ -192,8 +189,7 @@ export class CdAnimator {
    * Continues a paused track's animation from where it stopped, without restarting the intro.
    */
   public resume(): void {
-    if (!this.animation || !this.clock.paused) return;
-    this.clock.resume();
+    if (!this.runner.resume()) return;
     const frameDelay = 1000 / this.config.fps;
     this.intervalId = setInterval(this.renderFrame, frameDelay);
   }
@@ -202,8 +198,8 @@ export class CdAnimator {
    * Moves a playing or paused track's animation to `progressMs`, without restarting the intro.
    */
   public seek(progressMs: number): void {
-    if (!(this.animation instanceof CdAnimation)) return;
-    this.clock.seek(progressMs);
+    if (!(this.runner.current instanceof CdAnimation)) return;
+    this.runner.seek(progressMs);
   }
 
   /**
@@ -222,8 +218,8 @@ export class CdAnimator {
    * when play() or showQr() takes over. Call only for an authenticated user with nothing playing.
    */
   public startIdle(): void {
-    if (this.animation instanceof CalicoCatAnimation && !this.animation.exiting)
-      return;
+    const current = this.runner.current;
+    if (current instanceof CalicoCatAnimation && !current.exiting) return;
     if (this.waitForExit(() => this.startIdle())) return;
 
     console.log("[CdAnimator] Idle cat animation started.");
@@ -257,8 +253,7 @@ export class CdAnimator {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    this.animation = null;
-    this.afterExit = null;
+    this.runner.clear();
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.presentFrame();
   }
@@ -268,33 +263,24 @@ export class CdAnimator {
    * is running, so the caller can start right away.
    */
   private waitForExit(next: () => void): boolean {
-    if (!this.animation) return false;
-    this.afterExit = next;
     // A paused outro would never finish, so a replaced track resumes playback first.
     this.resume();
-    this.animation.exit(this.elapsedMs());
-    return true;
+    return this.runner.waitForExit(next);
   }
 
   /**
    * Starts an animation on the shared interval. `afterExit` runs once it has finished.
    */
   private run(
-    animation: LedAnimation,
+    animation: Animation<CanvasContext>,
     progressOffsetMs: number,
     afterExit: (() => void) | null,
   ): void {
     this.stop(); // Prevent overlapping intervals
 
-    this.animation = animation;
-    this.afterExit = afterExit;
-    this.clock.start(progressOffsetMs);
+    this.runner.start(animation, progressOffsetMs, afterExit);
     const frameDelay = 1000 / this.config.fps;
     this.intervalId = setInterval(this.renderFrame, frameDelay);
-  }
-
-  private elapsedMs(): number {
-    return this.clock.elapsedMs();
   }
 
   private show(state: AnimatorState): void {
@@ -305,7 +291,7 @@ export class CdAnimator {
   /** A track's position is live: it is read when the snapshot is taken, not when the track started. */
   private snapshot(state: AnimatorState): AnimatorState {
     return state.kind === "track"
-      ? { ...state, positionMs: this.elapsedMs() }
+      ? { ...state, positionMs: this.runner.elapsedMs() }
       : state;
   }
 
@@ -335,7 +321,7 @@ export class CdAnimator {
    * When the animation finishes, the next content starts.
    */
   private renderFrame = (): void => {
-    const animation = this.animation;
+    const animation = this.runner.current;
     if (!animation) return;
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -343,13 +329,13 @@ export class CdAnimator {
       ctx: this.ctx,
       width: this.canvas.width,
       height: this.canvas.height,
-      elapsedMs: this.elapsedMs(),
+      elapsedMs: this.runner.elapsedMs(),
     });
 
     this.presentFrame();
 
     if (!animation.finished) return;
-    const next = this.afterExit;
+    const next = this.runner.afterExit;
     this.stop();
     next?.();
   };
