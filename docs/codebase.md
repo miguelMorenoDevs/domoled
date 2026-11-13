@@ -19,12 +19,23 @@ src/
     animations/base.ts    `BaseLedAnimation` lifecycle (intro once, loop until `exit()`, outro once, `finished`; subclasses implement `draw`) and `animationPhaseAt`
     animations/cd.ts      CD animation: intro slide-in, rotating art, sheen, outro fade at track end or when exited (`CdAnimation`, `DEFAULT_CD_TIMING`)
     animations/calico.ts  Calico cat idle animation: intro jump and lie down once, sleep and stand-and-stretch loop until exit, outro jump out once (`CalicoCatAnimation`, `DEFAULT_CALICO_TIMING`)
-    types.ts              AnimatorConfig, TrackData, matrix dimensions, LedAnimation interface, CdTimingConfig, CalicoTimingConfig, CanvasContext, animation phase and pose types
+    routes.ts             `GET /led/state` Server-Sent Events: sends the current `AnimatorState` on connect and on each change (CORS open for the TV app)
+    types.ts              AnimatorConfig, AnimatorState, TrackData, matrix dimensions, LedAnimation interface, CdTimingConfig, CalicoTimingConfig, CanvasContext, animation phase and pose types
   utils/
     network.ts            getLocalIP() for the OAuth state round-trip
     math.ts               lerp()
     canvas.ts             fillEllipse(), fillTriangle() for canvas drawing
 test/                      node:test suites (spotify client, network utils), run by `pnpm test`
+lg-app/                   LG webOS 5+ TV app: a browser copy of the LED animations, built separately (not part of `pnpm build`)
+  tsconfig.json           ES2017 classic-script build (`outFile` dist/app.js); `files` order = concatenation order
+  src/types.ts            Global types (no exports) incl. `ScreenState`, mirror of the server's `AnimatorState`; declares `LED_SERVER_URL`
+  src/animations/         base.ts, cd.ts, calico.ts: copies of src/led/animations with DOM types; keep in step with the LED versions
+  src/animator.ts         `TvAnimator`: same state machine as `CdAnimator` on a screen-sized canvas (64-unit drawing, scaled)
+  src/main.ts             Opens `EventSource(LED_SERVER_URL + "/led/state")` and maps each event to the animator
+  static/                 index.html, appinfo.json, icons (copied into dist/)
+  config.example.js       Template for config.js (gitignored; holds the server address)
+  copy-static.mjs         Copies static/ and config.js into dist/ (run by `pnpm lg:build`)
+  out/                    Packaged .ipk from `pnpm lg:package` (gitignored)
 simulator.html            Standalone browser view of the 8080 frame stream
 index.html                GitHub Pages OAuth relay
 public/success.html       Friendly page rendered after a successful OAuth callback
@@ -46,6 +57,7 @@ public/connect.html       Landing page the matrix QR opens; its button goes to `
 - `POST /spotify/login`
 - `GET /spotify/login`
 - `GET /spotify/callback`
+- `GET /led/state` (SSE; the LG TV app's feed)
 - `GET /spotify/users` (loopback only)
 - `POST /spotify/users/active` (loopback only; `SpotifyClient.setActiveUser` throws `UserNotLoggedError` for an unknown email; the route maps it to `403` and any other error to `502`)
 - `DELETE /spotify/users/active` (loopback only)
@@ -56,6 +68,8 @@ User admin routes go through `requireLoopback` (`src/spotify/guard.ts`), which c
 ## Conventions and gotchas
 
 - ESM project (`"type": "module"`, `module: nodenext`): relative imports must end in `.js` even from `.ts` files.
+- `lg-app/` is excluded from the root `tsconfig.json` and ESLint. It is one classic script (no imports or exports; `lg-app/tsconfig.json` lists the files in order), because webOS 5 blocks module scripts from `file://`. Ship only the compiled `lg-app/dist/` through `pnpm lg:package`.
+- The animator publishes every change of what is shown (`play`, `startIdle`, `showQr`) to `subscribe()` listeners; a track's `positionMs` is read live when a listener is called, so a late TV connection resumes mid-song. `lg-app/` copies the animations rather than sharing them, so a change to `src/led/animations` must be mirrored there.
 - `verbatimModuleSyntax` is on: type-only imports must use `import type`.
 - Strict TS extras: `noUncheckedIndexedAccess` (indexed reads are possibly undefined; the code uses `!`), `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature` (hence `process.env["X"]`), plus `noUnusedLocals`/`noUnusedParameters`.
 - `src/led/animator.ts` mocks the matrix on win32/darwin and loads `rpi-led-matrix` through `eval("require")` on Linux so bundlers skip the native module. Keep this pattern; do not turn it into a normal import.

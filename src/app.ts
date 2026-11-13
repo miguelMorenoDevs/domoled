@@ -4,12 +4,14 @@ import { pathToFileURL } from "node:url";
 import SpotifyClient from "./spotify/client.js";
 import spotifyRouter, { loginQrUrl } from "./spotify/routes.js";
 import { cdAnimator } from "./led/animator.js";
+import ledRouter from "./led/routes.js";
 
 const app = express();
 
 app.use(express.json());
 
 app.use("/spotify", spotifyRouter);
+app.use("/led", ledRouter);
 
 app.use(express.static("public"));
 

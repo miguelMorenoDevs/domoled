@@ -73,6 +73,11 @@ export interface CatPose {
   eyesClosed: boolean;
 }
 
+export type AnimatorState =
+  | { kind: "track"; track: TrackData; positionMs: number }
+  | { kind: "idle" }
+  | { kind: "qr"; modules: boolean[][] };
+
 export interface LedAnimation {
   /** Starts the outro once the intro has ended; idempotent. */
   exit(elapsedMs: number): void;
