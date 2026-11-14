@@ -364,7 +364,7 @@ export class CdAnimator {
 
   /**
    * Renders one frame: clears the canvas, lets the active animation draw, then pushes it out.
-   * When the animation finishes, the next content starts.
+   * When the animation finishes, the next content starts; a track at its end holds its last frame.
    */
   private renderFrame = (): void => {
     const animation = this.runner.current;
@@ -380,6 +380,11 @@ export class CdAnimator {
 
     this.presentFrame();
 
+    // A track that reached its end keeps its last frame until the poller replaces it.
+    if (animation.holdsAt(this.runner.elapsedMs())) {
+      this.pause();
+      return;
+    }
     if (!animation.finished) return;
     const next = this.runner.afterExit;
     this.stop();
