@@ -6,8 +6,8 @@ Every animation runs through the shared lifecycle in `src/animator/`: an intro p
 
 Used for tracks.
 
-- Intro slide-in, then rotating album art with a silver rim and centre hole, floating motion and a light sheen.
-- At the end of the track, or when the content changes, the outro fades out once. Then the new content appears.
+- Intro slide-in: the CD fades in and reaches full opacity at the midpoint of the intro, then rotating album art with a silver rim and centre hole, floating motion and a light sheen.
+- At the end of the track, or when the content changes, the outro plays the intro in reverse: full opacity until its midpoint, then it fades out while sliding down. Then the new content appears.
 
 ## Podcast
 
