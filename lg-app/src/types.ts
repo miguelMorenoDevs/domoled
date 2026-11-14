@@ -57,3 +57,18 @@ interface CdSparkle {
   radius: number;
   color: string;
 }
+
+interface Rgb {
+  r: number;
+  g: number;
+  b: number;
+}
+
+/** The CD colours derived from the album art; see artPalette() in utils/color.ts. */
+interface ArtPalette {
+  main: Rgb;
+  deep: Rgb;
+  light: Rgb;
+  opposite: Rgb;
+  oppositeDeep: Rgb;
+}

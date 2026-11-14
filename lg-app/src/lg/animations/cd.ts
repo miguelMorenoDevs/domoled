@@ -6,14 +6,19 @@ import type {
 import { BaseAnimation } from "../../../../src/animator/base.js";
 import { DEFAULT_CD_TIMING } from "../../../../src/animator/timing.js";
 import { cdCurveAt } from "../../../../src/utils/cd-curve.js";
+import { artPalette, rgba, sampleDominantColor } from "../../utils/color.js";
 
-const PALETTE = ["#ff5db1", "#e0338f", "#4cc9d9", "#2a8fb5", "#f2c28b"];
-const GLOW_CENTER = "rgba(224, 51, 143, 0.55)";
-const GLOW_EDGE = "rgba(42, 143, 181, 0)";
+/** The palette of the original reference disc, used when the artwork has no usable colour. */
+const FALLBACK_PALETTE: ArtPalette = {
+  main: { r: 255, g: 93, b: 177 },
+  deep: { r: 224, g: 51, b: 143 },
+  light: { r: 242, g: 194, b: 139 },
+  opposite: { r: 76, g: 201, b: 217 },
+  oppositeDeep: { r: 42, g: 143, b: 181 },
+};
 const DISK_CENTER = "#2b3f5e";
 const DISK_EDGE = "#0e1a2e";
 const THUMB_BACK = "#0b1626";
-const SPARKLE_GOLD = "#f2c28b";
 
 // Scene geometry of the reference disc: a 70 unit radius, centred above the horizon.
 const CENTER_X = 200;
@@ -45,6 +50,7 @@ function smoothstep(from: number, to: number, value: number): number {
 export class CdAnimation extends BaseAnimation<CanvasContext> {
   private readonly art: HTMLImageElement;
   private readonly timing: CdTimingConfig;
+  private readonly palette: ArtPalette;
   private readonly particles: CdParticle[];
   private readonly sparkles: CdSparkle[];
 
@@ -56,7 +62,15 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
     super(timing.introDurationMs, timing.outroDurationMs, track.durationMs);
     this.art = art;
     this.timing = timing;
+    this.palette = artPalette(sampleDominantColor(art)) ?? FALLBACK_PALETTE;
 
+    const colors = [
+      this.palette.main,
+      this.palette.deep,
+      this.palette.opposite,
+      this.palette.oppositeDeep,
+      this.palette.light,
+    ];
     this.particles = Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
       angle: Math.random() * TAU,
       speed: randomBetween(0.1, 0.26),
@@ -64,12 +78,12 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
       radius: randomBetween(56, 66),
       travel: randomBetween(45, 85),
       size: randomBetween(1.5, 4),
-      color: PALETTE[i % PALETTE.length]!,
+      color: rgba(colors[i % colors.length]!, 1),
     }));
     this.sparkles = Array.from({ length: SPARKLE_COUNT }, (_, i) => ({
       angle: i * 0.785 + Math.random(),
       radius: randomBetween(78, 112),
-      color: i % 2 ? "#ffffff" : SPARKLE_GOLD,
+      color: i % 2 ? "#ffffff" : rgba(this.palette.light, 1),
     }));
   }
 
@@ -105,8 +119,8 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
 
   private drawGlow(ctx: CanvasContext, opacity: number): void {
     const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 92);
-    gradient.addColorStop(0, GLOW_CENTER);
-    gradient.addColorStop(1, GLOW_EDGE);
+    gradient.addColorStop(0, rgba(this.palette.deep, 0.55));
+    gradient.addColorStop(1, rgba(this.palette.oppositeDeep, 0));
     ctx.save();
     ctx.globalAlpha = opacity;
     ctx.fillStyle = gradient;
@@ -127,7 +141,10 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
       ctx.beginPath();
       ctx.arc(0, 0, 64 + progress * 50, 0, TAU);
       ctx.lineWidth = 0.6 + 2.4 * (1 - progress);
-      ctx.strokeStyle = PALETTE[i % 2 ? 2 : 0]!;
+      ctx.strokeStyle = rgba(
+        i % 2 ? this.palette.opposite : this.palette.main,
+        1,
+      );
       ctx.globalAlpha = (1 - progress) * 0.55 * opacity;
       ctx.stroke();
     }
@@ -203,9 +220,9 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
     ctx.fill();
 
     const rim = ctx.createLinearGradient(-RADIUS, 0, RADIUS, 0);
-    rim.addColorStop(0, "#ff5db1");
-    rim.addColorStop(0.5, "#f2c28b");
-    rim.addColorStop(1, "#4cc9d9");
+    rim.addColorStop(0, rgba(this.palette.main, 1));
+    rim.addColorStop(0.5, rgba(this.palette.light, 1));
+    rim.addColorStop(1, rgba(this.palette.opposite, 1));
     ctx.beginPath();
     ctx.arc(0, 0, RADIUS - 1, 0, TAU);
     ctx.lineWidth = 3;
@@ -221,7 +238,7 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
     ctx.stroke();
 
-    ctx.fillStyle = "rgba(255, 93, 177, 0.3)";
+    ctx.fillStyle = rgba(this.palette.main, 0.3);
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(RADIUS, 0);
@@ -229,7 +246,7 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = "rgba(76, 201, 217, 0.3)";
+    ctx.fillStyle = rgba(this.palette.opposite, 0.3);
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(-RADIUS, 0);

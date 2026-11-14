@@ -4,10 +4,9 @@ import type {
 } from "../../../../src/animator/types.js";
 import { BaseAnimation } from "../../../../src/animator/base.js";
 import { DEFAULT_CD_TIMING } from "../../../../src/animator/timing.js";
-import { dominantColor } from "../../utils/color.js";
+import { sampleDominantColor } from "../../utils/color.js";
 import { lerp } from "../../utils/math.js";
 
-const PODCAST_SAMPLE_SIZE = 16;
 const PODCAST_SHADOW_BRIGHTNESS = 0.25;
 const PODCAST_SHADOW_MAX_RISE = 0.55;
 const PODCAST_WAVE_AMPLITUDE = 4 / 64;
@@ -29,15 +28,7 @@ export class PodcastAnimation extends BaseAnimation<CanvasContext> {
     );
     this.art = art;
 
-    const sample = document.createElement("canvas");
-    sample.width = PODCAST_SAMPLE_SIZE;
-    sample.height = PODCAST_SAMPLE_SIZE;
-    const sampleCtx = sample.getContext("2d")!;
-    sampleCtx.drawImage(art, 0, 0, PODCAST_SAMPLE_SIZE, PODCAST_SAMPLE_SIZE);
-    const { r, g, b } = dominantColor(
-      sampleCtx.getImageData(0, 0, PODCAST_SAMPLE_SIZE, PODCAST_SAMPLE_SIZE)
-        .data,
-    );
+    const { r, g, b } = sampleDominantColor(art);
     const shade = (channel: number) =>
       Math.round(channel * PODCAST_SHADOW_BRIGHTNESS);
     this.shadowColor = `rgb(${shade(r)}, ${shade(g)}, ${shade(b)})`;
