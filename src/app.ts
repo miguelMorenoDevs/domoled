@@ -21,7 +21,9 @@ app.listen(3000, async () => {
   if (await SpotifyClient.hasActiveUser()) {
     cdAnimator.startIdle();
     startPlaybackPoller(SpotifyClient, cdAnimator);
-  } else if (process.platform === "win32" || process.platform === "darwin")
-    console.log(`Simulator: ${pathToFileURL("simulator.html").href}`);
-  else cdAnimator.showQr(loginQrUrl());
+  } else {
+    if (process.platform === "win32" || process.platform === "darwin")
+      console.log(`Simulator: ${pathToFileURL("simulator.html").href}`);
+    cdAnimator.showQr(loginQrUrl());
+  }
 });

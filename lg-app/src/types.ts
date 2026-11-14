@@ -14,7 +14,8 @@ interface TrackData {
 type ScreenState =
   | { kind: "track"; track: TrackData; positionMs: number }
   | { kind: "idle" }
-  | { kind: "qr"; modules: boolean[][] };
+  | { kind: "qr"; modules: boolean[][] }
+  | { kind: "error"; message: string };
 
 type CanvasContext = CanvasRenderingContext2D;
 

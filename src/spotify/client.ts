@@ -112,6 +112,10 @@ class SpotifyClient {
       "Content-Type": "application/x-www-form-urlencoded",
     };
 
+    headers["Authorization"] =
+      "Basic " +
+      Buffer.from(this.client_id + ":" + this.client_secret).toString("base64");
+
     const body = new URLSearchParams();
     body.append("grant_type", options.grant_type);
     body.append("client_id", this.client_id);
@@ -123,11 +127,6 @@ class SpotifyClient {
       case "authorization_code":
         body.append("redirect_uri", this.redirect_uri);
         body.append("code", options.token);
-        headers["Authorization"] =
-          "Basic " +
-          Buffer.from(this.client_id + ":" + this.client_secret).toString(
-            "base64",
-          );
         break;
       case "refresh_token": {
         if (!this.active_user) throw Error("There is no active user");

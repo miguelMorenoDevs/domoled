@@ -50,4 +50,5 @@ export interface CatPose {
 export type AnimatorState =
   | { kind: "track"; track: TrackData; positionMs: number }
   | { kind: "idle" }
-  | { kind: "qr"; modules: boolean[][] };
+  | { kind: "qr"; modules: boolean[][] }
+  | { kind: "error"; message: string };
