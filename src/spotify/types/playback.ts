@@ -20,3 +20,16 @@ export interface PlaybackTransition {
   memory: PlaybackMemory | null;
   actions: PlaybackAction[];
 }
+
+/** Whether the pending poll was scheduled for a track end, and how many stale retries it has used. */
+export interface BoundaryPoll {
+  pending: boolean;
+  retries: number;
+}
+
+export interface PollSchedule {
+  delayMs: number;
+  boundary: BoundaryPoll;
+  /** The reply still shows the previous track: its actions must not be applied. */
+  stale: boolean;
+}

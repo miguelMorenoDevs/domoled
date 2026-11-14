@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   playbackTransition,
   rateLimitDelayMs,
+  scheduleNextPoll,
   startPlaybackPoller,
   POLL_INTERVAL_MS,
 } from "../../src/spotify/playback.js";
@@ -151,6 +152,78 @@ test("playback: a repeated track restarts once past its end", () => {
       isPlaying: true,
     },
   ]);
+});
+
+test("schedule: a long track polls on the 5 s interval", () => {
+  const next = scheduleNextPoll(song(), "track-1", {
+    pending: false,
+    retries: 0,
+  });
+  assert.deepEqual(next, {
+    delayMs: POLL_INTERVAL_MS,
+    boundary: { pending: false, retries: 0 },
+    stale: false,
+  });
+});
+
+test("schedule: a track ending in 3 s polls at about 3.5 s", () => {
+  const next = scheduleNextPoll(
+    song({ durationMs: 13_000, progressMs: 10_000 }),
+    "track-1",
+    { pending: false, retries: 0 },
+  );
+  assert.equal(next.delayMs, 3_500);
+  assert.deepEqual(next.boundary, { pending: true, retries: 0 });
+  assert.equal(next.stale, false);
+});
+
+test("schedule: a stale boundary reply retries at 500 ms, three times at most", () => {
+  let boundary = { pending: true, retries: 0 };
+  for (let retry = 1; retry <= 3; retry++) {
+    const next = scheduleNextPoll(song(), "track-1", boundary);
+    assert.deepEqual(next, {
+      delayMs: 500,
+      boundary: { pending: true, retries: retry },
+      stale: true,
+    });
+    boundary = next.boundary;
+  }
+  const next = scheduleNextPoll(song(), "track-1", boundary);
+  assert.equal(next.stale, false);
+  assert.equal(next.delayMs, POLL_INTERVAL_MS);
+  assert.deepEqual(next.boundary, { pending: false, retries: 0 });
+});
+
+test("schedule: a new track at the boundary is applied, not retried", () => {
+  const next = scheduleNextPoll(song({ id: "track-2" }), "track-1", {
+    pending: true,
+    retries: 0,
+  });
+  assert.equal(next.stale, false);
+});
+
+test("schedule: paused or past-end tracks poll on the 5 s interval", () => {
+  const paused = scheduleNextPoll(
+    song({ isPlaying: false, durationMs: 13_000, progressMs: 10_000 }),
+    undefined,
+    { pending: false, retries: 0 },
+  );
+  assert.equal(paused.delayMs, POLL_INTERVAL_MS);
+  const pastEnd = scheduleNextPoll(
+    song({ durationMs: 13_000, progressMs: 13_200 }),
+    undefined,
+    { pending: false, retries: 0 },
+  );
+  assert.equal(pastEnd.delayMs, POLL_INTERVAL_MS);
+});
+
+test("schedule: nothing playing polls on the 5 s interval", () => {
+  const next = scheduleNextPoll(undefined, "track-1", {
+    pending: true,
+    retries: 0,
+  });
+  assert.equal(next.delayMs, POLL_INTERVAL_MS);
+  assert.equal(next.stale, false);
 });
 
 test("playback: 429 waits Retry-After, else doubles the delay up to 60 s", () => {
