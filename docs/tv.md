@@ -58,6 +58,10 @@ pnpm exec ares-launch --device tv com.domo.led
 
 `pnpm lg:package` runs `tsc -p lg-app`, bundles with esbuild, copies `lg-app/static/` and `config.js` into `lg-app/dist/`, then runs `ares-package`. Re-run it after any change to `lg-app/` or `config.js`, then `pnpm exec ares-install` again.
 
+## Preview in the browser
+
+Without a TV, `simulator.html` has an "LG TV" view that runs the same app. Build it with `pnpm lg:preview` and see [simulator.md](simulator.md).
+
 ## Notes
 
 - The TV reconnects on its own when the server restarts.

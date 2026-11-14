@@ -5,3 +5,4 @@ dist-test
 data
 lg-app/config.js
 lg-app/out
+lg-app/preview

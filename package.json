@@ -8,6 +8,7 @@
     "build": "tsc",
     "lg:build": "tsc -p lg-app && esbuild lg-app/src/main.ts --bundle --format=iife --target=es2017 --outfile=lg-app/dist/app.js && node lg-app/copy-static.mjs",
     "lg:package": "pnpm lg:build && ares-package lg-app/dist --outdir lg-app/out",
+    "lg:preview": "node lg-app/build-preview.mjs",
     "lg:rebuild": "pnpm lg:package && pnpm exec ares-install --device tv lg-app/out/com.domo.led_1.0.0_all.ipk && pnpm exec ares-launch --device tv com.domo.led",
     "lint": "eslint .",
     "format": "prettier --write .",
