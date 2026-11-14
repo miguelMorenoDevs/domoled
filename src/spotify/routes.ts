@@ -29,7 +29,7 @@ function spotifyAuthorizeUrl(): string {
     throw Error("Cannot build Spotify login URL, missing SPOTIFY_CLIENT_ID");
 
   const state = createOAuthState(getLocalIP() + ":3000");
-  const scope = "user-read-currently-playing user-read-email";
+  const scope = "user-read-currently-playing user-read-private";
 
   const params = new URLSearchParams();
   params.append("response_type", "code");
@@ -122,6 +122,14 @@ router.get("/callback", async (req: Request, res: Response) => {
         );
       return;
     }
+    if (error instanceof SpotifyApiError && error.status === 403) {
+      res
+        .status(502)
+        .send(
+          "Spotify refused this account. Development Mode apps only work with the Spotify accounts added to the app in the Spotify developer dashboard.",
+        );
+      return;
+    }
     if (
       error instanceof SpotifyApiError ||
       error instanceof SpotifyRequestError ||
@@ -160,14 +168,14 @@ router.post(
   requireLoopback,
   async (req: Request, res: Response) => {
     try {
-      const { email } = req.body;
+      const { userId } = req.body;
 
-      if (!email) {
-        res.status(400).send("Email is mandatory");
+      if (!userId) {
+        res.status(400).send("User id is mandatory");
         return;
       }
 
-      await SpotifyClient.setActiveUser(email);
+      await SpotifyClient.setActiveUser(userId);
       startPlaybackPoller(SpotifyClient, cdAnimator);
       res.sendStatus(200);
     } catch (error) {
@@ -192,12 +200,12 @@ router.delete(
 );
 
 router.delete(
-  "/users/:email",
+  "/users/:userId",
   requireLoopback,
   async (req: Request, res: Response) => {
     try {
       const wasActive = await SpotifyClient.removeUser(
-        String(req.params["email"]),
+        String(req.params["userId"]),
       );
       if (wasActive) cdAnimator.showQr(loginQrUrl());
       res.sendStatus(200);
