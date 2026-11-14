@@ -13,7 +13,8 @@ const CAT_ORANGE = "#dc7f2c";
 const CAT_BLACK = "#201a17";
 const CAT_TAIL_SHEEN = "#5a4a40";
 const CAT_PINK = "#e9a3a0";
-const CAT_IRIS = "#8c5a2b";
+const CAT_IRIS = "#a6cc82";
+const CAT_IRIS_RIM = "#5e7f45";
 const CAT_EYE = "#0e0b0a";
 const CAT_RED = "#c93a2c";
 const CAT_TAG = "#c8a35c";
@@ -463,47 +464,86 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   ];
   for (const [ex, ey] of eyes) {
     if (eyesClosed) {
-      strokeLine(
+      fillSmooth(
         ctx,
         [
           [ex - 30, ey],
-          [ex, ey + 20],
+          [ex - 14, ey + 14],
+          [ex, ey + 17],
+          [ex + 14, ey + 14],
           [ex + 30, ey],
+          [ex + 14, ey + 9],
+          [ex, ey + 11],
+          [ex - 14, ey + 9],
         ],
-        8,
         CAT_EYE,
       );
     } else {
       fillSmooth(
         ctx,
         [
-          [ex - 28, ey],
-          [ex - 10, ey - 22],
-          [ex + 14, ey - 20],
-          [ex + 28, ey],
-          [ex + 12, ey + 22],
-          [ex - 12, ey + 20],
+          [ex - 30, ey],
+          [ex - 12, ey - 26],
+          [ex + 16, ey - 24],
+          [ex + 30, ey],
+          [ex + 14, ey + 24],
+          [ex - 14, ey + 22],
+        ],
+        CAT_IRIS_RIM,
+      );
+      fillSmooth(
+        ctx,
+        [
+          [ex - 24, ey],
+          [ex - 10, ey - 20],
+          [ex + 13, ey - 18],
+          [ex + 24, ey],
+          [ex + 12, ey + 19],
+          [ex - 11, ey + 18],
         ],
         CAT_IRIS,
       );
       fillSmooth(
         ctx,
         [
-          [ex + 2, ey - 20],
+          [ex - 7, ey],
+          [ex - 3, ey - 9],
+          [ex + 4, ey - 9],
           [ex + 8, ey],
-          [ex + 2, ey + 20],
-          [ex - 4, ey],
+          [ex + 4, ey + 9],
+          [ex - 3, ey + 9],
         ],
         CAT_EYE,
       );
       fillSmooth(
         ctx,
         [
-          [ex + 8, ey - 12],
-          [ex + 14, ey - 9],
-          [ex + 9, ey - 5],
+          [ex + 6, ey - 13],
+          [ex + 13, ey - 13],
+          [ex + 14, ey - 6],
+          [ex + 7, ey - 5],
         ],
         "#ffffff",
+      );
+      fillSmooth(
+        ctx,
+        [
+          [ex - 12, ey + 7],
+          [ex - 8, ey + 6],
+          [ex - 7, ey + 11],
+          [ex - 11, ey + 12],
+        ],
+        "rgba(255, 255, 255, 0.8)",
+      );
+      strokeLine(
+        ctx,
+        [
+          [ex - 32, ey - 7],
+          [ex - 4, ey - 24],
+          [ex + 32, ey - 8],
+        ],
+        3.2,
+        CAT_EYE,
       );
     }
   }
