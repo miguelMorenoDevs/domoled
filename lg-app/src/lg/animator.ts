@@ -3,6 +3,7 @@ import { AnimationRunner } from "../../../src/animator/runner.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
 import { CdAnimation } from "./animations/cd.js";
 import { PodcastAnimation } from "./animations/podcast.js";
+import { wrapText } from "../utils/canvas.js";
 
 // Animations draw in the LED matrix's 64x64 units; the screen scales them up to fill its height.
 const MATRIX_SIZE = 64;
@@ -16,6 +17,7 @@ export class LgAnimator {
   private readonly ctx: CanvasContext;
   private readonly runner = new AnimationRunner<CanvasContext>();
   private qrModules: boolean[][] = [];
+  private errorMessage = "";
   private intervalId: number | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -78,6 +80,13 @@ export class LgAnimator {
     this.intervalId = window.setInterval(this.renderQrFrame, 1000 / FPS);
   }
 
+  showError(message: string): void {
+    if (this.waitForExit(() => this.showError(message))) return;
+    this.stop();
+    this.errorMessage = message;
+    this.intervalId = window.setInterval(this.renderErrorFrame, 1000 / FPS);
+  }
+
   private stop(): void {
     if (this.intervalId !== null) {
       window.clearInterval(this.intervalId);
@@ -129,6 +138,42 @@ export class LgAnimator {
           ctx.fillRect(offsetX + x * cell, offsetY + y * cell, cell, cell);
         }
       }),
+    );
+  };
+
+  /**
+   * Renders the failure screen: a red ring with an X, and the reason underneath.
+   */
+  private renderErrorFrame = (): void => {
+    const { ctx, canvas } = this;
+    const side = Math.min(canvas.width, canvas.height);
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2 - side * 0.1;
+    const radius = side * 0.22;
+    const arm = radius * 0.5;
+
+    this.clearScreen("#000");
+    ctx.strokeStyle = "#e5484d";
+    ctx.shadowColor = "#e5484d";
+    ctx.shadowBlur = side * 0.04;
+    ctx.lineCap = "round";
+    ctx.lineWidth = side * 0.035;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.moveTo(cx - arm, cy - arm);
+    ctx.lineTo(cx + arm, cy + arm);
+    ctx.moveTo(cx + arm, cy - arm);
+    ctx.lineTo(cx - arm, cy + arm);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    const fontSize = Math.round(side * 0.05);
+    ctx.font = `${fontSize}px sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    wrapText(ctx, this.errorMessage, canvas.width * 0.8).forEach((line, i) =>
+      ctx.fillText(line, cx, cy + radius + side * 0.08 + i * fontSize * 1.3),
     );
   };
 

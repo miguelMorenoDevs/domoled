@@ -1,6 +1,7 @@
 import type { CdAnimator } from "../led/animator.js";
 import type SpotifyClient from "./client.js";
 import { SpotifyApiError } from "./errors.js";
+import { describeFailure } from "../utils/failure.js";
 import type { GetCurrentlyPlayedSong } from "./types/api.js";
 import type {
   BoundaryPoll,
@@ -23,7 +24,7 @@ type PlaybackSpotify = Pick<
 >;
 type PlaybackAnimator = Pick<
   CdAnimator,
-  "setTrack" | "play" | "pause" | "resume" | "seek" | "startIdle"
+  "setTrack" | "play" | "pause" | "resume" | "seek" | "startIdle" | "showError"
 >;
 
 /** Maps one reply onto the animator actions it needs, given the previous reply. */
@@ -183,6 +184,9 @@ export function startPlaybackPoller(
       } else {
         console.error("[Playback] Poll failed", error);
       }
+      // Forget the last track so the next good reply loads it again, clearing the failure screen.
+      memory = null;
+      animator.showError(describeFailure(error));
     }
     if (current === run) timer = setTimeout(tick, nextMs);
   };

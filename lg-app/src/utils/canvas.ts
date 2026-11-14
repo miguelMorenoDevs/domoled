@@ -12,6 +12,26 @@ export function fillEllipse(
   ctx.fill();
 }
 
+export function wrapText(
+  ctx: CanvasContext,
+  text: string,
+  maxWidth: number,
+): string[] {
+  const lines: string[] = [];
+  let line = "";
+  for (const word of text.split(" ")) {
+    const next = line ? line + " " + word : word;
+    if (line && ctx.measureText(next).width > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 export function fillTriangle(
   ctx: CanvasContext,
   points: readonly (readonly [number, number])[],
