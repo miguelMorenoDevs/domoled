@@ -2,6 +2,15 @@
 
 Every animation runs through the shared lifecycle in `src/animator/`: an intro plays once, the loop runs until an exit is requested, and an outro plays once. The LED matrix (`src/led/animations/`) and the [LG TV app](tv.md) (`lg-app/src/lg/animations/`) draw them separately, so the visuals can differ.
 
+## TV scene
+
+The TV app draws every state inside one 1080p meadow: sky, sun or moon, stars, clouds, hills, grass and flowers, with the palette and the sun/moon position following the TV's local clock, and a night tint over everything after dusk.
+
+- Login QR: a white projector screen drops from the top with the QR and "Scan to log in", sways while it hangs, and rolls back up when the state changes.
+- Idle: a side-view calico leaps in, crouches and sits, then sleeps with z's, wakes to stretch and leaps out, with blinking, ear flicks and tail motion.
+- Playing: a translucent disc with the album art, a rainbow rim, a soft glow, expanding rings and orbiting flecks rises from below the meadow and sinks back in the outro.
+- Podcast episodes keep the artwork with the tinted rising wave, cropped to fill the screen; they are not part of the meadow scene yet.
+
 ## CD
 
 Used for tracks.

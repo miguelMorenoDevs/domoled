@@ -19,10 +19,41 @@ type ScreenState =
 
 type CanvasContext = CanvasRenderingContext2D;
 
-interface CatPose {
+type CatPoseName = "sit" | "sleep" | "crouch" | "leap" | "stretch";
+
+/** The scene cat's body parameters, all in the reference's 400x225 scene units. */
+interface CatPoseParams {
+  by: number;
+  pitch: number;
+  head: number;
+  fS: number;
+  hS: number;
+  reach: number;
+  tBase: number;
+  tAmp: number;
+  breath: number;
+  eye: number;
+}
+
+/** Where the cat should be and which pose it should hold, for one animation phase. */
+interface CatTarget {
+  pose: CatPoseName;
   x: number;
   jump: number;
-  lie: number;
-  stretch: number;
-  eyesClosed: boolean;
+}
+
+interface CdParticle {
+  angle: number;
+  speed: number;
+  offset: number;
+  radius: number;
+  travel: number;
+  size: number;
+  color: string;
+}
+
+interface CdSparkle {
+  angle: number;
+  radius: number;
+  color: string;
 }
