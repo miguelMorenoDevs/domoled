@@ -196,21 +196,20 @@ const BODY_OUTLINE: readonly (readonly [number, number])[] = [
   [600, 232],
 ];
 const HEAD_OUTLINE: readonly (readonly [number, number])[] = [
-  [500, 220],
-  [510, 160],
-  [560, 120],
-  [640, 95],
-  [720, 88],
-  [800, 95],
-  [860, 130],
-  [885, 190],
-  [880, 250],
-  [850, 300],
-  [790, 335],
-  [700, 352],
-  [610, 340],
-  [540, 305],
-  [505, 265],
+  [500, 210],
+  [505, 150],
+  [545, 105],
+  [640, 90],
+  [760, 90],
+  [860, 105],
+  [900, 150],
+  [905, 220],
+  [885, 290],
+  [830, 338],
+  [740, 354],
+  [650, 350],
+  [570, 322],
+  [515, 272],
 ];
 
 function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
@@ -372,46 +371,47 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   fillSmooth(
     ctx,
     [
-      [478, 170],
-      [492, 100],
-      [512, 40],
-      [560, 70],
-      [612, 110],
-      [640, 150],
+      [490, 170],
+      [496, 100],
+      [530, 50],
+      [585, 70],
+      [630, 110],
+      [660, 160],
     ],
     CAT_BLACK,
   );
   fillSmooth(
     ctx,
     [
-      [730, 150],
-      [770, 62],
-      [805, 4],
-      [842, 52],
-      [872, 112],
-      [868, 160],
+      [740, 160],
+      [770, 70],
+      [805, 26],
+      [850, 52],
+      [895, 110],
+      [910, 165],
     ],
     CAT_BLACK,
   );
   fillSmooth(
     ctx,
     [
-      [500, 120],
-      [520, 75],
-      [552, 84],
-      [575, 110],
-      [560, 135],
+      [525, 140],
+      [532, 98],
+      [555, 82],
+      [592, 108],
+      [610, 138],
     ],
     CAT_PINK,
   );
   fillSmooth(
     ctx,
     [
-      [772, 125],
-      [792, 66],
-      [806, 36],
-      [828, 74],
-      [840, 124],
+      [765, 138],
+      [782, 90],
+      [806, 62],
+      [836, 90],
+      [856, 128],
+      [812, 142],
     ],
     CAT_PINK,
   );
@@ -459,22 +459,22 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   ctx.restore();
 
   const eyes: [number, number][] = [
-    [610, 245],
-    [770, 228],
+    [622, 238],
+    [778, 238],
   ];
   for (const [ex, ey] of eyes) {
     if (eyesClosed) {
       fillSmooth(
         ctx,
         [
-          [ex - 30, ey],
-          [ex - 14, ey + 10],
-          [ex, ey + 12],
-          [ex + 14, ey + 10],
-          [ex + 30, ey],
-          [ex + 14, ey + 7],
-          [ex, ey + 9],
-          [ex - 14, ey + 7],
+          [ex - 36, ey],
+          [ex - 17, ey + 12],
+          [ex, ey + 14],
+          [ex + 17, ey + 12],
+          [ex + 36, ey],
+          [ex + 17, ey + 8],
+          [ex, ey + 10],
+          [ex - 17, ey + 8],
         ],
         CAT_EYE,
       );
@@ -488,43 +488,45 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
             ey + dy + r * (HEAD_SCALE_X / HEAD_SCALE_Y) * Math.sin(a),
           ];
         });
-      fillSmooth(ctx, disc(26), CAT_IRIS_RIM);
-      fillSmooth(ctx, disc(21), CAT_IRIS);
-      fillSmooth(ctx, disc(10), CAT_EYE);
-      fillSmooth(ctx, disc(5, 7, -8), "#ffffff");
-      fillSmooth(ctx, disc(2.5, -9, 7), "rgba(255, 255, 255, 0.8)");
+      fillSmooth(ctx, disc(34), CAT_IRIS_RIM);
+      fillSmooth(ctx, disc(27), CAT_IRIS);
+      fillSmooth(ctx, disc(12), CAT_EYE);
+      fillSmooth(ctx, disc(6, 9, -10), "#ffffff");
+      fillSmooth(ctx, disc(3, -11, 9), "rgba(255, 255, 255, 0.8)");
     }
   }
 
   fillSmooth(
     ctx,
     [
-      [704, 288],
-      [726, 288],
-      [722, 300],
-      [712, 306],
-      [706, 298],
+      [690, 276],
+      [710, 276],
+      [706, 288],
+      [700, 293],
+      [694, 288],
     ],
     CAT_PINK,
   );
-  strokeLine(
-    ctx,
-    [
-      [745, 305],
-      [860, 285],
-    ],
-    4,
-    "rgba(255, 255, 255, 0.7)",
-  );
-  strokeLine(
-    ctx,
-    [
-      [745, 322],
-      [860, 338],
-    ],
-    4,
-    "rgba(255, 255, 255, 0.7)",
-  );
+  for (const side of [-1, 1]) {
+    strokeLine(
+      ctx,
+      [
+        [700 + side * 42, 296],
+        [700 + side * 150, 284],
+      ],
+      2.6,
+      CAT_BLACK,
+    );
+    strokeLine(
+      ctx,
+      [
+        [700 + side * 42, 306],
+        [700 + side * 146, 312],
+      ],
+      2.6,
+      CAT_BLACK,
+    );
+  }
 
   ctx.restore();
 
