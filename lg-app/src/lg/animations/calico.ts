@@ -8,13 +8,10 @@ import { DEFAULT_CALICO_TIMING } from "../../../../src/animator/timing.js";
 import { lerp } from "../../utils/math.js";
 
 const CAT_WHITE = "#f7f3ec";
-const CAT_SHADE = "#e2d9c8";
 const CAT_ORANGE = "#dc7f2c";
 const CAT_BLACK = "#201a17";
-const CAT_TAIL_SHEEN = "#5a4a40";
 const CAT_PINK = "#e9a3a0";
 const CAT_IRIS = "#a6cc82";
-const CAT_IRIS_RIM = "#5e7f45";
 const CAT_EYE = "#0e0b0a";
 const CAT_RED = "#c93a2c";
 const CAT_TAG = "#c8a35c";
@@ -266,9 +263,6 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   ]);
   ctx.fillStyle = CAT_BLACK;
   ctx.fill();
-  ctx.lineWidth = 0.5;
-  ctx.strokeStyle = CAT_TAIL_SHEEN;
-  ctx.stroke();
   // Hind paws: pale feet tucked under the body.
   for (const hx of [bodyX - bodyRx * 0.55, bodyX + bodyRx * 0.5]) {
     fillSmooth(
@@ -290,10 +284,7 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   ctx.scale(bodyRx / BODY_RX, bodyRy / BODY_RY);
   ctx.translate(-BODY_CX, -BODY_CY);
   smoothPath(ctx, BODY_OUTLINE);
-  const shade = ctx.createRadialGradient(420, 420, 60, 560, 520, 360);
-  shade.addColorStop(0, CAT_WHITE);
-  shade.addColorStop(1, CAT_SHADE);
-  ctx.fillStyle = shade;
+  ctx.fillStyle = CAT_WHITE;
   ctx.fill();
   ctx.clip();
   fillSmooth(
@@ -356,9 +347,6 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   ctx.quadraticCurveTo(pawX - 1, bodyY + bodyRy * 0.8, pawX, floorY);
   ctx.lineCap = "round";
   ctx.lineWidth = 2.6;
-  ctx.strokeStyle = CAT_SHADE;
-  ctx.stroke();
-  ctx.lineWidth = 1.8;
   ctx.strokeStyle = CAT_WHITE;
   ctx.stroke();
 
@@ -488,11 +476,10 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
             ey + dy + r * (HEAD_SCALE_X / HEAD_SCALE_Y) * Math.sin(a),
           ];
         });
-      fillSmooth(ctx, disc(34), CAT_IRIS_RIM);
-      fillSmooth(ctx, disc(27), CAT_IRIS);
-      fillSmooth(ctx, disc(12), CAT_EYE);
-      fillSmooth(ctx, disc(6, 9, -10), "#ffffff");
-      fillSmooth(ctx, disc(3, -11, 9), "rgba(255, 255, 255, 0.8)");
+      fillSmooth(ctx, disc(28), CAT_IRIS);
+      fillSmooth(ctx, disc(15), CAT_EYE);
+      fillSmooth(ctx, disc(6, 7, -8), "#ffffff");
+      fillSmooth(ctx, disc(2.5, -7, 6), "#ffffff");
     }
   }
 
