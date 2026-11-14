@@ -11,7 +11,7 @@ The app has four layers:
 
 ## Module map
 
-- `src/spotify/`: Spotify OAuth, API client, playback polling, routes and types.
+- `src/spotify/`: Spotify OAuth, API client, playback polling, routes and types. Routes include `GET /spotify/status`, which returns the last polled playback and the active user for the landing page.
 - `src/animator/`: shared animation lifecycle, state machine, playback clock and timing.
 - `src/led/`: matrix output, simulator stream, animations for the matrix, and the event stream route.
 - `src/utils/`: pure helpers used across modules.

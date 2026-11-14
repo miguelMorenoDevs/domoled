@@ -15,7 +15,11 @@ import { cdAnimator } from "../led/animator.js";
 import { AlbumArtLoadError } from "../led/errors.js";
 import { requireLoopback } from "./guard.js";
 import { consumeOAuthState, createOAuthState } from "./oauth-state.js";
-import { startPlaybackPoller } from "./playback.js";
+import {
+  buildSpotifyStatus,
+  lastPlaybackTrack,
+  startPlaybackPoller,
+} from "./playback.js";
 
 const router: Router = Router();
 
@@ -135,6 +139,13 @@ router.get("/callback", async (req: Request, res: Response) => {
     }
     res.status(400).send("Something went wrong.");
   }
+});
+
+// Read by the landing page every 5 s. It is served to the LAN, so it is not loopback-only.
+router.get("/status", (_req: Request, res: Response) => {
+  res.json(
+    buildSpotifyStatus(SpotifyClient.getActiveUser(), lastPlaybackTrack()),
+  );
 });
 
 router.get("/users", requireLoopback, async (_req: Request, res: Response) => {

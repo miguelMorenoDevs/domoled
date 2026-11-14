@@ -2,7 +2,11 @@ import type { CdAnimator } from "../led/animator.js";
 import type SpotifyClient from "./client.js";
 import { SpotifyApiError } from "./errors.js";
 import { describeFailure } from "../utils/failure.js";
-import type { GetCurrentlyPlayedSong } from "./types/api.js";
+import type {
+  GetCurrentlyPlayedSong,
+  SpotifyStatus,
+  SpotifyStatusTrack,
+} from "./types/api.js";
 import type {
   BoundaryPoll,
   PlaybackAction,
@@ -115,6 +119,27 @@ let run = 0;
 let memory: PlaybackMemory | null = null;
 let backoffMs = POLL_INTERVAL_MS;
 let boundary: BoundaryPoll = { pending: false, retries: 0 };
+let lastTrack: SpotifyStatusTrack | null = null;
+
+/** The track shown on the landing page: its title and artist while it plays, else null. */
+export function statusTrack(
+  song: GetCurrentlyPlayedSong | undefined,
+): SpotifyStatusTrack | null {
+  return song?.isPlaying ? { title: song.title, artist: song.artist } : null;
+}
+
+export function lastPlaybackTrack(): SpotifyStatusTrack | null {
+  return lastTrack;
+}
+
+/** Shows no track when no user is active, even if the poller still holds one. */
+export function buildSpotifyStatus(
+  activeUser: string | null,
+  track: SpotifyStatusTrack | null,
+): SpotifyStatus {
+  const shown = activeUser ? track : null;
+  return { activeUser, playing: shown !== null, track: shown };
+}
 
 async function apply(
   animator: PlaybackAnimator,
@@ -152,6 +177,7 @@ export function startPlaybackPoller(
   clearTimeout(timer);
   const current = ++run;
   memory = null;
+  lastTrack = null;
   backoffMs = POLL_INTERVAL_MS;
   boundary = { pending: false, retries: 0 };
 
@@ -168,6 +194,7 @@ export function startPlaybackPoller(
       boundary = schedule.boundary;
       nextMs = schedule.delayMs;
       if (!schedule.stale) {
+        lastTrack = statusTrack(song);
         const transition = playbackTransition(memory, song, Date.now());
         for (const action of transition.actions) await apply(animator, action);
         memory = transition.memory;
@@ -186,6 +213,7 @@ export function startPlaybackPoller(
       }
       // Forget the last track so the next good reply loads it again, clearing the failure screen.
       memory = null;
+      lastTrack = null;
       animator.showError(describeFailure(error));
     }
     if (current === run) timer = setTimeout(tick, nextMs);

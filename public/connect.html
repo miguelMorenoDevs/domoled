@@ -60,6 +60,28 @@
         <h1>Connect your Spotify</h1>
         <p>Log in with Spotify so your current track plays on the LED matrix.</p>
         <a class="button" href="/spotify/login">Connect my Spotify</a>
+        <p id="status"></p>
     </main>
+    <script>
+        const status = document.getElementById("status");
+
+        async function refresh() {
+            try {
+                const res = await fetch("/spotify/status", { cache: "no-store" });
+                if (!res.ok) throw new Error(String(res.status));
+                const s = await res.json();
+                const user = s.activeUser ? "Connected as " + s.activeUser : "Not connected";
+                const track = s.track
+                    ? "Now playing: " + s.track.title + (s.track.artist ? " by " + s.track.artist : "")
+                    : "Nothing playing";
+                status.textContent = user + " · " + track;
+            } catch {
+                status.textContent = "Cannot reach the server";
+            }
+        }
+
+        refresh();
+        setInterval(refresh, 5000);
+    </script>
 </body>
 </html>

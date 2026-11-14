@@ -259,6 +259,10 @@ class SpotifyClient {
     return !!this.active_user;
   }
 
+  getActiveUser() {
+    return this.active_user ?? null;
+  }
+
   async setActiveUser(email: string) {
     const loggedUsers = await this.getLoggedUsers();
 
@@ -311,6 +315,13 @@ class SpotifyClient {
     return {
       id: item.id,
       title: item.name,
+      artist:
+        item.type === "track"
+          ? item.artists
+              .map((a) => a.name)
+              .filter(Boolean)
+              .join(", ")
+          : "",
       image: bestImage.url,
       durationMs: item.duration_ms,
       progressMs: track.progress_ms ?? 0,

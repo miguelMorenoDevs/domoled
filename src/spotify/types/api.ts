@@ -54,9 +54,21 @@ export function isTokenResponse(value: unknown): value is TokenResponse {
 export interface GetCurrentlyPlayedSong {
   id: string;
   title: string;
+  artist: string;
   image: string;
   durationMs: number;
   progressMs: number;
   isPlaying: boolean;
   contentType: "track" | "episode";
+}
+
+export interface SpotifyStatusTrack {
+  title: string;
+  artist: string;
+}
+
+export interface SpotifyStatus {
+  activeUser: string | null;
+  playing: boolean;
+  track: SpotifyStatusTrack | null;
 }
