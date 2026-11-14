@@ -68,6 +68,7 @@ function track(overrides: Record<string, unknown> = {}) {
       id: "track-id",
       name: "Song",
       duration_ms: 200000,
+      artists: [{ name: "Artist" }],
       album: {
         images: [
           { url: "https://img/640", height: 640, width: 640 },
@@ -158,6 +159,7 @@ test("getCurrentSong returns the largest square album image", async (t) => {
   assert.deepEqual(await spotify.getCurrentSong(), {
     id: "track-id",
     title: "Song",
+    artist: "Artist",
     image: "https://img/640",
     durationMs: 200000,
     progressMs: 42000,
@@ -245,6 +247,7 @@ test("getCurrentSong returns the episode cover, duration and progress", async (t
   assert.deepEqual(await spotify.getCurrentSong(), {
     id: "episode-id",
     title: "Episode",
+    artist: "",
     image: "https://img/episode",
     durationMs: 3600000,
     progressMs: 42000,

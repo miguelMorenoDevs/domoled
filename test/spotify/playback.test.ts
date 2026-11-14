@@ -1,7 +1,9 @@
 import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildSpotifyStatus,
   playbackTransition,
+  statusTrack,
   rateLimitDelayMs,
   scheduleNextPoll,
   startPlaybackPoller,
@@ -15,6 +17,7 @@ function song(overrides: Partial<GetCurrentlyPlayedSong> = {}) {
   return {
     id: "track-1",
     title: "Song",
+    artist: "Artist",
     image: "https://img.example/art.jpg",
     durationMs: 200_000,
     progressMs: 10_000,
@@ -291,6 +294,30 @@ test("poller: a 429 backs off and the next successful reply resets the delay", a
   assert.equal(warnLog.mock.callCount(), 1);
   assert.equal(errorLog.mock.callCount(), 0);
   t.mock.timers.reset();
+});
+
+test("status: idle when nothing plays or no user is active", () => {
+  assert.equal(statusTrack(undefined), null);
+  assert.equal(statusTrack(song({ isPlaying: false })), null);
+  assert.deepEqual(buildSpotifyStatus(null, null), {
+    activeUser: null,
+    playing: false,
+    track: null,
+  });
+  assert.deepEqual(
+    buildSpotifyStatus(null, { title: "Song", artist: "Artist" }),
+    { activeUser: null, playing: false, track: null },
+  );
+});
+
+test("status: shows the active user and the playing track", () => {
+  const track = statusTrack(song());
+  assert.deepEqual(track, { title: "Song", artist: "Artist" });
+  assert.deepEqual(buildSpotifyStatus("user@example.com", track), {
+    activeUser: "user@example.com",
+    playing: true,
+    track: { title: "Song", artist: "Artist" },
+  });
 });
 
 async function flush() {
