@@ -232,12 +232,12 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   const pawX = headX + 1 + stretch * 4;
 
   // Tail: a curved brush, thick at the body and rounded at the tip, curling along the floor when lying down.
-  const baseX = bodyX - bodyRx * 0.8;
-  const baseY = bodyY + bodyRy * 0.3;
-  const curlX = lerpPose(x - 16, x - 18);
-  const curlY = lerpPose(44, 49) + y;
-  const tipX = lerpPose(x - 14, x - 17);
-  const tipY = lerpPose(30, 42) + y;
+  const baseX = bodyX - bodyRx * 0.75;
+  const baseY = bodyY + bodyRy * 0.35;
+  const curlX = bodyX - bodyRx * 1.5;
+  const curlY = bodyY + bodyRy * 0.9;
+  const tipX = bodyX - bodyRx * 1.2;
+  const tipY = bodyY - bodyRy * 0.2;
   const tailAt = (t: number): readonly [number, number] => {
     const u = 1 - t;
     return [
@@ -246,7 +246,7 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
     ];
   };
   const tailSamples = [0, 0.25, 0.5, 0.75, 1];
-  const tailWidths = [3.4, 3, 2.4, 1.9, 1.5];
+  const tailWidths = [2.2, 1.9, 1.6, 1.3, 1];
   const tailEdges = tailSamples.map((t, i) => {
     const [ax, ay] = tailAt(Math.max(0, t - 0.01));
     const [bx, by] = tailAt(Math.min(1, t + 0.01));
