@@ -479,72 +479,20 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
         CAT_EYE,
       );
     } else {
-      fillSmooth(
-        ctx,
-        [
-          [ex - 30, ey],
-          [ex - 12, ey - 26],
-          [ex + 16, ey - 24],
-          [ex + 30, ey],
-          [ex + 14, ey + 24],
-          [ex - 14, ey + 22],
-        ],
-        CAT_IRIS_RIM,
-      );
-      fillSmooth(
-        ctx,
-        [
-          [ex - 24, ey],
-          [ex - 10, ey - 20],
-          [ex + 13, ey - 18],
-          [ex + 24, ey],
-          [ex + 12, ey + 19],
-          [ex - 11, ey + 18],
-        ],
-        CAT_IRIS,
-      );
-      fillSmooth(
-        ctx,
-        [
-          [ex - 7, ey],
-          [ex - 3, ey - 9],
-          [ex + 4, ey - 9],
-          [ex + 8, ey],
-          [ex + 4, ey + 9],
-          [ex - 3, ey + 9],
-        ],
-        CAT_EYE,
-      );
-      fillSmooth(
-        ctx,
-        [
-          [ex + 6, ey - 13],
-          [ex + 13, ey - 13],
-          [ex + 14, ey - 6],
-          [ex + 7, ey - 5],
-        ],
-        "#ffffff",
-      );
-      fillSmooth(
-        ctx,
-        [
-          [ex - 12, ey + 7],
-          [ex - 8, ey + 6],
-          [ex - 7, ey + 11],
-          [ex - 11, ey + 12],
-        ],
-        "rgba(255, 255, 255, 0.8)",
-      );
-      strokeLine(
-        ctx,
-        [
-          [ex - 32, ey - 7],
-          [ex - 4, ey - 24],
-          [ex + 32, ey - 8],
-        ],
-        3.2,
-        CAT_EYE,
-      );
+      // Round discs in head space: the head scale is not square, so y is stretched to look round on screen.
+      const disc = (r: number, dx = 0, dy = 0): [number, number][] =>
+        Array.from({ length: 8 }, (_, i): [number, number] => {
+          const a = (i * Math.PI) / 4;
+          return [
+            ex + dx + r * Math.cos(a),
+            ey + dy + r * (HEAD_SCALE_X / HEAD_SCALE_Y) * Math.sin(a),
+          ];
+        });
+      fillSmooth(ctx, disc(26), CAT_IRIS_RIM);
+      fillSmooth(ctx, disc(21), CAT_IRIS);
+      fillSmooth(ctx, disc(10), CAT_EYE);
+      fillSmooth(ctx, disc(5, 7, -8), "#ffffff");
+      fillSmooth(ctx, disc(2.5, -9, 7), "rgba(255, 255, 255, 0.8)");
     }
   }
 
