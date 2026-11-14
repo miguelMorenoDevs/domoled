@@ -15,6 +15,7 @@
             margin: 0;
             font-family: sans-serif;
         }
+        [hidden] { display: none !important; }
         .matrix-container {
             /* We scale the 64x64 image up so you can actually see it */
             width: 512px;
@@ -23,11 +24,28 @@
             box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
             background: #111;
         }
-        #screen {
+        #matrix-screen {
             width: 100%;
             height: 100%;
             /* image-rendering ensures the pixels stay sharp and chunky, not blurry! */
             image-rendering: pixelated; 
+        }
+        #lg-view {
+            position: fixed;
+            inset: 0;
+        }
+        #lg-view canvas {
+            display: block;
+        }
+        #view {
+            position: fixed;
+            top: 8px;
+            left: 8px;
+            z-index: 1;
+            background: #111;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 4px;
         }
         .status { margin-bottom: 20px; font-weight: bold; color: #ff4444; }
         .connected { color: #00C851; }
@@ -35,16 +53,53 @@
 </head>
 <body>
 
-    <div id="status" class="status">🔴 Disconnected. Waiting for Node server...</div>
-    
-    <div class="matrix-container">
-        <img id="screen" src="" alt="Waiting for frames..." />
+    <select id="view">
+        <option value="matrix">LED matrix</option>
+        <option value="lg">LG TV</option>
+    </select>
+
+    <div id="matrix-view">
+        <div id="status" class="status">🔴 Disconnected. Waiting for Node server...</div>
+
+        <div class="matrix-container">
+            <img id="matrix-screen" src="" alt="Waiting for frames..." />
+        </div>
+    </div>
+
+    <div id="lg-view" hidden>
+        <canvas id="screen"></canvas>
     </div>
 
     <script>
+        const viewEl = document.getElementById('view');
+        const matrixView = document.getElementById('matrix-view');
+        const lgView = document.getElementById('lg-view');
         const statusEl = document.getElementById('status');
-        const screen = document.getElementById('screen');
-        
+        const screen = document.getElementById('matrix-screen');
+        let lgLoaded = false;
+
+        // Loaded on first use: the TV app opens its own event stream as soon as it runs.
+        function showLgView() {
+            lgView.hidden = false;
+            if (lgLoaded) return;
+            lgLoaded = true;
+            const script = document.createElement('script');
+            script.src = 'lg-app/preview/app.js';
+            script.onerror = () => {
+                lgView.hidden = true;
+                viewEl.value = 'matrix';
+                alert('LG TV preview is not built. Run "pnpm lg:preview" first.');
+            };
+            document.body.appendChild(script);
+        }
+
+        viewEl.addEventListener('change', () => {
+            const isLg = viewEl.value === 'lg';
+            matrixView.hidden = isLg;
+            if (isLg) showLgView();
+            else lgView.hidden = true;
+        });
+
         function connect() {
             const ws = new WebSocket('ws://localhost:8080');
             

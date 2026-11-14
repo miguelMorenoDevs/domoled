@@ -105,6 +105,7 @@ JSON
 - Express listens on **3000**. `GET /led/state` streams the current animation state to the LG TV app.
 - On win32/darwin the animator starts a WebSocket server on **8080** and streams frames.
 - Open `simulator.html` directly in a browser (double-click or `file://`); it connects to `ws://localhost:8080`. It is not served by Express — `public/` only holds the OAuth success page at `public/success.html`.
+- The simulator's "LG TV" view needs `pnpm lg:preview` once (see `docs/simulator.md`).
 
 ## Spotify OAuth setup
 
