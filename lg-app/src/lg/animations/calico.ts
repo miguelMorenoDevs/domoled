@@ -5,7 +5,6 @@ import type {
 } from "../../../../src/animator/types.js";
 import { BaseAnimation } from "../../../../src/animator/base.js";
 import { DEFAULT_CALICO_TIMING } from "../../../../src/animator/timing.js";
-import { fillTriangle } from "../../utils/canvas.js";
 import { lerp } from "../../utils/math.js";
 
 const CAT_WHITE = "#f7f3ec";
@@ -113,38 +112,40 @@ export class CalicoCatAnimation extends BaseAnimation<CanvasContext> {
 }
 
 /**
- * Ellipse outline with a fixed, slightly irregular wobble, so fur patches look organic.
+ * Closed smooth outline through the points (Catmull-Rom curves), so shapes have no visible corners or round blobs.
  */
-function blobPath(
+function smoothPath(
   ctx: CanvasContext,
-  cx: number,
-  cy: number,
-  rx: number,
-  ry: number,
-  wobble: number,
+  points: readonly (readonly [number, number])[],
 ): void {
+  const n = points.length;
+  const at = (i: number): readonly [number, number] =>
+    points[(i + n) % n] as readonly [number, number];
   ctx.beginPath();
-  for (let i = 0; i <= 32; i++) {
-    const a = (i / 32) * Math.PI * 2;
-    const k = 1 + wobble * (Math.sin(3 * a + 1) + 0.5 * Math.sin(5 * a + 2));
-    const px = cx + rx * k * Math.cos(a);
-    const py = cy + ry * k * Math.sin(a);
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
+  ctx.moveTo(at(0)[0], at(0)[1]);
+  for (let i = 0; i < n; i++) {
+    const p0 = at(i - 1);
+    const p1 = at(i);
+    const p2 = at(i + 1);
+    const p3 = at(i + 2);
+    ctx.bezierCurveTo(
+      p1[0] + (p2[0] - p0[0]) / 6,
+      p1[1] + (p2[1] - p0[1]) / 6,
+      p2[0] - (p3[0] - p1[0]) / 6,
+      p2[1] - (p3[1] - p1[1]) / 6,
+      p2[0],
+      p2[1],
+    );
   }
   ctx.closePath();
 }
 
-function fillBlob(
+function fillSmooth(
   ctx: CanvasContext,
-  cx: number,
-  cy: number,
-  rx: number,
-  ry: number,
-  wobble: number,
+  points: readonly (readonly [number, number])[],
   color: string,
 ): void {
-  blobPath(ctx, cx, cy, rx, ry, wobble);
+  smoothPath(ctx, points);
   ctx.fillStyle = color;
   ctx.fill();
 }
@@ -177,16 +178,41 @@ const HEAD_CY = 215;
 const HEAD_SCALE_X = 6 / 215;
 const HEAD_SCALE_Y = 5.6 / 140;
 
-function bodyPath(ctx: CanvasContext): void {
-  ctx.beginPath();
-  ctx.moveTo(470, 250);
-  ctx.bezierCurveTo(330, 220, 240, 340, 235, 520);
-  ctx.bezierCurveTo(230, 680, 300, 800, 450, 810);
-  ctx.bezierCurveTo(600, 820, 720, 760, 770, 640);
-  ctx.bezierCurveTo(840, 560, 890, 460, 850, 330);
-  ctx.bezierCurveTo(820, 260, 720, 230, 470, 250);
-  ctx.closePath();
-}
+const BODY_OUTLINE: readonly (readonly [number, number])[] = [
+  [470, 250],
+  [330, 220],
+  [240, 340],
+  [235, 520],
+  [230, 680],
+  [300, 800],
+  [450, 810],
+  [600, 820],
+  [720, 760],
+  [770, 640],
+  [840, 560],
+  [890, 460],
+  [850, 330],
+  [820, 260],
+  [720, 230],
+];
+
+const HEAD_OUTLINE: readonly (readonly [number, number])[] = [
+  [500, 220],
+  [510, 160],
+  [560, 120],
+  [640, 95],
+  [720, 88],
+  [800, 95],
+  [860, 130],
+  [885, 190],
+  [880, 250],
+  [850, 300],
+  [790, 335],
+  [700, 352],
+  [610, 340],
+  [540, 305],
+  [505, 265],
+];
 
 function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   const { x, lie, stretch, eyesClosed } = pose;
@@ -207,43 +233,103 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   const floorY = bodyY + bodyRy * 0.8;
   const pawX = headX + 1 + stretch * 4;
 
-  // Tail: curls along the floor when lying down.
+  // Tail: tapers from the body to a point, curling along the floor when lying down.
+  const baseX = bodyX - bodyRx * 0.8;
+  const baseY = bodyY + bodyRy * 0.3;
+  const curlX = lerpPose(x - 16, x - 18);
+  const curlY = lerpPose(44, 49) + y;
+  const tipX = lerpPose(x - 14, x - 17);
+  const tipY = lerpPose(30, 42) + y;
   ctx.beginPath();
-  ctx.moveTo(bodyX - bodyRx * 0.8, bodyY + bodyRy * 0.3);
-  ctx.quadraticCurveTo(
-    lerpPose(x - 16, x - 18),
-    lerpPose(44, 49) + y,
-    lerpPose(x - 14, x - 17),
-    lerpPose(30, 42) + y,
-  );
-  ctx.lineWidth = 3.6;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = CAT_BLACK;
-  ctx.stroke();
-  ctx.lineWidth = 1.2;
+  ctx.moveTo(baseX, baseY - 3.4);
+  ctx.quadraticCurveTo(curlX, curlY - 3, tipX, tipY);
+  ctx.quadraticCurveTo(curlX, curlY + 3, baseX, baseY + 3.4);
+  ctx.closePath();
+  ctx.fillStyle = CAT_BLACK;
+  ctx.fill();
+  ctx.lineWidth = 0.6;
   ctx.strokeStyle = CAT_TAIL_SHEEN;
   ctx.stroke();
 
-  // Hind paws: rounded white feet tucked under the body.
-  fillBlob(ctx, bodyX - bodyRx * 0.55, floorY, 2.7, 1.8, 0.08, CAT_WHITE);
-  fillBlob(ctx, bodyX + bodyRx * 0.5, floorY, 2.7, 1.8, 0.08, CAT_WHITE);
-
+  // Hind paws: pale feet tucked under the body.
+  for (const hx of [bodyX - bodyRx * 0.55, bodyX + bodyRx * 0.5]) {
+    fillSmooth(
+      ctx,
+      [
+        [hx - 2.7, floorY],
+        [hx - 1, floorY - 1.6],
+        [hx + 2.5, floorY - 1],
+        [hx + 2.9, floorY + 1],
+        [hx, floorY + 1.8],
+        [hx - 2.4, floorY + 1.2],
+      ],
+      CAT_WHITE,
+    );
+  }
   // Body: shaded white fur with black and orange patches, clipped to the posed outline.
   ctx.save();
   ctx.translate(bodyX, bodyY);
   ctx.scale(bodyRx / BODY_RX, bodyRy / BODY_RY);
   ctx.translate(-BODY_CX, -BODY_CY);
-  bodyPath(ctx);
+  smoothPath(ctx, BODY_OUTLINE);
   const shade = ctx.createRadialGradient(420, 420, 60, 560, 520, 360);
   shade.addColorStop(0, CAT_WHITE);
   shade.addColorStop(1, CAT_SHADE);
   ctx.fillStyle = shade;
   ctx.fill();
   ctx.clip();
-  fillBlob(ctx, 410, 290, 130, 85, 0.15, CAT_BLACK);
-  fillBlob(ctx, 440, 380, 70, 100, 0.2, CAT_ORANGE);
-  fillBlob(ctx, 640, 690, 55, 40, 0.2, CAT_BLACK);
-  fillBlob(ctx, 840, 330, 35, 60, 0.2, CAT_BLACK);
+  fillSmooth(
+    ctx,
+    [
+      [300, 240],
+      [380, 214],
+      [480, 224],
+      [520, 280],
+      [470, 302],
+      [400, 316],
+      [330, 300],
+      [290, 270],
+    ],
+    CAT_BLACK,
+  );
+  fillSmooth(
+    ctx,
+    [
+      [395, 300],
+      [445, 285],
+      [490, 320],
+      [500, 380],
+      [478, 450],
+      [430, 480],
+      [390, 440],
+      [372, 370],
+    ],
+    CAT_ORANGE,
+  );
+  fillSmooth(
+    ctx,
+    [
+      [600, 650],
+      [660, 640],
+      [690, 690],
+      [670, 740],
+      [620, 745],
+      [590, 700],
+    ],
+    CAT_BLACK,
+  );
+  fillSmooth(
+    ctx,
+    [
+      [815, 280],
+      [855, 262],
+      [872, 320],
+      [860, 390],
+      [825, 380],
+      [810, 330],
+    ],
+    CAT_BLACK,
+  );
   ctx.restore();
 
   // Front leg: white with a soft shadow edge, from the shoulder to the paw.
@@ -264,42 +350,93 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   ctx.scale(HEAD_SCALE_X, HEAD_SCALE_Y);
   ctx.translate(-HEAD_CX, -HEAD_CY);
 
-  fillTriangle(
+  fillSmooth(
     ctx,
     [
-      [480, 160],
-      [505, 40],
-      [625, 120],
+      [478, 170],
+      [492, 100],
+      [512, 40],
+      [560, 70],
+      [612, 110],
+      [640, 150],
     ],
     CAT_BLACK,
   );
-  fillTriangle(
+  fillSmooth(
     ctx,
     [
-      [735, 120],
-      [805, 0],
-      [865, 150],
+      [730, 150],
+      [770, 62],
+      [805, 4],
+      [842, 52],
+      [872, 112],
+      [868, 160],
     ],
     CAT_BLACK,
   );
-  fillTriangle(
+  fillSmooth(
     ctx,
     [
-      [780, 110],
-      [805, 35],
-      [838, 135],
+      [500, 120],
+      [520, 75],
+      [552, 84],
+      [575, 110],
+      [560, 135],
+    ],
+    CAT_PINK,
+  );
+  fillSmooth(
+    ctx,
+    [
+      [772, 125],
+      [792, 66],
+      [806, 36],
+      [828, 74],
+      [840, 124],
     ],
     CAT_PINK,
   );
 
-  ctx.save();
-  blobPath(ctx, HEAD_CX, HEAD_CY, 215, 140, 0.02);
+  smoothPath(ctx, HEAD_OUTLINE);
   ctx.fillStyle = CAT_WHITE;
   ctx.fill();
+  ctx.save();
   ctx.clip();
-  fillBlob(ctx, 700, 110, 120, 50, 0.15, CAT_ORANGE);
-  fillBlob(ctx, 555, 150, 85, 65, 0.15, CAT_BLACK);
-  fillBlob(ctx, 840, 160, 55, 65, 0.15, CAT_BLACK);
+  fillSmooth(
+    ctx,
+    [
+      [610, 80],
+      [700, 70],
+      [790, 95],
+      [780, 130],
+      [700, 140],
+      [630, 125],
+    ],
+    CAT_ORANGE,
+  );
+  fillSmooth(
+    ctx,
+    [
+      [500, 200],
+      [530, 130],
+      [600, 110],
+      [640, 150],
+      [625, 200],
+      [560, 230],
+    ],
+    CAT_BLACK,
+  );
+  fillSmooth(
+    ctx,
+    [
+      [800, 100],
+      [860, 130],
+      [880, 200],
+      [850, 220],
+      [810, 190],
+    ],
+    CAT_BLACK,
+  );
   ctx.restore();
 
   const eyes: [number, number][] = [
@@ -319,13 +456,51 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
         CAT_EYE,
       );
     } else {
-      fillBlob(ctx, ex, ey, 26, 28, 0.05, CAT_IRIS);
-      fillBlob(ctx, ex + 3, ey, 12, 22, 0, CAT_EYE);
-      fillBlob(ctx, ex + 10, ey - 10, 6, 6, 0, "#ffffff");
+      fillSmooth(
+        ctx,
+        [
+          [ex - 28, ey],
+          [ex - 10, ey - 22],
+          [ex + 14, ey - 20],
+          [ex + 28, ey],
+          [ex + 12, ey + 22],
+          [ex - 12, ey + 20],
+        ],
+        CAT_IRIS,
+      );
+      fillSmooth(
+        ctx,
+        [
+          [ex + 2, ey - 20],
+          [ex + 8, ey],
+          [ex + 2, ey + 20],
+          [ex - 4, ey],
+        ],
+        CAT_EYE,
+      );
+      fillSmooth(
+        ctx,
+        [
+          [ex + 8, ey - 12],
+          [ex + 14, ey - 9],
+          [ex + 9, ey - 5],
+        ],
+        "#ffffff",
+      );
     }
   }
 
-  fillBlob(ctx, 715, 300, 22, 16, 0.1, CAT_PINK);
+  fillSmooth(
+    ctx,
+    [
+      [704, 294],
+      [726, 294],
+      [722, 306],
+      [712, 312],
+      [706, 304],
+    ],
+    CAT_PINK,
+  );
   strokeLine(
     ctx,
     [
@@ -355,9 +530,31 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
     22,
     CAT_RED,
   );
-  fillBlob(ctx, 778, 410, 22, 26, 0, CAT_TAG);
+  fillSmooth(
+    ctx,
+    [
+      [768, 396],
+      [788, 394],
+      [798, 412],
+      [788, 430],
+      [768, 426],
+      [760, 410],
+    ],
+    CAT_TAG,
+  );
   ctx.restore();
 
-  // Paw: white, resting on the floor and reaching forward while stretching.
-  fillBlob(ctx, pawX, floorY, 2.3, 1.5, 0.1, CAT_WHITE);
+  // Front paw, resting on the floor and reaching forward while stretching.
+  fillSmooth(
+    ctx,
+    [
+      [pawX - 2.6, floorY - 1.2],
+      [pawX, floorY - 1.8],
+      [pawX + 2.6, floorY - 0.8],
+      [pawX + 2.4, floorY + 1.4],
+      [pawX - 1.2, floorY + 1.8],
+      [pawX - 2.8, floorY + 0.6],
+    ],
+    CAT_WHITE,
+  );
 }
