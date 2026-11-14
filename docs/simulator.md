@@ -13,4 +13,4 @@ Open `simulator.html` directly in a browser (double-click or `file://`). It conn
 
 It is not served by Express: `public/` only holds the pages the phone and the Spotify callback open (`public/connect.html`, `public/success.html`).
 
-On win32/darwin, boot logs the `simulator.html` file URL instead of showing the login QR on the matrix. The simulator shows nothing until you log in, and `DELETE /spotify/users/active` shows the login QR in it.
+On win32/darwin, boot also logs the `simulator.html` file URL. The simulator shows the login QR the same way the matrix does, and `DELETE /spotify/users/active` shows it again.

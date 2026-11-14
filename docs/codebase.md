@@ -31,6 +31,7 @@ src/
   utils/
     color.ts              `dominantColor()`: most prominent colour of RGBA pixels (used to tint the podcast shadow)
     network.ts            getLocalIP() for the OAuth state round-trip
+    failure.ts            `describeFailure()`: short user-facing reason for a failed playback poll (failure screen)
     math.ts               lerp()
     canvas.ts             fillEllipse(), fillTriangle() for canvas drawing
     clock.ts              `PlaybackClock`: track position that pauses, resumes and seeks (used by `AnimationRunner`, so both animators share it)
@@ -40,7 +41,7 @@ lg-app/                   LG webOS 5+ TV app: full-screen version of the animati
   src/types.ts            Global types (no exports) incl. `ScreenState`, mirror of the server's `AnimatorState`; declares `LED_SERVER_URL`
   src/lg/animator.ts      `LgAnimator`: same lifecycle through `AnimationRunner` on a screen-sized canvas (64-unit drawing, scaled), incl. pause/resume/seek
   src/lg/animations/      cd.ts, calico.ts: TV drawing on `BaseAnimation` from src/animator/; visuals may differ from the LED ones
-  src/utils/              canvas.ts (fillEllipse, fillTriangle), math.ts (lerp) for the TV drawing; the clock comes from the shared src/utils/clock.ts
+  src/utils/              canvas.ts (fillEllipse, fillTriangle, wrapText), math.ts (lerp) for the TV drawing; the clock comes from the shared src/utils/clock.ts
   src/main.ts             Opens `EventSource(LED_SERVER_URL + "/led/state")` and maps each event to the animator
   static/                 index.html, appinfo.json, icons (copied into dist/)
   config.example.js       Template for config.js (gitignored; holds the server address)
@@ -54,7 +55,7 @@ public/connect.html       Landing page the matrix QR opens; its button goes to `
 
 ## Execution flow
 
-1. `src/app.ts` mounts `spotifyRouter` at `/spotify` and listens on 3000. With no active user it calls `cdAnimator.showQr()` for `http://<localIP>:3000/connect.html` (on win32/darwin it logs the `simulator.html` URL instead). The static `public/connect.html` page has a "Connect my Spotify" button that goes to `/spotify/login`.
+1. `src/app.ts` mounts `spotifyRouter` at `/spotify` and listens on 3000. With no active user it calls `cdAnimator.showQr()` for `http://<localIP>:3000/connect.html` (on win32/darwin it also logs the `simulator.html` URL). The static `public/connect.html` page has a "Connect my Spotify" button that goes to `/spotify/login`.
 2. `POST /spotify/login` builds the Spotify authorize URL (`state` = `<random nonce>.<localIP>:3000`, the nonce stored in memory for 10 min), prints a QR code, returns the URL. `GET /spotify/login` redirects to that same URL; the landing page button targets it.
 3. Spotify redirects to the GitHub Pages `index.html`, which forwards `code` and `state` unchanged to `GET /spotify/callback` on the host named in `state`.
 4. The callback first consumes `state`: a missing, unknown, expired or reused value gets `400` and no code exchange. Otherwise it exchanges the code for tokens, fetches the current song (including `progress_ms`), loads the album art into the shared `cdAnimator`, calls `play()` from that playback position, and renders `public/success.html`. When nothing is playing, it calls `cdAnimator.startIdle()` and replies `200` with a plain-text message instead.
