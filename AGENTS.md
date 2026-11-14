@@ -5,7 +5,7 @@ Raspberry Pi LED matrix that animates the Spotify track currently playing. Expre
 ## Docs — load only what the task needs
 
 - `docs/setup.md` — env vars, install, dev/build commands, simulator, OAuth redirect setup.
-- `docs/codebase.md` — architecture, module map, TS/ESM conventions, routes, rendering flow.
+- `docs/codebase.md` — architecture overview and module map.
 - GitHub Issues — known bugs, gaps and deferred work (`gh issue list --state open`). Read before fixing or extending behavior.
 
 ## Always
