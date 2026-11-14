@@ -551,11 +551,11 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   fillSmooth(
     ctx,
     [
-      [704, 294],
-      [726, 294],
-      [722, 306],
-      [712, 312],
-      [706, 304],
+      [704, 288],
+      [726, 288],
+      [722, 300],
+      [712, 306],
+      [706, 298],
     ],
     CAT_PINK,
   );
