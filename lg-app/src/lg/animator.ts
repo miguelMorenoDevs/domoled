@@ -2,6 +2,7 @@ import type { Animation } from "../../../src/animator/types.js";
 import { AnimationRunner } from "../../../src/animator/runner.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
 import { CdAnimation } from "./animations/cd.js";
+import { PodcastAnimation } from "./animations/podcast.js";
 
 // Animations draw in the LED matrix's 64x64 units; the screen scales them up to fill its height.
 const MATRIX_SIZE = 64;
@@ -26,7 +27,11 @@ export class LgAnimator {
 
   play(art: HTMLImageElement, track: TrackData, positionMs: number): void {
     if (this.waitForExit(() => this.play(art, track, positionMs))) return;
-    this.run(new CdAnimation(track, art), positionMs, () => this.startIdle());
+    const animation =
+      track.contentType === "episode"
+        ? new PodcastAnimation(track, art)
+        : new CdAnimation(track, art);
+    this.run(animation, positionMs, () => this.startIdle());
   }
 
   /**
@@ -50,7 +55,12 @@ export class LgAnimator {
    * Moves a playing or paused track's animation to `progressMs`, without restarting the intro.
    */
   seek(progressMs: number): void {
-    if (!(this.runner.current instanceof CdAnimation)) return;
+    const current = this.runner.current;
+    if (
+      !(current instanceof CdAnimation) &&
+      !(current instanceof PodcastAnimation)
+    )
+      return;
     this.runner.seek(progressMs);
   }
 

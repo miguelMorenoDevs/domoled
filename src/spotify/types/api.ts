@@ -56,4 +56,5 @@ export interface GetCurrentlyPlayedSong {
   image: string;
   durationMs: number;
   progressMs: number;
+  contentType: "track" | "episode";
 }
