@@ -5,6 +5,7 @@ import type {
 } from "../../../../src/animator/types.js";
 import { BaseAnimation } from "../../../../src/animator/base.js";
 import { DEFAULT_CD_TIMING } from "../../../../src/animator/timing.js";
+import { cdCurveAt } from "../../../../src/utils/cd-curve.js";
 
 /**
  * The spinning CD: album art on a silver disc, with a slide-in intro and a fade-out outro.
@@ -41,30 +42,21 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
     const padding = 6;
     const cdRadius = width / 2 - padding;
 
-    let yPos = height / 2;
     const xPos = width / 2;
-    let opacity = 1.0;
 
     const rotation = (elapsed / 1000) * (Math.PI / 2);
-    let floatOffset = 0;
 
     // --- 2. Timings & Position Math ---
-    if (state.phase === "intro") {
-      const progress = state.elapsedInPhaseMs / this.timing.introDurationMs;
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      const startY = height + cdRadius * 2; // Start below the screen
-      yPos = startY - (startY - height / 2) * easeOut;
-    } else if (state.phase === "outro") {
-      opacity = Math.max(
-        0,
-        1 - state.elapsedInPhaseMs / this.timing.outroDurationMs,
-      );
-      floatOffset = Math.sin(elapsed / 500) * 1.5;
-    } else {
-      floatOffset = Math.sin(elapsed / 500) * 1.5;
+    const { opacity, offscreen } = cdCurveAt(
+      state,
+      this.timing.introDurationMs,
+      this.timing.outroDurationMs,
+    );
+    const startY = height + cdRadius * 2; // Start below the screen
+    let yPos = height / 2 + offscreen * (startY - height / 2);
+    if (state.phase !== "intro") {
+      yPos += Math.sin(elapsed / 500) * 1.5;
     }
-
-    yPos += floatOffset;
 
     // --- 3. RENDER LAYERS ---
     ctx.save();
