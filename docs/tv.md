@@ -58,6 +58,28 @@ pnpm exec ares-launch --device tv com.domo.led
 
 `pnpm lg:package` runs `tsc -p lg-app`, bundles with esbuild, copies `lg-app/static/` and `config.js` into `lg-app/dist/`, then runs `ares-package`. Re-run it after any change to `lg-app/` or `config.js`, then `pnpm exec ares-install` again.
 
+## Deploy on merge
+
+Merging to `main` deploys the app automatically: `.github/workflows/lg-deploy.yml` packages it and installs and launches it on the TV when the commit touches `lg-app/`, `src/animator/`, `src/utils/`, `package.json` or `pnpm-lock.yaml`. Start it by hand with `gh workflow run lg-deploy.yml`. The run fails when the TV is off or the key has expired, so a stale TV does not go unnoticed.
+
+The job runs on a self-hosted runner labelled `lg-tv`, because the TV only accepts installs from its own network. Add one under Settings → Actions → Runners → New self-hosted runner and label it `lg-tv`; the runner needs `git`, Node and pnpm, on Linux, macOS or Windows.
+
+Set the repository secrets so the runner can build and pair the TV:
+
+| Secret           | Value                                                            |
+| ---------------- | ---------------------------------------------------------------- |
+| `LED_SERVER_URL` | `http://<pi-address>:3000`, the same value as `lg-app/config.js` |
+| `TV_HOST`        | the TV's IPv4 address, as in step 2                              |
+| `TV_KEY`         | the private key from step 2, `~/.ssh/tv_webos`                   |
+
+```sh
+gh secret set LED_SERVER_URL --body "http://<pi-address>:3000"
+gh secret set TV_HOST --body "<tv-address>"
+gh secret set TV_KEY < ~/.ssh/tv_webos
+```
+
+Each run pairs the TV under the name `ci`, so it leaves a local `tv` device alone. The key stays valid while Developer Mode is on; turn it back on when it expires.
+
 ## Preview in the browser
 
 Without a TV, `simulator.html` has an "LG TV" view that runs the same app. Build it with `pnpm lg:preview` and see [simulator.md](simulator.md).
