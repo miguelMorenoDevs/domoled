@@ -7,6 +7,15 @@ export interface UserTokens {
   refresh_token: string;
 }
 
+/** `GET /me`. Development Mode apps no longer receive `email` from it. */
+export interface UserProfile {
+  id: string;
+}
+
+export function isUserProfile(value: unknown): value is UserProfile {
+  return isRecord(value) && typeof value["id"] === "string";
+}
+
 export interface StoredUsers {
   users: Record<string, UserTokens>;
   active_user: string | null;
@@ -15,6 +24,8 @@ export interface StoredUsers {
 export interface TokenResponse {
   access_token: string;
   refresh_token?: string;
+  /** Space-separated scopes Spotify actually granted. */
+  scope?: string;
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {

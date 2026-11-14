@@ -4,6 +4,7 @@ import {
   isRecord,
   isStoredUsers,
   isTokenResponse,
+  isUserProfile,
   type GetCurrentlyPlayedSong,
   type GetUserTokenOptions,
   type StoredUsers,
@@ -79,8 +80,8 @@ class SpotifyClient {
       const store: unknown = JSON.parse(raw);
       if (!isStoredUsers(store))
         throw new TypeError("Token store does not match the expected shape");
-      for (const [email, tokens] of Object.entries(store.users))
-        this.users_map.set(email, tokens);
+      for (const [userId, tokens] of Object.entries(store.users))
+        this.users_map.set(userId, tokens);
       if (store.active_user && this.users_map.has(store.active_user))
         this.active_user = store.active_user;
     } catch (error) {
@@ -164,6 +165,8 @@ class SpotifyClient {
     const payload: unknown = await readBody("/token", () => res.json());
     if (!isTokenResponse(payload)) throw new SpotifyResponseError("/token");
     const { access_token, refresh_token } = payload;
+    if (payload.scope !== undefined)
+      console.info("Granted Spotify scopes: " + payload.scope);
 
     // Spotify may omit refresh_token on refresh; the code grant has no stored token to fall back to.
     const nextRefreshToken = refresh_token ?? storedRefreshToken;
@@ -176,7 +179,7 @@ class SpotifyClient {
     };
 
     if (options.grant_type === "authorization_code") {
-      await this.assingTokensToEmail(tokens);
+      await this.assignTokensToUser(tokens);
     } else {
       const activeUser = this.active_user;
       if (!activeUser) throw Error("There is no active user");
@@ -245,9 +248,9 @@ class SpotifyClient {
     }
   }
 
-  private forgetUser(email: string) {
-    this.users_map.delete(email);
-    if (this.active_user === email) this.active_user = undefined;
+  private forgetUser(userId: string) {
+    this.users_map.delete(userId);
+    if (this.active_user === userId) this.active_user = undefined;
     this.saveStore();
   }
 
@@ -263,12 +266,12 @@ class SpotifyClient {
     return this.active_user ?? null;
   }
 
-  async setActiveUser(email: string) {
+  async setActiveUser(userId: string) {
     const loggedUsers = await this.getLoggedUsers();
 
-    if (!loggedUsers.includes(email)) throw new UserNotLoggedError(email);
+    if (!loggedUsers.includes(userId)) throw new UserNotLoggedError(userId);
 
-    this.active_user = email;
+    this.active_user = userId;
     this.saveStore();
   }
 
@@ -277,11 +280,11 @@ class SpotifyClient {
     this.saveStore();
   }
 
-  async removeUser(email: string) {
-    if (!this.users_map.has(email)) throw new UserNotLoggedError(email);
+  async removeUser(userId: string) {
+    if (!this.users_map.has(userId)) throw new UserNotLoggedError(userId);
 
-    const wasActive = this.active_user === email;
-    this.users_map.delete(email);
+    const wasActive = this.active_user === userId;
+    this.users_map.delete(userId);
     if (wasActive) this.active_user = undefined;
     this.saveStore();
 
@@ -331,21 +334,25 @@ class SpotifyClient {
     };
   }
 
-  private async assingTokensToEmail(tokens: UserTokens) {
+  private async assignTokensToUser(tokens: UserTokens) {
+    // Development Mode apps get no `email` from /me, so key users by their Spotify id.
     const res = await this.send("/me", this.api_url + "/me", {
       headers: {
         Authorization: "Bearer " + tokens.access_token,
       },
     });
 
-    const data = res.ok
-      ? ((await readBody("/me", () => res.json())) as { email?: string })
-      : undefined;
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("Spotify /me failed", res.status, body);
+      throw new SpotifyApiError("/me", res.status, parseRetryAfter(res));
+    }
 
-    if (!data || !data.email) throw Error("Fetching user email failed");
+    const profile: unknown = await readBody("/me", () => res.json());
+    if (!isUserProfile(profile)) throw new SpotifyResponseError("/me");
 
-    this.users_map.set(data.email, tokens);
-    this.active_user = data.email;
+    this.users_map.set(profile.id, tokens);
+    this.active_user = profile.id;
   }
 }
 

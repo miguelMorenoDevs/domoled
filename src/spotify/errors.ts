@@ -1,10 +1,10 @@
 export class UserNotLoggedError extends Error {
-  readonly email: string;
+  readonly userId: string;
 
-  constructor(email: string) {
+  constructor(userId: string) {
     super("User is not logged in");
     this.name = "UserNotLoggedError";
-    this.email = email;
+    this.userId = userId;
   }
 }
 
@@ -50,11 +50,11 @@ export class SpotifyRequestError extends Error {
 
 /** Spotify rejected the stored refresh token; the user's tokens have been removed. */
 export class SpotifyAuthRevokedError extends Error {
-  readonly email: string;
+  readonly userId: string;
 
-  constructor(email: string) {
+  constructor(userId: string) {
     super("Spotify rejected the stored login for this user");
     this.name = "SpotifyAuthRevokedError";
-    this.email = email;
+    this.userId = userId;
   }
 }
