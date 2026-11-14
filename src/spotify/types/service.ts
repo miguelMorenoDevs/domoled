@@ -171,6 +171,7 @@ export function isGetCurrentSongResponse(
 ): value is GetCurrentSongResponse {
   return (
     isRecord(value) &&
+    typeof value["is_playing"] === "boolean" &&
     (value["progress_ms"] === null ||
       typeof value["progress_ms"] === "number") &&
     isCurrentlyPlayingItem(value["item"])

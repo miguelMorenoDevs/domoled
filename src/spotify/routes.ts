@@ -15,6 +15,7 @@ import { cdAnimator } from "../led/animator.js";
 import { AlbumArtLoadError } from "../led/errors.js";
 import { requireLoopback } from "./guard.js";
 import { consumeOAuthState, createOAuthState } from "./oauth-state.js";
+import { startPlaybackPoller } from "./playback.js";
 
 const router: Router = Router();
 
@@ -74,6 +75,7 @@ router.get("/callback", async (req: Request, res: Response) => {
       grant_type: "authorization_code",
       token: code,
     });
+    startPlaybackPoller(SpotifyClient, cdAnimator);
 
     const song = await SpotifyClient.getCurrentSong();
     console.log({ song });
@@ -91,7 +93,7 @@ router.get("/callback", async (req: Request, res: Response) => {
       progressMs: song.progressMs,
       contentType: song.contentType,
     });
-    cdAnimator.play();
+    cdAnimator.play(!song.isPlaying);
     console.info(
       "Check your animation in: " + process.cwd() + "/simulator.html",
     );
@@ -155,6 +157,7 @@ router.post(
       }
 
       await SpotifyClient.setActiveUser(email);
+      startPlaybackPoller(SpotifyClient, cdAnimator);
       res.sendStatus(200);
     } catch (error) {
       console.error(error);

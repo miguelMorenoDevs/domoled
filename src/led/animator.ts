@@ -160,14 +160,15 @@ export class CdAnimator {
   }
 
   /**
-   * Starts or resumes the animation from the track's current playback position.
+   * Starts or resumes the animation from the track's current playback position. With `startPaused`,
+   * the first frame is drawn and the track waits there until resume().
    */
-  public play(): void {
+  public play(startPaused = false): void {
     if (!this.loadedTrack) {
       console.warn("No track loaded. Call setTrack() first.");
       return;
     }
-    if (this.waitForExit(() => this.play())) return;
+    if (this.waitForExit(() => this.play(startPaused))) return;
 
     const { track, art } = this.loadedTrack;
     console.log(`[CdAnimator] Playing from ${track.progressMs}ms...`);
@@ -177,6 +178,10 @@ export class CdAnimator {
         : new CdAnimation(track, art);
     this.run(animation, track.progressMs, () => this.startIdle());
     this.show({ kind: "track", track, positionMs: track.progressMs });
+    if (startPaused) {
+      this.renderFrame();
+      this.pause();
+    }
   }
 
   /**
