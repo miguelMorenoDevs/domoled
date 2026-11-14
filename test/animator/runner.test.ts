@@ -7,6 +7,7 @@ function probe(exits: number[]): Animation<null> {
   return {
     exiting: false,
     finished: false,
+    holdsAt: () => false,
     exit(elapsedMs) {
       exits.push(elapsedMs);
     },

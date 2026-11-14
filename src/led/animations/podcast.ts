@@ -18,17 +18,19 @@ const WAVE_AMPLITUDE = 4;
 /**
  * A podcast episode: the artwork, with a dark shadow tinted from the artwork's dominant colour that
  * rises from the bottom edge, ripples across the matrix and sinks back. Same intro, loop and outro as the CD.
- * The outro starts at the end of the episode unless exit() ends it earlier.
+ * At the end of the episode it holds its last frame until the poller calls exit().
  */
 export class PodcastAnimation extends BaseAnimation<CanvasContext> {
   private readonly art: Image;
-  private readonly durationMs: number;
   private readonly shadowColor: string;
 
   constructor(track: TrackData, art: Image) {
-    super(DEFAULT_CD_TIMING.introDurationMs, DEFAULT_CD_TIMING.outroDurationMs);
+    super(
+      DEFAULT_CD_TIMING.introDurationMs,
+      DEFAULT_CD_TIMING.outroDurationMs,
+      track.durationMs,
+    );
     this.art = art;
-    this.durationMs = track.durationMs;
 
     const sample = createCanvas(SAMPLE_SIZE, SAMPLE_SIZE);
     const sampleCtx = sample.getContext("2d");
@@ -38,10 +40,6 @@ export class PodcastAnimation extends BaseAnimation<CanvasContext> {
     );
     const shade = (channel: number) => Math.round(channel * SHADOW_BRIGHTNESS);
     this.shadowColor = `rgb(${shade(r)}, ${shade(g)}, ${shade(b)})`;
-  }
-
-  protected override scheduledExitMs(): number {
-    return this.durationMs - DEFAULT_CD_TIMING.outroDurationMs;
   }
 
   protected draw(

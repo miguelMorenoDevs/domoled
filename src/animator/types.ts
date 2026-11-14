@@ -32,6 +32,8 @@ export interface Animation<Ctx> {
   readonly exiting: boolean;
   /** True once the outro has ended; the animator then starts the next content. */
   readonly finished: boolean;
+  /** True once a track has reached its end and waits for exit(); the animator freezes on its last frame. */
+  holdsAt(elapsedMs: number): boolean;
   /** Draws one frame into the canvas context. The animator clears the canvas first. */
   render(frame: AnimationFrame<Ctx>): void;
 }

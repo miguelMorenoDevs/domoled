@@ -205,6 +205,11 @@ export class LgAnimator {
       elapsedMs: this.runner.elapsedMs(),
     });
 
+    // A track that reached its end keeps its last frame until the server replaces it.
+    if (animation.holdsAt(this.runner.elapsedMs())) {
+      this.pause();
+      return;
+    }
     if (!animation.finished) return;
     const next = this.runner.afterExit;
     this.stop();

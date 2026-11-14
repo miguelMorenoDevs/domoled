@@ -8,12 +8,8 @@ const introMs = 1000;
 const outroMs = 500;
 
 class ProbeAnimation extends BaseAnimation<null> {
-  constructor(private readonly endMs: number | null = null) {
-    super(introMs, outroMs);
-  }
-
-  protected override scheduledExitMs(): number | null {
-    return this.endMs === null ? null : this.endMs - outroMs;
+  constructor(trackMs: number | null = null) {
+    super(introMs, outroMs, trackMs);
   }
 
   protected override draw(): void {}
@@ -77,22 +73,22 @@ test("exit requested during the intro waits for the intro to finish", () => {
   assert.equal(animation.finished, true);
 });
 
-test("a scheduled end (track end) starts the outro without exit()", () => {
+test("a track holds at its end until exit(), without an outro of its own", () => {
   const animation = new ProbeAnimation(5000);
+  assert.equal(animation.holdsAt(4999), false);
+  assert.equal(animation.holdsAt(5000), true);
+
+  animation.render(frameAt(6000));
   assert.equal(animation.exiting, false);
-
-  animation.render(frameAt(4499));
   assert.equal(animation.finished, false);
+  assert.equal(animation.holdsAt(9000), true);
 
-  animation.render(frameAt(5000));
+  animation.exit(6000);
+  assert.equal(animation.holdsAt(9000), false);
+  animation.render(frameAt(6000 + outroMs));
   assert.equal(animation.finished, true);
 });
 
-test("exit() after a scheduled end keeps the outro in progress", () => {
-  const animation = new ProbeAnimation(5000);
-  animation.render(frameAt(4800));
-  animation.exit(4800);
-
-  animation.render(frameAt(5000));
-  assert.equal(animation.finished, true);
+test("animations without a track never hold", () => {
+  assert.equal(new ProbeAnimation().holdsAt(600_000), false);
 });

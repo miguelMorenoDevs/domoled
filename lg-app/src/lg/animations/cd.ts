@@ -9,11 +9,10 @@ import { cdCurveAt } from "../../../../src/utils/cd-curve.js";
 
 /**
  * The spinning CD: album art on a silver disc, with a slide-in intro and a fade-out outro.
- * The outro starts at the end of the track unless exit() ends it earlier.
+ * At the end of the track it holds its last frame until the poller calls exit().
  */
 export class CdAnimation extends BaseAnimation<CanvasContext> {
   private readonly art: HTMLImageElement;
-  private readonly durationMs: number;
   private readonly timing: CdTimingConfig;
 
   constructor(
@@ -21,14 +20,9 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
     art: HTMLImageElement,
     timing: CdTimingConfig = DEFAULT_CD_TIMING,
   ) {
-    super(timing.introDurationMs, timing.outroDurationMs);
+    super(timing.introDurationMs, timing.outroDurationMs, track.durationMs);
     this.art = art;
-    this.durationMs = track.durationMs;
     this.timing = timing;
-  }
-
-  protected override scheduledExitMs(): number {
-    return this.durationMs - this.timing.outroDurationMs;
   }
 
   protected draw(
