@@ -11,7 +11,7 @@ import type {
   PollSchedule,
 } from "./types/playback.js";
 
-export const POLL_INTERVAL_MS = 5_000;
+export const POLL_INTERVAL_MS = 2_000;
 const MAX_BACKOFF_MS = 60_000;
 const DRIFT_TOLERANCE_MS = 2_000;
 const BOUNDARY_SLACK_MS = 500;
@@ -70,7 +70,7 @@ export function playbackTransition(
 
 /**
  * Picks the next poll: at the track end (plus slack) when a track is playing and ends before the
- * 5 s interval, and a short retry while Spotify still reports the previous track at that boundary.
+ * 2 s interval, and a short retry while Spotify still reports the previous track at that boundary.
  */
 export function scheduleNextPoll(
   song: GetCurrentlyPlayedSong | undefined,
@@ -141,7 +141,7 @@ async function apply(
 }
 
 /**
- * Polls the active user's currently-playing every 5 s, or at the track end when it comes sooner, and
+ * Polls the active user's currently-playing every 2 s, or at the track end when it comes sooner, and
  * drives the animator. Stops by itself when no user is active; calling it again restarts polling from
  * scratch.
  */
