@@ -316,6 +316,8 @@ class SpotifyClient {
       durationMs: item.duration_ms,
       progressMs: track.progress_ms ?? 0,
       isPlaying: track.is_playing,
+      contentType:
+        track.currently_playing_type === "episode" ? "episode" : "track",
     };
   }
 

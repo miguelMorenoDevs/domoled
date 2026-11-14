@@ -46,10 +46,12 @@ export function playbackTransition(
       imageUrl: song.image,
       durationMs: song.durationMs,
       progressMs: song.progressMs,
+      contentType: song.contentType,
     };
-    const actions: PlaybackAction[] = [{ kind: "load", track }];
-    if (!song.isPlaying) actions.push({ kind: "pause" });
-    return { memory, actions };
+    return {
+      memory,
+      actions: [{ kind: "load", track, isPlaying: song.isPlaying }],
+    };
   }
 
   const actions: PlaybackAction[] = [];
@@ -81,7 +83,7 @@ async function apply(
   switch (action.kind) {
     case "load":
       await animator.setTrack(action.track);
-      animator.play();
+      animator.play(!action.isPlaying);
       return;
     case "idle":
       animator.startIdle();

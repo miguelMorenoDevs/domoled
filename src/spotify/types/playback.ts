@@ -10,7 +10,7 @@ export interface PlaybackMemory {
 }
 
 export type PlaybackAction =
-  | { kind: "load"; track: TrackData }
+  | { kind: "load"; track: TrackData; isPlaying: boolean }
   | { kind: "pause" }
   | { kind: "resume" }
   | { kind: "seek"; progressMs: number }

@@ -18,6 +18,7 @@ function song(overrides: Partial<GetCurrentlyPlayedSong> = {}) {
     durationMs: 200_000,
     progressMs: 10_000,
     isPlaying: true,
+    contentType: "track" as const,
     ...overrides,
   };
 }
@@ -39,7 +40,9 @@ const load = {
     imageUrl: "https://img.example/art.jpg",
     durationMs: 200_000,
     progressMs: 10_000,
+    contentType: "track",
   },
+  isPlaying: true,
 } as const;
 
 test("playback: first reply loads the track", () => {
@@ -57,9 +60,9 @@ test("playback: a new track id loads it again", () => {
   assert.deepEqual(actions, [load]);
 });
 
-test("playback: a track that starts paused loads and pauses", () => {
+test("playback: a track that starts paused loads it paused", () => {
   const { actions } = playbackTransition(null, song({ isPlaying: false }), 0);
-  assert.deepEqual(actions, [load, { kind: "pause" }]);
+  assert.deepEqual(actions, [{ ...load, isPlaying: false }]);
 });
 
 test("playback: no drift while playing on time gives no actions", () => {
@@ -143,7 +146,9 @@ test("playback: a repeated track restarts once past its end", () => {
         imageUrl: "https://img.example/art.jpg",
         durationMs: 200_000,
         progressMs: 0,
+        contentType: "track",
       },
+      isPlaying: true,
     },
   ]);
 });

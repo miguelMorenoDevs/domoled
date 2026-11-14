@@ -162,6 +162,7 @@ test("getCurrentSong returns the largest square album image", async (t) => {
     durationMs: 200000,
     progressMs: 42000,
     isPlaying: true,
+    contentType: "track",
   });
 });
 
@@ -248,6 +249,7 @@ test("getCurrentSong returns the episode cover, duration and progress", async (t
     durationMs: 3600000,
     progressMs: 42000,
     isPlaying: true,
+    contentType: "episode",
   });
 });
 

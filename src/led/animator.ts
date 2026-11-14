@@ -20,6 +20,7 @@ import type { Animation } from "../animator/types.js";
 import { AnimationRunner } from "../animator/runner.js";
 import { CdAnimation } from "./animations/cd.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
+import { PodcastAnimation } from "./animations/podcast.js";
 import { AlbumArtLoadError } from "./errors.js";
 
 // qrcode-terminal's encoder returns the module grid; its public API only prints text.
@@ -159,21 +160,28 @@ export class CdAnimator {
   }
 
   /**
-   * Starts or resumes the animation from the track's current playback position.
+   * Starts or resumes the animation from the track's current playback position. With `startPaused`,
+   * the first frame is drawn and the track waits there until resume().
    */
-  public play(): void {
+  public play(startPaused = false): void {
     if (!this.loadedTrack) {
       console.warn("No track loaded. Call setTrack() first.");
       return;
     }
-    if (this.waitForExit(() => this.play())) return;
+    if (this.waitForExit(() => this.play(startPaused))) return;
 
     const { track, art } = this.loadedTrack;
     console.log(`[CdAnimator] Playing from ${track.progressMs}ms...`);
-    this.run(new CdAnimation(track, art), track.progressMs, () =>
-      this.startIdle(),
-    );
+    const animation =
+      track.contentType === "episode"
+        ? new PodcastAnimation(track, art)
+        : new CdAnimation(track, art);
+    this.run(animation, track.progressMs, () => this.startIdle());
     this.show({ kind: "track", track, positionMs: track.progressMs });
+    if (startPaused) {
+      this.renderFrame();
+      this.pause();
+    }
   }
 
   /**
@@ -198,7 +206,12 @@ export class CdAnimator {
    * Moves a playing or paused track's animation to `progressMs`, without restarting the intro.
    */
   public seek(progressMs: number): void {
-    if (!(this.runner.current instanceof CdAnimation)) return;
+    const current = this.runner.current;
+    if (
+      !(current instanceof CdAnimation) &&
+      !(current instanceof PodcastAnimation)
+    )
+      return;
     this.runner.seek(progressMs);
   }
 

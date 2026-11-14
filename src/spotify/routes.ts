@@ -91,8 +91,9 @@ router.get("/callback", async (req: Request, res: Response) => {
       imageUrl: song.image,
       durationMs: song.durationMs,
       progressMs: song.progressMs,
+      contentType: song.contentType,
     });
-    cdAnimator.play();
+    cdAnimator.play(!song.isPlaying);
     console.info(
       "Check your animation in: " + process.cwd() + "/simulator.html",
     );
