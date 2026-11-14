@@ -469,11 +469,12 @@ class CalicoCat {
   }
 
   private drawWhiskers(ctx: CanvasContext): void {
+    // The reference's whisker sway is already in degrees, unlike the pose angles.
     const sway = Math.sin(this.time * 1.3) * 2;
     for (const side of [-1, 1]) {
       ctx.save();
       ctx.translate(side * 44, 6);
-      ctx.rotate((side < 0 ? sway : -sway) * DEGREES * RAD);
+      ctx.rotate((side < 0 ? sway : -sway) * RAD);
       ctx.translate(-side * 44, -6);
       ctx.beginPath();
       for (const [dy, ey] of [
