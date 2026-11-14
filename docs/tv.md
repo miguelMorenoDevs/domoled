@@ -53,4 +53,5 @@ pnpm exec ares-launch --device tv com.domo.led
 ## Notes
 
 - The TV reconnects on its own when the server restarts.
+- If the TV cannot reach the server within 3 seconds, or the connection drops, it shows the failure screen ("Cannot reach the LED server."). The next state from the server replaces it.
 - Changing the animation visuals means editing `lg-app/src/lg/animations/`; shared timing lives in `src/animator/`.

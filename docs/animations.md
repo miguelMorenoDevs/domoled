@@ -32,4 +32,4 @@ Shown on the matrix (and the simulator) when no user is active. See [spotify.md]
 
 ## Failure
 
-Shown when a playback poll fails: Spotify returns an error, cannot be reached or sends an unreadable reply, or the album art does not load. The matrix shows a red X. The TV shows a red ring with an X and the reason underneath. The next successful poll replaces it and loads the track again.
+Shown when a playback poll fails: Spotify returns an error, cannot be reached or sends an unreadable reply, or the album art does not load. The matrix shows a red X. The TV shows a red ring with an X and the reason underneath. The next successful poll replaces it and loads the track again. The TV also shows the failure screen when it cannot reach the server within 3 seconds or loses the connection, with the message "Cannot reach the LED server.".
