@@ -1,8 +1,10 @@
 import { LgAnimator } from "./lg/animator.js";
+import { holdScreenSaver } from "./lg/screensaver.js";
 
 const animator = new LgAnimator(
   document.getElementById("screen") as HTMLCanvasElement,
 );
+holdScreenSaver();
 
 // Only the newest track's art is played; an older one still loading is dropped.
 let pendingArt: HTMLImageElement | null = null;
