@@ -154,7 +154,7 @@ test("playback: a repeated track restarts once past its end", () => {
   ]);
 });
 
-test("schedule: a long track polls on the 5 s interval", () => {
+test("schedule: a long track polls on the 2 s interval", () => {
   const next = scheduleNextPoll(song(), "track-1", {
     pending: false,
     retries: 0,
@@ -166,13 +166,13 @@ test("schedule: a long track polls on the 5 s interval", () => {
   });
 });
 
-test("schedule: a track ending in 3 s polls at about 3.5 s", () => {
+test("schedule: a track ending in 1 s polls at about 1.5 s", () => {
   const next = scheduleNextPoll(
-    song({ durationMs: 13_000, progressMs: 10_000 }),
+    song({ durationMs: 11_000, progressMs: 10_000 }),
     "track-1",
     { pending: false, retries: 0 },
   );
-  assert.equal(next.delayMs, 3_500);
+  assert.equal(next.delayMs, 1_500);
   assert.deepEqual(next.boundary, { pending: true, retries: 0 });
   assert.equal(next.stale, false);
 });
@@ -202,7 +202,7 @@ test("schedule: a new track at the boundary is applied, not retried", () => {
   assert.equal(next.stale, false);
 });
 
-test("schedule: paused or past-end tracks poll on the 5 s interval", () => {
+test("schedule: paused or past-end tracks poll on the 2 s interval", () => {
   const paused = scheduleNextPoll(
     song({ isPlaying: false, durationMs: 13_000, progressMs: 10_000 }),
     undefined,
@@ -217,7 +217,7 @@ test("schedule: paused or past-end tracks poll on the 5 s interval", () => {
   assert.equal(pastEnd.delayMs, POLL_INTERVAL_MS);
 });
 
-test("schedule: nothing playing polls on the 5 s interval", () => {
+test("schedule: nothing playing polls on the 2 s interval", () => {
   const next = scheduleNextPoll(undefined, "track-1", {
     pending: true,
     retries: 0,
@@ -228,7 +228,10 @@ test("schedule: nothing playing polls on the 5 s interval", () => {
 
 test("playback: 429 waits Retry-After, else doubles the delay up to 60 s", () => {
   assert.equal(rateLimitDelayMs(POLL_INTERVAL_MS, 30), 30_000);
-  assert.equal(rateLimitDelayMs(POLL_INTERVAL_MS, undefined), 10_000);
+  assert.equal(
+    rateLimitDelayMs(POLL_INTERVAL_MS, undefined),
+    POLL_INTERVAL_MS * 2,
+  );
   assert.equal(rateLimitDelayMs(40_000, undefined), 60_000);
   assert.equal(rateLimitDelayMs(60_000, undefined), 60_000);
 });
