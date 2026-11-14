@@ -3,14 +3,19 @@ import type SpotifyClient from "./client.js";
 import { SpotifyApiError } from "./errors.js";
 import type { GetCurrentlyPlayedSong } from "./types/api.js";
 import type {
+  BoundaryPoll,
   PlaybackAction,
   PlaybackMemory,
   PlaybackTransition,
+  PollSchedule,
 } from "./types/playback.js";
 
 export const POLL_INTERVAL_MS = 5_000;
 const MAX_BACKOFF_MS = 60_000;
 const DRIFT_TOLERANCE_MS = 2_000;
+const BOUNDARY_SLACK_MS = 500;
+const STALE_RETRY_MS = 500;
+const MAX_STALE_RETRIES = 3;
 
 type PlaybackSpotify = Pick<
   typeof SpotifyClient,
@@ -62,6 +67,39 @@ export function playbackTransition(
   return { memory, actions };
 }
 
+/**
+ * Picks the next poll: at the track end (plus slack) when a track is playing and ends before the
+ * 5 s interval, and a short retry while Spotify still reports the previous track at that boundary.
+ */
+export function scheduleNextPoll(
+  song: GetCurrentlyPlayedSong | undefined,
+  prevTrackId: string | undefined,
+  boundary: BoundaryPoll,
+): PollSchedule {
+  if (
+    boundary.pending &&
+    song &&
+    song.id === prevTrackId &&
+    boundary.retries < MAX_STALE_RETRIES
+  )
+    return {
+      delayMs: STALE_RETRY_MS,
+      boundary: { pending: true, retries: boundary.retries + 1 },
+      stale: true,
+    };
+
+  const remainingMs = song ? song.durationMs - song.progressMs : 0;
+  const delayMs =
+    song?.isPlaying && remainingMs > 0
+      ? Math.min(POLL_INTERVAL_MS, remainingMs + BOUNDARY_SLACK_MS)
+      : POLL_INTERVAL_MS;
+  return {
+    delayMs,
+    boundary: { pending: delayMs < POLL_INTERVAL_MS, retries: 0 },
+    stale: false,
+  };
+}
+
 /** Delay before the next poll after a 429: Retry-After when sent, else double, capped at 60 s. */
 export function rateLimitDelayMs(
   currentMs: number,
@@ -74,7 +112,8 @@ export function rateLimitDelayMs(
 let timer: NodeJS.Timeout | undefined;
 let run = 0;
 let memory: PlaybackMemory | null = null;
-let delayMs = POLL_INTERVAL_MS;
+let backoffMs = POLL_INTERVAL_MS;
+let boundary: BoundaryPoll = { pending: false, retries: 0 };
 
 async function apply(
   animator: PlaybackAnimator,
@@ -101,8 +140,9 @@ async function apply(
 }
 
 /**
- * Polls the active user's currently-playing every 5 s and drives the animator. Stops by itself when
- * no user is active; calling it again restarts polling from scratch.
+ * Polls the active user's currently-playing every 5 s, or at the track end when it comes sooner, and
+ * drives the animator. Stops by itself when no user is active; calling it again restarts polling from
+ * scratch.
  */
 export function startPlaybackPoller(
   spotify: PlaybackSpotify,
@@ -111,31 +151,40 @@ export function startPlaybackPoller(
   clearTimeout(timer);
   const current = ++run;
   memory = null;
-  delayMs = POLL_INTERVAL_MS;
+  backoffMs = POLL_INTERVAL_MS;
+  boundary = { pending: false, retries: 0 };
 
   const tick = async (): Promise<void> => {
     timer = undefined;
+    let nextMs = backoffMs;
     try {
       if (!(await spotify.hasActiveUser())) return;
       const song = await spotify.getCurrentSong();
       if (current !== run) return;
 
-      delayMs = POLL_INTERVAL_MS;
-      const transition = playbackTransition(memory, song, Date.now());
-      for (const action of transition.actions) await apply(animator, action);
-      memory = transition.memory;
+      backoffMs = POLL_INTERVAL_MS;
+      const schedule = scheduleNextPoll(song, memory?.trackId, boundary);
+      boundary = schedule.boundary;
+      nextMs = schedule.delayMs;
+      if (!schedule.stale) {
+        const transition = playbackTransition(memory, song, Date.now());
+        for (const action of transition.actions) await apply(animator, action);
+        memory = transition.memory;
+      }
     } catch (error) {
       if (current !== run) return;
+      boundary = { pending: false, retries: 0 };
       if (error instanceof SpotifyApiError && error.status === 429) {
-        delayMs = rateLimitDelayMs(delayMs, error.retryAfterSeconds);
+        backoffMs = rateLimitDelayMs(backoffMs, error.retryAfterSeconds);
+        nextMs = backoffMs;
         console.warn(
-          `[Playback] Spotify rate limit, polling again in ${delayMs} ms`,
+          `[Playback] Spotify rate limit, polling again in ${nextMs} ms`,
         );
       } else {
         console.error("[Playback] Poll failed", error);
       }
     }
-    if (current === run) timer = setTimeout(tick, delayMs);
+    if (current === run) timer = setTimeout(tick, nextMs);
   };
 
   timer = setTimeout(tick, 0);
