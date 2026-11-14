@@ -5,12 +5,18 @@ import type {
 } from "../../../../src/animator/types.js";
 import { BaseAnimation } from "../../../../src/animator/base.js";
 import { DEFAULT_CALICO_TIMING } from "../../../../src/animator/timing.js";
-import { fillEllipse, fillTriangle } from "../../utils/canvas.js";
+import { fillTriangle } from "../../utils/canvas.js";
 import { lerp } from "../../utils/math.js";
 
-const CAT_WHITE = "#f5f1ea";
-const CAT_ORANGE = "#e8892b";
-const CAT_BLACK = "#1c1c1c";
+const CAT_WHITE = "#f7f3ec";
+const CAT_SHADE = "#e2d9c8";
+const CAT_ORANGE = "#dc7f2c";
+const CAT_BLACK = "#201a17";
+const CAT_PINK = "#e9a3a0";
+const CAT_IRIS = "#8c5a2b";
+const CAT_EYE = "#0e0b0a";
+const CAT_RED = "#c93a2c";
+const CAT_TAG = "#c8a35c";
 
 /**
  * Stand and stretch (each 0..1) at loopMs into the loop: the cat sleeps for sleepMs, then stands up,
@@ -105,6 +111,82 @@ export class CalicoCatAnimation extends BaseAnimation<CanvasContext> {
   }
 }
 
+/**
+ * Ellipse outline with a fixed, slightly irregular wobble, so fur patches look organic.
+ */
+function blobPath(
+  ctx: CanvasContext,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  wobble: number,
+): void {
+  ctx.beginPath();
+  for (let i = 0; i <= 32; i++) {
+    const a = (i / 32) * Math.PI * 2;
+    const k = 1 + wobble * (Math.sin(3 * a + 1) + 0.5 * Math.sin(5 * a + 2));
+    const px = cx + rx * k * Math.cos(a);
+    const py = cy + ry * k * Math.sin(a);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+function fillBlob(
+  ctx: CanvasContext,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  wobble: number,
+  color: string,
+): void {
+  blobPath(ctx, cx, cy, rx, ry, wobble);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function strokeLine(
+  ctx: CanvasContext,
+  points: readonly (readonly [number, number])[],
+  width: number,
+  color: string,
+): void {
+  const [first, ...rest] = points;
+  if (!first) return;
+  ctx.beginPath();
+  ctx.moveTo(first[0], first[1]);
+  for (const [px, py] of rest) ctx.lineTo(px, py);
+  ctx.lineWidth = width;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = color;
+  ctx.stroke();
+}
+
+// Photo pixel layout of the body and head; each part is posed by scaling this layout to the pose's ellipse.
+const BODY_CX = 560;
+const BODY_CY = 520;
+const BODY_RX = 330;
+const BODY_RY = 320;
+const HEAD_CX = 700;
+const HEAD_CY = 215;
+const HEAD_SCALE_X = 6 / 215;
+const HEAD_SCALE_Y = 5.6 / 140;
+
+function bodyPath(ctx: CanvasContext): void {
+  ctx.beginPath();
+  ctx.moveTo(470, 250);
+  ctx.bezierCurveTo(330, 220, 240, 340, 235, 520);
+  ctx.bezierCurveTo(230, 680, 300, 800, 450, 810);
+  ctx.bezierCurveTo(600, 820, 720, 760, 770, 640);
+  ctx.bezierCurveTo(840, 560, 890, 460, 850, 330);
+  ctx.bezierCurveTo(820, 260, 720, 230, 470, 250);
+  ctx.closePath();
+}
+
 function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   const { x, lie, stretch, eyesClosed } = pose;
   const y = -pose.jump;
@@ -120,7 +202,9 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   // Head: rests on the front paws, and dips forward while stretching.
   const headX = lerpPose(x + 8, x + 13) + stretch * 3;
   const headY = lerpPose(31, 42) + y + stretch * 4;
-  const headR = 5.5;
+
+  const floorY = bodyY + bodyRy * 0.8;
+  const pawX = headX + 1 + stretch * 4;
 
   // Tail: curls along the floor when lying down.
   ctx.beginPath();
@@ -131,80 +215,145 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
     lerpPose(x - 14, x - 17),
     lerpPose(30, 42) + y,
   );
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = CAT_ORANGE;
+  ctx.lineWidth = 3.6;
   ctx.lineCap = "round";
+  ctx.strokeStyle = CAT_BLACK;
   ctx.stroke();
 
-  // Back legs: two stubs at the floor, tucked under the body.
-  const floorY = bodyY + bodyRy * 0.8;
-  fillEllipse(ctx, bodyX - bodyRx * 0.6, floorY, 2.2, 2.2, CAT_WHITE);
-  fillEllipse(ctx, bodyX + bodyRx * 0.5, floorY, 2.2, 2.2, CAT_WHITE);
+  // Hind paws: rounded white feet tucked under the body.
+  fillBlob(ctx, bodyX - bodyRx * 0.55, floorY, 2.7, 1.8, 0.08, CAT_WHITE);
+  fillBlob(ctx, bodyX + bodyRx * 0.5, floorY, 2.7, 1.8, 0.08, CAT_WHITE);
 
-  // Body with calico patches clipped to its outline.
+  // Body: shaded white fur with black and orange patches, clipped to the posed outline.
   ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(bodyX, bodyY, bodyRx, bodyRy, 0, 0, Math.PI * 2);
-  ctx.fillStyle = CAT_WHITE;
+  ctx.translate(bodyX, bodyY);
+  ctx.scale(bodyRx / BODY_RX, bodyRy / BODY_RY);
+  ctx.translate(-BODY_CX, -BODY_CY);
+  bodyPath(ctx);
+  const shade = ctx.createRadialGradient(420, 420, 60, 560, 520, 360);
+  shade.addColorStop(0, CAT_WHITE);
+  shade.addColorStop(1, CAT_SHADE);
+  ctx.fillStyle = shade;
   ctx.fill();
   ctx.clip();
-  fillEllipse(ctx, bodyX - 4, bodyY - 1, 5, 4.5, CAT_ORANGE);
-  fillEllipse(ctx, bodyX + 4, bodyY - 2, 3, 3, CAT_BLACK);
-  fillEllipse(ctx, bodyX + 9, bodyY + 1, 2.5, 2, CAT_ORANGE);
+  fillBlob(ctx, 400, 300, 110, 70, 0.15, CAT_BLACK);
+  fillBlob(ctx, 440, 380, 70, 100, 0.2, CAT_ORANGE);
+  fillBlob(ctx, 640, 690, 55, 40, 0.2, CAT_BLACK);
+  fillBlob(ctx, 840, 330, 35, 60, 0.2, CAT_BLACK);
   ctx.restore();
 
-  // Front leg: a limb from the shoulder to the paw, so the paw stays attached while stretching.
-  const pawX = headX + 1 + stretch * 4;
+  // Front leg: white with a soft shadow edge, from the shoulder to the paw.
   ctx.beginPath();
-  ctx.moveTo(bodyX + bodyRx * 0.5, bodyY + bodyRy * 0.5);
-  ctx.lineTo(pawX, floorY);
-  ctx.lineWidth = 2.4;
-  ctx.strokeStyle = CAT_ORANGE;
+  ctx.moveTo(bodyX + bodyRx * 0.4, bodyY + bodyRy * 0.1);
+  ctx.quadraticCurveTo(pawX - 1, bodyY + bodyRy * 0.8, pawX, floorY);
+  ctx.lineCap = "round";
+  ctx.lineWidth = 2.6;
+  ctx.strokeStyle = CAT_SHADE;
+  ctx.stroke();
+  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = CAT_WHITE;
   ctx.stroke();
 
-  // Ears behind the head.
+  // Head: posed by scaling the photo layout, so ears, face and collar move with it.
+  ctx.save();
+  ctx.translate(headX, headY);
+  ctx.scale(HEAD_SCALE_X, HEAD_SCALE_Y);
+  ctx.translate(-HEAD_CX, -HEAD_CY);
+
   fillTriangle(
     ctx,
     [
-      [headX - 4, headY - 3],
-      [headX - 5, headY - 9],
-      [headX - 1, headY - 4],
-    ],
-    CAT_ORANGE,
-  );
-
-  // Head with calico cap and cheek patch.
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(headX, headY, headR, 0, Math.PI * 2);
-  ctx.fillStyle = CAT_WHITE;
-  ctx.fill();
-  ctx.clip();
-  fillEllipse(ctx, headX - 2, headY - 3, 3.5, 2.5, CAT_ORANGE);
-  fillEllipse(ctx, headX - 2, headY + 2.5, 2, 1.5, CAT_BLACK);
-  ctx.restore();
-
-  // Front ear.
-  fillTriangle(
-    ctx,
-    [
-      [headX + 1, headY - 4],
-      [headX + 2, headY - 10],
-      [headX + 5, headY - 3],
+      [480, 160],
+      [505, 40],
+      [625, 120],
     ],
     CAT_BLACK,
   );
+  fillTriangle(
+    ctx,
+    [
+      [735, 120],
+      [805, 0],
+      [865, 150],
+    ],
+    CAT_BLACK,
+  );
+  fillTriangle(
+    ctx,
+    [
+      [780, 110],
+      [805, 35],
+      [838, 135],
+    ],
+    CAT_PINK,
+  );
 
-  // Eye: a 2px closed dash or a 1x2px open dot, snapped to the pixel grid.
-  const eyeX = Math.round(headX + 1);
-  const eyeY = Math.round(headY - 1);
-  ctx.fillStyle = CAT_BLACK;
-  if (eyesClosed) {
-    ctx.fillRect(eyeX, eyeY, 2, 1);
-  } else {
-    ctx.fillRect(eyeX, eyeY - 1, 1, 2);
+  ctx.save();
+  blobPath(ctx, HEAD_CX, HEAD_CY, 215, 140, 0.02);
+  ctx.fillStyle = CAT_WHITE;
+  ctx.fill();
+  ctx.clip();
+  fillBlob(ctx, 700, 110, 120, 50, 0.15, CAT_ORANGE);
+  fillBlob(ctx, 555, 150, 85, 65, 0.15, CAT_BLACK);
+  fillBlob(ctx, 840, 160, 55, 65, 0.15, CAT_BLACK);
+  ctx.restore();
+
+  const eyes: [number, number][] = [
+    [610, 245],
+    [770, 228],
+  ];
+  for (const [ex, ey] of eyes) {
+    if (eyesClosed) {
+      strokeLine(
+        ctx,
+        [
+          [ex - 30, ey],
+          [ex, ey + 20],
+          [ex + 30, ey],
+        ],
+        8,
+        CAT_EYE,
+      );
+    } else {
+      fillBlob(ctx, ex, ey, 26, 28, 0.05, CAT_IRIS);
+      fillBlob(ctx, ex + 3, ey, 12, 22, 0, CAT_EYE);
+      fillBlob(ctx, ex + 10, ey - 10, 6, 6, 0, "#ffffff");
+    }
   }
 
-  // Paw: orange, resting on the floor and reaching forward while stretching.
-  fillEllipse(ctx, pawX, floorY, 2.4, 1.8, CAT_ORANGE);
+  fillBlob(ctx, 715, 300, 22, 16, 0.1, CAT_PINK);
+  strokeLine(
+    ctx,
+    [
+      [745, 305],
+      [860, 285],
+    ],
+    4,
+    "rgba(255, 255, 255, 0.7)",
+  );
+  strokeLine(
+    ctx,
+    [
+      [745, 322],
+      [860, 338],
+    ],
+    4,
+    "rgba(255, 255, 255, 0.7)",
+  );
+
+  strokeLine(
+    ctx,
+    [
+      [665, 400],
+      [720, 425],
+      [790, 395],
+    ],
+    22,
+    CAT_RED,
+  );
+  fillBlob(ctx, 778, 440, 22, 26, 0, CAT_TAG);
+  ctx.restore();
+
+  // Paw: white, resting on the floor and reaching forward while stretching.
+  fillBlob(ctx, pawX, floorY, 2.3, 1.5, 0.1, CAT_WHITE);
 }
