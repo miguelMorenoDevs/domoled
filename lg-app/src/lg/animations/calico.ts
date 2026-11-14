@@ -179,23 +179,21 @@ const HEAD_SCALE_X = 6 / 215;
 const HEAD_SCALE_Y = 5.6 / 140;
 
 const BODY_OUTLINE: readonly (readonly [number, number])[] = [
-  [470, 250],
-  [330, 220],
-  [240, 340],
-  [235, 520],
-  [230, 680],
-  [300, 800],
-  [450, 810],
-  [600, 820],
-  [720, 760],
-  [770, 640],
-  [840, 560],
-  [890, 460],
-  [850, 330],
-  [820, 260],
-  [720, 230],
+  [440, 250],
+  [330, 290],
+  [262, 400],
+  [234, 560],
+  [260, 700],
+  [360, 800],
+  [520, 826],
+  [680, 800],
+  [760, 700],
+  [820, 600],
+  [880, 500],
+  [860, 380],
+  [780, 270],
+  [600, 232],
 ];
-
 const HEAD_OUTLINE: readonly (readonly [number, number])[] = [
   [500, 220],
   [510, 160],
@@ -233,24 +231,44 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   const floorY = bodyY + bodyRy * 0.8;
   const pawX = headX + 1 + stretch * 4;
 
-  // Tail: tapers from the body to a point, curling along the floor when lying down.
+  // Tail: a curved brush, thick at the body and rounded at the tip, curling along the floor when lying down.
   const baseX = bodyX - bodyRx * 0.8;
   const baseY = bodyY + bodyRy * 0.3;
   const curlX = lerpPose(x - 16, x - 18);
   const curlY = lerpPose(44, 49) + y;
   const tipX = lerpPose(x - 14, x - 17);
   const tipY = lerpPose(30, 42) + y;
-  ctx.beginPath();
-  ctx.moveTo(baseX, baseY - 3.4);
-  ctx.quadraticCurveTo(curlX, curlY - 3, tipX, tipY);
-  ctx.quadraticCurveTo(curlX, curlY + 3, baseX, baseY + 3.4);
-  ctx.closePath();
+  const tailAt = (t: number): readonly [number, number] => {
+    const u = 1 - t;
+    return [
+      u * u * baseX + 2 * u * t * curlX + t * t * tipX,
+      u * u * baseY + 2 * u * t * curlY + t * t * tipY,
+    ];
+  };
+  const tailSamples = [0, 0.25, 0.5, 0.75, 1];
+  const tailWidths = [3.4, 3, 2.4, 1.9, 1.5];
+  const tailEdges = tailSamples.map((t, i) => {
+    const [ax, ay] = tailAt(Math.max(0, t - 0.01));
+    const [bx, by] = tailAt(Math.min(1, t + 0.01));
+    const len = Math.hypot(bx - ax, by - ay) || 1;
+    const nx = -(by - ay) / len;
+    const ny = (bx - ax) / len;
+    const [cx, cy] = tailAt(t);
+    const w = tailWidths[i] ?? 0;
+    return {
+      top: [cx + nx * w, cy + ny * w] as const,
+      bottom: [cx - nx * w, cy - ny * w] as const,
+    };
+  });
+  smoothPath(ctx, [
+    ...tailEdges.map((edge) => edge.top),
+    ...tailEdges.map((edge) => edge.bottom).reverse(),
+  ]);
   ctx.fillStyle = CAT_BLACK;
   ctx.fill();
-  ctx.lineWidth = 0.6;
+  ctx.lineWidth = 0.5;
   ctx.strokeStyle = CAT_TAIL_SHEEN;
   ctx.stroke();
-
   // Hind paws: pale feet tucked under the body.
   for (const hx of [bodyX - bodyRx * 0.55, bodyX + bodyRx * 0.5]) {
     fillSmooth(
@@ -520,29 +538,30 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
     "rgba(255, 255, 255, 0.7)",
   );
 
+  ctx.restore();
+
+  // Collar: a band around the neck where the head meets the body, with the tag hanging below it.
   strokeLine(
     ctx,
     [
-      [665, 372],
-      [720, 392],
-      [790, 366],
+      [headX - 4.2, headY + 4.4],
+      [headX - 0.4, headY + 6.2],
+      [headX + 3.6, headY + 5],
     ],
-    22,
+    1.1,
     CAT_RED,
   );
   fillSmooth(
     ctx,
     [
-      [768, 396],
-      [788, 394],
-      [798, 412],
-      [788, 430],
-      [768, 426],
-      [760, 410],
+      [headX + 0.6, headY + 6.6],
+      [headX + 1.8, headY + 6.4],
+      [headX + 2.2, headY + 7.8],
+      [headX + 1.4, headY + 8.8],
+      [headX + 0.6, headY + 7.9],
     ],
     CAT_TAG,
   );
-  ctx.restore();
 
   // Front paw, resting on the floor and reaching forward while stretching.
   fillSmooth(
