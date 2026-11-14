@@ -91,5 +91,6 @@ The app draws in the reference scene's 400x225 units and renders at 1080p, fitti
 ## Notes
 
 - The TV reconnects on its own when the server restarts.
+- The TV's own screensaver would dim or replace the display after a few minutes without a key press, so the app registers with the TV's power service and cancels each screensaver request while it is in front. This uses an undocumented webOS call; where a TV refuses it, the normal screensaver still applies.
 - If the TV cannot reach the server within 3 seconds, or the connection drops, it shows the failure screen ("Cannot reach the LED server."). The next state from the server replaces it.
 - Changing the scene or animation visuals means editing `lg-app/src/lg/scene.ts` and `lg-app/src/lg/animations/`; shared timing lives in `src/animator/`.
