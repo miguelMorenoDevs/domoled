@@ -264,6 +264,7 @@ test("poller: a 429 backs off and the next successful reply resets the delay", a
     resume: () => calls.push("resume"),
     seek: () => calls.push("seek"),
     startIdle: () => calls.push("startIdle"),
+    showError: () => calls.push("showError"),
   };
 
   const errorLog = t.mock.method(console, "error", () => {});
@@ -273,7 +274,7 @@ test("poller: a 429 backs off and the next successful reply resets the delay", a
   t.mock.timers.tick(0);
   await flush();
   assert.deepEqual(polls, [0]);
-  assert.deepEqual(calls, []);
+  assert.deepEqual(calls, ["showError"]);
 
   t.mock.timers.tick(19_999);
   await flush();
@@ -282,7 +283,7 @@ test("poller: a 429 backs off and the next successful reply resets the delay", a
   t.mock.timers.tick(1);
   await flush();
   assert.deepEqual(polls, [0, 20_000]);
-  assert.deepEqual(calls, ["setTrack", "play"]);
+  assert.deepEqual(calls, ["showError", "setTrack", "play"]);
 
   t.mock.timers.tick(POLL_INTERVAL_MS);
   await flush();

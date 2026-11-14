@@ -1,4 +1,7 @@
 allowBuilds:
+  "@webos-tools/cli": true
   canvas: false
+  cpu-features: false
   esbuild: false
   rpi-led-matrix: true
+  ssh2: false

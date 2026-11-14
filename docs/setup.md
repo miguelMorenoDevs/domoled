@@ -98,24 +98,7 @@ JSON
 
 ## LG TV app
 
-`lg-app/` is a webOS web app that mirrors the matrix animations on the TV. It runs the same lifecycle and timing as the LED animations (`src/animator/`) with its own full-screen drawing: it does not run on the Pi, it reads the state the server publishes on `GET /led/state` (Server-Sent Events) and animates it at full screen.
-
-Requirements: an LG webOS TV on webOS 5 or later, the TV and the Pi on the same LAN, and the [webOS CLI](https://webostv.developer.lge.com/develop/tools/cli-dev-guide) (`npm install -g @webos-tools/cli`).
-
-1. On the TV, install **Developer Mode** from the LG Content Store, turn it on, and note the passphrase it shows. Developer Mode turns itself off after about 50 days; re-enable it and reinstall the app when that happens.
-2. Add the TV to the CLI with `ares-setup-device` (name it `tv`), using its address and the passphrase.
-3. Copy `lg-app/config.example.js` to `lg-app/config.js` and set `LED_SERVER_URL` to `http://<pi-address>:3000`. The file is gitignored: it holds your LAN address and must not be committed.
-4. Package and install:
-
-```sh
-pnpm lg:package                       # tsc -p lg-app, esbuild bundle, copies static files, runs ares-package -> lg-app/out/
-ares-install --device tv lg-app/out/com.domo.led_1.0.0_all.ipk
-ares-launch --device tv com.domo.led
-```
-
-- Only compiled output ships: `lg-app/dist/` holds `app.js`, `index.html`, `config.js`, `appinfo.json` and the icons. The `.ipk` is built from `dist/` only.
-- `lg-app/tsconfig.json` is separate from the server's and only type checks. esbuild bundles `lg-app/src/main.ts` and the shared `src/animator/` code into one classic script (`dist/app.js`, IIFE, ES2017), because webOS 5 rejects `<script type="module">` from `file://`.
-- The server must be running with the TV on, and the TV reconnects on its own when the server restarts.
+`lg-app/` is a webOS app that shows the matrix animations full screen on an LG TV. Install and setup steps live in `docs/tv.md`.
 
 ## Ports and simulator
 
@@ -129,5 +112,5 @@ ares-launch --device tv com.domo.led
 - That GitHub Pages URL serves `index.html`, which forwards `code` + `state` to `http://<state>/spotify/callback`; `state` is the machine's local IP from `src/utils/network.ts`.
 - The redirect URI appears in both `src/spotify/client.ts` and `src/spotify/routes.ts`; changing it means updating both files and the Spotify dashboard.
 - `POST /spotify/login` returns the authorize URL and prints a QR code to the terminal. Scan it, approve, and the callback starts the animation.
-- With no active user (at boot or after `DELETE /spotify/users/active`), the matrix shows a short login QR pointing to `http://<localIP>:3000/spotify/login` (phone must be on the same LAN as the Pi). On win32/darwin, boot logs the `simulator.html` file URL instead of showing the QR; `DELETE /spotify/users/active` still shows the QR in the simulator.
+- With no active user (at boot or after `DELETE /spotify/users/active`), the matrix shows a short login QR pointing to `http://<localIP>:3000/spotify/login` (phone must be on the same LAN as the Pi). On win32/darwin, boot also logs the `simulator.html` file URL, and the simulator shows the QR too; `DELETE /spotify/users/active` shows it again.
 - Tokens are saved to `data/users.json` (relative to the working directory, created with mode `0600`, gitignored) on login, refresh and active-user changes, and reloaded on startup. Delete that file to log every user out.

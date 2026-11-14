@@ -259,6 +259,19 @@ export class CdAnimator {
   }
 
   /**
+   * Shows a red X until the stream is replaced. The message is for the TV; the matrix has no room for it.
+   */
+  public showError(message: string): void {
+    if (this.waitForExit(() => this.showError(message))) return;
+
+    this.stop();
+
+    const frameDelay = 1000 / this.config.fps;
+    this.intervalId = setInterval(this.renderErrorFrame, frameDelay);
+    this.show({ kind: "error", message });
+  }
+
+  /**
    * Stops the animation and clears the LED matrix.
    */
   public stop(): void {
@@ -326,6 +339,26 @@ export class CdAnimator {
         }
       }),
     );
+    this.presentFrame();
+  };
+
+  /**
+   * Renders the failure X: two red diagonals, inset from the matrix edges.
+   */
+  private renderErrorFrame = (): void => {
+    const { width, height } = this.canvas;
+    const inset = Math.round(width * 0.2);
+
+    this.ctx.clearRect(0, 0, width, height);
+    this.ctx.strokeStyle = "#f00";
+    this.ctx.lineWidth = Math.max(2, Math.round(width / 10));
+    this.ctx.beginPath();
+    this.ctx.moveTo(inset, inset);
+    this.ctx.lineTo(width - inset, height - inset);
+    this.ctx.moveTo(width - inset, inset);
+    this.ctx.lineTo(inset, height - inset);
+    this.ctx.stroke();
+
     this.presentFrame();
   };
 
