@@ -12,6 +12,7 @@ const CAT_WHITE = "#f7f3ec";
 const CAT_SHADE = "#e2d9c8";
 const CAT_ORANGE = "#dc7f2c";
 const CAT_BLACK = "#201a17";
+const CAT_TAIL_SHEEN = "#5a4a40";
 const CAT_PINK = "#e9a3a0";
 const CAT_IRIS = "#8c5a2b";
 const CAT_EYE = "#0e0b0a";
@@ -219,6 +220,9 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   ctx.lineCap = "round";
   ctx.strokeStyle = CAT_BLACK;
   ctx.stroke();
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = CAT_TAIL_SHEEN;
+  ctx.stroke();
 
   // Hind paws: rounded white feet tucked under the body.
   fillBlob(ctx, bodyX - bodyRx * 0.55, floorY, 2.7, 1.8, 0.08, CAT_WHITE);
@@ -236,7 +240,7 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   ctx.fillStyle = shade;
   ctx.fill();
   ctx.clip();
-  fillBlob(ctx, 400, 300, 110, 70, 0.15, CAT_BLACK);
+  fillBlob(ctx, 410, 290, 130, 85, 0.15, CAT_BLACK);
   fillBlob(ctx, 440, 380, 70, 100, 0.2, CAT_ORANGE);
   fillBlob(ctx, 640, 690, 55, 40, 0.2, CAT_BLACK);
   fillBlob(ctx, 840, 330, 35, 60, 0.2, CAT_BLACK);
@@ -344,14 +348,14 @@ function drawCat(ctx: CanvasContext, pose: CatPose, breath: number): void {
   strokeLine(
     ctx,
     [
-      [665, 400],
-      [720, 425],
-      [790, 395],
+      [665, 372],
+      [720, 392],
+      [790, 366],
     ],
     22,
     CAT_RED,
   );
-  fillBlob(ctx, 778, 440, 22, 26, 0, CAT_TAG);
+  fillBlob(ctx, 778, 410, 22, 26, 0, CAT_TAG);
   ctx.restore();
 
   // Paw: white, resting on the floor and reaching forward while stretching.
