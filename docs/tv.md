@@ -66,16 +66,18 @@ The job runs on a self-hosted runner labelled `lg-tv`, because the TV only accep
 
 Set the repository secrets so the runner can build and pair the TV:
 
-| Secret           | Value                                                            |
-| ---------------- | ---------------------------------------------------------------- |
-| `LED_SERVER_URL` | `http://<pi-address>:3000`, the same value as `lg-app/config.js` |
-| `TV_HOST`        | the TV's IPv4 address, as in step 2                              |
-| `TV_KEY`         | the private key from step 2, `~/.ssh/tv_webos`                   |
+| Secret           | Value                                                                      |
+| ---------------- | -------------------------------------------------------------------------- |
+| `LED_SERVER_URL` | `http://<pi-address>:3000`, the same value as `lg-app/config.js`           |
+| `TV_HOST`        | the TV's IPv4 address, as in step 2                                        |
+| `TV_KEY`         | the private key from step 2, `~/.ssh/tv_webos`                             |
+| `TV_PASSPHRASE`  | the passphrase shown in the TV's Developer Mode app, used to fetch the key |
 
 ```sh
 gh secret set LED_SERVER_URL --body "http://<pi-address>:3000"
 gh secret set TV_HOST --body "<tv-address>"
 gh secret set TV_KEY < ~/.ssh/tv_webos
+gh secret set TV_PASSPHRASE --body "<developer-mode-passphrase>"
 ```
 
 Each run pairs the TV under the name `ci`, so it leaves a local `tv` device alone. The key stays valid while Developer Mode is on; turn it back on when it expires.

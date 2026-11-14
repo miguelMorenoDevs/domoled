@@ -24,6 +24,8 @@ function writeConfig() {
 
 function deploy() {
   const host = required("TV_HOST");
+  // The Dev Mode key is encrypted with the TV passphrase; the CLI must store it to decrypt the key.
+  const passphrase = required("TV_PASSPHRASE");
   // The CLI reads the key from the same HOME/USERPROFILE path, so resolve it the same way.
   const keyPath = path.resolve(
     process.env.HOME || process.env.USERPROFILE,
@@ -50,6 +52,8 @@ function deploy() {
     "username=prisoner",
     "-i",
     `privatekey=${keyName}`,
+    "-i",
+    `passphrase=${passphrase}`,
   ]);
 
   const outDir = "lg-app/out";
@@ -61,4 +65,4 @@ function deploy() {
 
 if (mode === "config") writeConfig();
 else if (mode === "deploy") deploy();
-else throw new Error("usage: node .github/scripts/lg-deploy.mjs config|deploy");
+else throw new Error("usage: node lg-app/deploy.mjs config|deploy");

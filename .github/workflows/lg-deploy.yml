@@ -47,4 +47,5 @@ jobs:
         env:
           TV_HOST: ${{ secrets.TV_HOST }}
           TV_KEY: ${{ secrets.TV_KEY }}
+          TV_PASSPHRASE: ${{ secrets.TV_PASSPHRASE }}
         run: node lg-app/deploy.mjs deploy
