@@ -5,7 +5,6 @@ Raspberry Pi LED matrix that animates the Spotify track currently playing. Expre
 ## Docs — load only what the task needs
 
 - `docs/setup.md` — env vars, install, dev/build commands, simulator, OAuth redirect setup.
-- `docs/codebase.md` — architecture, module map, TS/ESM conventions, routes, rendering flow.
 - GitHub Issues — known bugs, gaps and deferred work (`gh issue list --state open`). Read before fixing or extending behavior.
 
 ## Always
@@ -19,7 +18,7 @@ Raspberry Pi LED matrix that animates the Spotify track currently playing. Expre
 - Shared behavior lives in `src/animator/` (`base.ts` lifecycle, `runner.ts` state machine, `timing.ts` phases and timing). `CdAnimator` (`src/led/animator.ts`) and `LgAnimator` (`lg-app/src/lg/animator.ts`) both run animations through `AnimationRunner`, and every animation extends `BaseAnimation`, so intro/outro, exit, track end, idle and QR behave the same on both targets. Change shared behavior there and check the open issues for the same behavior. Drawing is per target and may differ: `src/led/animations/` for the matrix, `lg-app/src/lg/animations/` for the TV. A visual change stays in its target's file.
 - Record new bugs, gaps and deferred work as GitHub issues with the `issue-create` skill; do not add a local TODO list.
 - Never commit, or mention in PR descriptions, issues or comments, where this project is being run (machine, OS, host, paths, local IPs) or any personal information (names, emails, account IDs, tokens). Describe the behavior, not the environment.
-- When a change resolves an issue, close it from the PR (`Closes #N`); update `docs/codebase.md` if the module map, routes or flow changed.
+- When a change resolves an issue, close it from the PR (`Closes #N`).
 
 ## Git and PRs
 

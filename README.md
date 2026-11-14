@@ -26,5 +26,4 @@ Animates the album art of the Spotify track or podcast episode currently playing
 ## Docs
 
 - `docs/setup.md` — install, env vars, commands, simulator, OAuth setup.
-- `docs/codebase.md` — architecture and conventions.
 - [GitHub Issues](https://github.com/miguelMorenoDevs/domoled/issues) — known bugs and deferred work.
