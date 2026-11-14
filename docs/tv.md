@@ -62,8 +62,12 @@ pnpm exec ares-launch --device tv com.domo.led
 
 Without a TV, `simulator.html` has an "LG TV" view that runs the same app. Build it with `pnpm lg:preview` and see [simulator.md](simulator.md).
 
+## Visuals
+
+The app draws in the reference scene's 400x225 units and renders at 1080p, fitting the canvas to the screen. The meadow (sky, sun or moon, stars, clouds, hills, grass and flowers) follows the TV's local time of day and sits under every state; `lg-app/src/lg/scene.ts` owns it. The projector screen, the calico and the disc are `BaseAnimation` subclasses in `lg-app/src/lg/animations/`, so they share the intro/loop/outro lifecycle and timing with the matrix.
+
 ## Notes
 
 - The TV reconnects on its own when the server restarts.
 - If the TV cannot reach the server within 3 seconds, or the connection drops, it shows the failure screen ("Cannot reach the LED server."). The next state from the server replaces it.
-- Changing the animation visuals means editing `lg-app/src/lg/animations/`; shared timing lives in `src/animator/`.
+- Changing the scene or animation visuals means editing `lg-app/src/lg/scene.ts` and `lg-app/src/lg/animations/`; shared timing lives in `src/animator/`.

@@ -10,7 +10,7 @@ import { lerp } from "../../utils/math.js";
 const PODCAST_SAMPLE_SIZE = 16;
 const PODCAST_SHADOW_BRIGHTNESS = 0.25;
 const PODCAST_SHADOW_MAX_RISE = 0.55;
-const PODCAST_WAVE_AMPLITUDE = 4;
+const PODCAST_WAVE_AMPLITUDE = 4 / 64;
 
 /**
  * A podcast episode: the artwork, with a dark shadow tinted from the artwork's dominant colour that
@@ -47,14 +47,26 @@ export class PodcastAnimation extends BaseAnimation<CanvasContext> {
     { ctx, width, height, elapsedMs: elapsed }: AnimationFrame<CanvasContext>,
     state: AnimationPhaseState,
   ): void {
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(this.art, 0, 0, width, height);
+    ctx.imageSmoothingEnabled = true;
+    if (this.art.width > 0 && this.art.height > 0) {
+      // Cover the 16:9 stage with the square artwork instead of stretching it.
+      const scale = Math.max(width / this.art.width, height / this.art.height);
+      const artWidth = this.art.width * scale;
+      const artHeight = this.art.height * scale;
+      ctx.drawImage(
+        this.art,
+        (width - artWidth) / 2,
+        (height - artHeight) / 2,
+        artWidth,
+        artHeight,
+      );
+    }
 
     const rise = this.riseAt(state);
     if (rise <= 0) return;
 
     const top = height - rise * height * PODCAST_SHADOW_MAX_RISE;
-    const amplitude = PODCAST_WAVE_AMPLITUDE * rise;
+    const amplitude = height * PODCAST_WAVE_AMPLITUDE * rise;
     ctx.beginPath();
     ctx.moveTo(0, height);
     for (let x = 0; x <= width; x++) {

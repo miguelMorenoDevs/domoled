@@ -3,29 +3,50 @@ import { AnimationRunner } from "../../../src/animator/runner.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
 import { CdAnimation } from "./animations/cd.js";
 import { PodcastAnimation } from "./animations/podcast.js";
+import { QrAnimation } from "./animations/qr.js";
+import {
+  STAGE_HEIGHT,
+  STAGE_WIDTH,
+  drawNightOverlay,
+  drawScene,
+} from "./scene.js";
 import { wrapText } from "../utils/canvas.js";
 
-// Animations draw in the LED matrix's 64x64 units; the screen scales them up to fill its height.
-const MATRIX_SIZE = 64;
+// The scene is authored in 400x225 units and rendered at 1080p for the TV.
+const SCREEN_WIDTH = 1920;
+const SCREEN_HEIGHT = 1080;
+const SCENE_SCALE = SCREEN_WIDTH / STAGE_WIDTH;
 const FPS = 30;
 
 /**
- * Same lifecycle as CdAnimator in src/led/animator.ts (shared AnimationRunner), drawing to a screen-sized canvas.
+ * Same lifecycle as CdAnimator in src/led/animator.ts (shared AnimationRunner), drawing the meadow
+ * scene and the animations on top of it at 1080p.
  */
 export class LgAnimator {
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasContext;
   private readonly runner = new AnimationRunner<CanvasContext>();
-  private qrModules: boolean[][] = [];
   private errorMessage = "";
   private intervalId: number | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = SCREEN_WIDTH;
+    canvas.height = SCREEN_HEIGHT;
     this.ctx = canvas.getContext("2d")!;
+    this.fitToWindow();
+    window.addEventListener("resize", this.fitToWindow);
   }
+
+  /** Renders at 1080p and scales the element to the window, so 4K panels get a full screen too. */
+  private fitToWindow = (): void => {
+    const factor = Math.min(
+      window.innerWidth / SCREEN_WIDTH,
+      window.innerHeight / SCREEN_HEIGHT,
+    );
+    this.canvas.style.width = `${Math.round(SCREEN_WIDTH * factor)}px`;
+    this.canvas.style.height = `${Math.round(SCREEN_HEIGHT * factor)}px`;
+  };
 
   play(art: HTMLImageElement, track: TrackData, positionMs: number): void {
     if (this.waitForExit(() => this.play(art, track, positionMs))) return;
@@ -75,9 +96,7 @@ export class LgAnimator {
 
   showQr(modules: boolean[][]): void {
     if (this.waitForExit(() => this.showQr(modules))) return;
-    this.stop();
-    this.qrModules = modules;
-    this.intervalId = window.setInterval(this.renderQrFrame, 1000 / FPS);
+    this.run(new QrAnimation(modules), 0, null);
   }
 
   showError(message: string): void {
@@ -119,45 +138,59 @@ export class LgAnimator {
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  /**
-   * Renders the login QR: white background, black modules, one quiet-zone module around the code.
-   */
-  private renderQrFrame = (): void => {
-    const { ctx, canvas } = this;
-    const size = this.qrModules.length;
-    const side = Math.min(canvas.width, canvas.height);
-    const cell = Math.floor(side / (size + 2));
-    const offsetX = Math.floor((canvas.width - size * cell) / 2);
-    const offsetY = Math.floor((canvas.height - size * cell) / 2);
+  private stageTransform(): void {
+    this.ctx.setTransform(SCENE_SCALE, 0, 0, SCENE_SCALE, 0, 0);
+  }
 
-    this.clearScreen("#fff");
-    ctx.fillStyle = "#000";
-    this.qrModules.forEach((row, y) =>
-      row.forEach((dark, x) => {
-        if (dark) {
-          ctx.fillRect(offsetX + x * cell, offsetY + y * cell, cell, cell);
-        }
-      }),
+  /** Local time of day, so the meadow follows the TV's clock. */
+  private currentHour(): number {
+    const now = new Date();
+    return now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+  }
+
+  /** Draws the meadow, lets the active animation draw over it, then lays the night tint on top. */
+  private drawStageWith(animation: Animation<CanvasContext>): void {
+    this.clearScreen("#000");
+    this.stageTransform();
+    const sky = drawScene(
+      this.ctx,
+      performance.now() / 1000,
+      this.currentHour(),
     );
-  };
+    animation.render({
+      ctx: this.ctx,
+      width: STAGE_WIDTH,
+      height: STAGE_HEIGHT,
+      elapsedMs: this.runner.elapsedMs(),
+    });
+    drawNightOverlay(this.ctx, sky);
+  }
 
   /**
-   * Renders the failure screen: a red ring with an X, and the reason underneath.
+   * Renders the failure screen over the dimmed meadow: a red ring with an X, and the reason underneath.
    */
   private renderErrorFrame = (): void => {
-    const { ctx, canvas } = this;
-    const side = Math.min(canvas.width, canvas.height);
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2 - side * 0.1;
-    const radius = side * 0.22;
+    const { ctx } = this;
+    this.clearScreen("#000");
+    this.stageTransform();
+    const sky = drawScene(ctx, performance.now() / 1000, this.currentHour());
+    drawNightOverlay(ctx, sky);
+
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.fillRect(0, 0, STAGE_WIDTH, STAGE_HEIGHT);
+    ctx.restore();
+
+    const cx = STAGE_WIDTH / 2;
+    const cy = STAGE_HEIGHT / 2 - 6;
+    const radius = 40;
     const arm = radius * 0.5;
 
-    this.clearScreen("#000");
     ctx.strokeStyle = "#e5484d";
     ctx.shadowColor = "#e5484d";
-    ctx.shadowBlur = side * 0.04;
+    ctx.shadowBlur = 10;
     ctx.lineCap = "round";
-    ctx.lineWidth = side * 0.035;
+    ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.moveTo(cx - arm, cy - arm);
@@ -167,45 +200,25 @@ export class LgAnimator {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    const fontSize = Math.round(side * 0.05);
-    ctx.font = `${fontSize}px sans-serif`;
-    ctx.fillStyle = "#fff";
+    ctx.font = "12px sans-serif";
+    ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    wrapText(ctx, this.errorMessage, canvas.width * 0.8).forEach((line, i) =>
-      ctx.fillText(line, cx, cy + radius + side * 0.08 + i * fontSize * 1.3),
+    wrapText(ctx, this.errorMessage, STAGE_WIDTH * 0.8).forEach((line, i) =>
+      ctx.fillText(line, cx, cy + radius + 14 + i * 16),
     );
   };
 
   /**
-   * Renders one frame: clears the screen, lets the active animation draw in matrix units, centred
-   * and scaled to the screen height. When the animation finishes, the next content starts.
+   * Renders one frame. When the animation finishes, the next content starts; a track that reached its
+   * end keeps its last frame until the server replaces it.
    */
   private renderFrame = (): void => {
     const animation = this.runner.current;
     if (!animation) return;
 
-    const { ctx, canvas } = this;
-    const side = Math.min(canvas.width, canvas.height);
-    const scale = side / MATRIX_SIZE;
+    this.drawStageWith(animation);
 
-    this.clearScreen("#000");
-    ctx.setTransform(
-      scale,
-      0,
-      0,
-      scale,
-      (canvas.width - side) / 2,
-      (canvas.height - side) / 2,
-    );
-    animation.render({
-      ctx,
-      width: MATRIX_SIZE,
-      height: MATRIX_SIZE,
-      elapsedMs: this.runner.elapsedMs(),
-    });
-
-    // A track that reached its end keeps its last frame until the server replaces it.
     if (animation.holdsAt(this.runner.elapsedMs())) {
       this.pause();
       return;
