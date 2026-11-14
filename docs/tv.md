@@ -42,6 +42,14 @@ Set `LED_SERVER_URL` in `lg-app/config.js` to `http://<pi-address>:3000`. The fi
 
 ## 4. Build, install and launch
 
+One command packages, installs and launches the app:
+
+```sh
+pnpm lg:rebuild
+```
+
+Or run the steps separately:
+
 ```sh
 pnpm lg:package                                          # builds lg-app/out/com.domo.led_1.0.0_all.ipk
 pnpm exec ares-install --device tv lg-app/out/com.domo.led_1.0.0_all.ipk
