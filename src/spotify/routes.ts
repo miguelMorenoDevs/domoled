@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import qrcode from "qrcode-terminal";
 import SpotifyClient from "./client.js";
+import type { LoginQr } from "./types/api.js";
 import {
   SpotifyApiError,
   SpotifyAuthRevokedError,
@@ -11,6 +12,7 @@ import {
 } from "./errors.js";
 import { getLocalIP } from "../utils/network.js";
 import { allowAnyOrigin } from "../utils/http.js";
+import { qrModules } from "../utils/qr.js";
 import { cdAnimator } from "../led/animator.js";
 import { AlbumArtLoadError } from "../led/errors.js";
 import { requireLoopback } from "./guard.js";
@@ -59,6 +61,13 @@ router.get("/login", (_req: Request, res: Response) => {
 export function loginQrUrl(): string {
   return `http://${getLocalIP()}:3000/connect.html`;
 }
+
+// Read by the TV's "Add user" screen. It only returns the connect link, so it is open to the LAN.
+router.get("/login/qr", allowAnyOrigin, (_req: Request, res: Response) => {
+  const url = loginQrUrl();
+  const body: LoginQr = { url, modules: qrModules(url) };
+  res.json(body);
+});
 
 router.get("/callback", async (req: Request, res: Response) => {
   try {

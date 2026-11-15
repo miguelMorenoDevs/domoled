@@ -92,6 +92,8 @@ A round profile picture of the active user sits in the bottom-right corner in ev
 
 Clicking the profile badge (the magic remote pointer on the TV) opens the account list over the scene. Pick an account to make it active; Close or the badge returns to the animation. The list is drawn on the paused frame too, so it works while a track is paused.
 
+"Add user" in that list shows the login QR on the projector screen, the same code the matrix shows (from `GET /spotify/login/qr`). A Back box returns to the list only once an account is logged in; the TV returns to the animation after the phone completes the login.
+
 The app draws in the reference scene's 400x225 units and renders at 1080p, fitting the canvas to the screen. The meadow (sky, sun or moon, stars, clouds, hills, grass and flowers) follows the TV's local time of day and sits under every state; `lg-app/src/lg/scene.ts` owns it. The projector screen, the calico and the disc are `BaseAnimation` subclasses in `lg-app/src/lg/animations/`, so they share the intro/loop/outro lifecycle and timing with the matrix.
 
 ## Notes
