@@ -1,3 +1,41 @@
+import { rgba } from "./color.js";
+
+/** A horizontal gradient across the artwork palette: main tone, light tint, opposite hue. */
+export function artGradient(
+  ctx: CanvasContext,
+  fromX: number,
+  toX: number,
+  palette: ArtPalette,
+): CanvasGradient {
+  const gradient = ctx.createLinearGradient(fromX, 0, toX, 0);
+  gradient.addColorStop(0, rgba(palette.main, 1));
+  gradient.addColorStop(0.5, rgba(palette.light, 1));
+  gradient.addColorStop(1, rgba(palette.opposite, 1));
+  return gradient;
+}
+
+/** The square artwork, cropped to its centre and drawn centred on the origin. */
+export function drawCoverArt(
+  ctx: CanvasContext,
+  art: HTMLImageElement,
+  size: number,
+): void {
+  if (art.width <= 0 || art.height <= 0) return;
+  const side = Math.min(art.width, art.height);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(
+    art,
+    (art.width - side) / 2,
+    (art.height - side) / 2,
+    side,
+    side,
+    -size / 2,
+    -size / 2,
+    size,
+    size,
+  );
+}
+
 export function fillEllipse(
   ctx: CanvasContext,
   x: number,

@@ -10,6 +10,7 @@ The TV app draws every state inside one 1080p meadow: sky, sun or moon, stars, c
 - Idle: a side-view calico leaps in, crouches and sits, then sleeps with z's, wakes to stretch and leaps out, with blinking, ear flicks and tail motion.
 - Playing: a translucent disc with the album art, a rim, a soft glow, expanding rings, orbiting flecks, sheen wedges and sparkles rises from below the meadow and sinks back in the outro. The glow, rim, rings, flecks, wedges and sparkles are tinted from the artwork's dominant colour (a main tone, a deeper shade, a light tint and the opposite hue); near-black or near-white grey artwork keeps the original pink, teal and gold palette.
 - Podcast: the episode's square cover pops in with a mic badge on its corner, broadcast squares ripple out, speech bars bounce under it and a progress line tracks the episode; the rim, bars and rings are tinted from the artwork's dominant colour.
+- Podcast video: when the episode's show is a video or mixed podcast (Spotify reports it as the show's `media_type`), the projector screen drops instead, with the cover, a podcast badge and the episode's progress bar; it rolls back up in the outro.
 
 ## CD
 
@@ -24,6 +25,7 @@ Used for podcast episodes (Spotify reports them as `episode`).
 
 - The artwork stays on the matrix while a dark shadow rises from the bottom edge, ripples across it and sinks back.
 - The shadow is tinted from the artwork's dominant colour, so each episode gets its own palette.
+- Episodes of a video or mixed show look the same on the matrix; only the TV has a video presentation.
 - Same intro, loop and outro as the CD.
 
 ## Idle cat

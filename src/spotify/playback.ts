@@ -58,6 +58,7 @@ export function playbackTransition(
       durationMs: song.durationMs,
       progressMs: song.progressMs,
       contentType: song.contentType,
+      hasVideo: song.hasVideo,
     };
     return {
       memory,
