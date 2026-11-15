@@ -96,7 +96,6 @@ export interface GetCurrentlyPlayedSong {
   progressMs: number;
   isPlaying: boolean;
   contentType: "track" | "episode";
-  hasVideo: boolean;
 }
 
 export interface SpotifyStatusTrack {

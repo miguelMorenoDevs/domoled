@@ -23,7 +23,6 @@ function song(overrides: Partial<GetCurrentlyPlayedSong> = {}) {
     progressMs: 10_000,
     isPlaying: true,
     contentType: "track" as const,
-    hasVideo: false,
     ...overrides,
   };
 }
@@ -47,7 +46,6 @@ const load = {
     durationMs: 200_000,
     progressMs: 10_000,
     contentType: "track",
-    hasVideo: false,
   },
   isPlaying: true,
 } as const;
@@ -155,7 +153,6 @@ test("playback: a repeated track restarts once past its end", () => {
         durationMs: 200_000,
         progressMs: 0,
         contentType: "track",
-        hasVideo: false,
       },
       isPlaying: true,
     },

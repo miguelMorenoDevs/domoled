@@ -17,7 +17,6 @@ interface TrackData {
   durationMs: number;
   progressMs: number;
   contentType: "track" | "episode";
-  hasVideo: boolean;
 }
 
 // Mirrors AnimatorState in src/led/types.ts on the server; keep the two in sync.

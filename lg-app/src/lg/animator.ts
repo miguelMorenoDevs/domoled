@@ -5,7 +5,6 @@ import { UserScreen } from "./user-screen.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
 import { CdAnimation } from "./animations/cd.js";
 import { PodcastAnimation } from "./animations/podcast.js";
-import { PodcastVideoAnimation } from "./animations/podcast-video.js";
 import { QrAnimation } from "./animations/qr.js";
 import {
   STAGE_HEIGHT,
@@ -68,9 +67,7 @@ export class LgAnimator {
     if (this.waitForExit(() => this.play(art, track, positionMs))) return;
     const animation =
       track.contentType === "episode"
-        ? track.hasVideo
-          ? new PodcastVideoAnimation(track, art)
-          : new PodcastAnimation(track, art)
+        ? new PodcastAnimation(track, art)
         : new CdAnimation(track, art);
     this.run(animation, positionMs, () => this.startIdle());
   }
@@ -99,8 +96,7 @@ export class LgAnimator {
     const current = this.runner.current;
     if (
       !(current instanceof CdAnimation) &&
-      !(current instanceof PodcastAnimation) &&
-      !(current instanceof PodcastVideoAnimation)
+      !(current instanceof PodcastAnimation)
     )
       return;
     this.runner.seek(progressMs);
