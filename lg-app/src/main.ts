@@ -49,7 +49,7 @@ source.onmessage = (event) => {
   const state = JSON.parse(event.data) as ScreenState;
   pendingArt = null;
   if (state.kind === "track") loadTrack(state.track, state.positionMs);
-  else if (state.kind === "qr") animator.showQr(state.modules);
+  else if (state.kind === "qr") void animator.showQr(state.modules);
   else if (state.kind === "error") animator.showError(state.message);
   else animator.startIdle();
 };

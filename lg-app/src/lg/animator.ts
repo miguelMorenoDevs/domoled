@@ -29,7 +29,10 @@ export class LgAnimator {
   private readonly ctx: CanvasContext;
   private readonly runner = new AnimationRunner<CanvasContext>();
   private readonly badge = new ProfileBadge();
-  private readonly users = new UserScreen(() => this.redraw());
+  private readonly users = new UserScreen(
+    () => this.redraw(),
+    () => void this.showAddUserQr(),
+  );
   private errorMessage = "";
   private intervalId: number | null = null;
 
@@ -106,9 +109,39 @@ export class LgAnimator {
     this.run(new CalicoCatAnimation(), 0, null);
   }
 
-  showQr(modules: boolean[][]): void {
-    if (this.waitForExit(() => this.showQr(modules))) return;
-    this.run(new QrAnimation(modules), 0, null);
+  /** Shows the login QR; the Back box appears only while at least one account is logged in. */
+  async showQr(modules: boolean[][]): Promise<void> {
+    this.startQr(modules, await this.hasLoggedUsers());
+  }
+
+  /** Opens the login QR from the account list, which closes once the QR is ready. */
+  private async showAddUserQr(): Promise<void> {
+    try {
+      const res = await fetch(LED_SERVER_URL + "/spotify/login/qr", {
+        cache: "no-store",
+      });
+      const { modules } = (await res.json()) as LoginQr;
+      this.users.close();
+      await this.showQr(modules);
+    } catch {
+      // The account list stays open so the viewer can try again.
+    }
+  }
+
+  private startQr(modules: boolean[][], hasBack: boolean): void {
+    if (this.waitForExit(() => this.startQr(modules, hasBack))) return;
+    this.run(new QrAnimation(modules, hasBack), 0, null);
+  }
+
+  private async hasLoggedUsers(): Promise<boolean> {
+    try {
+      const res = await fetch(LED_SERVER_URL + "/spotify/users", {
+        cache: "no-store",
+      });
+      return ((await res.json()) as LoggedUser[]).length > 0;
+    } catch {
+      return false;
+    }
   }
 
   showError(message: string): void {
@@ -118,13 +151,24 @@ export class LgAnimator {
     this.intervalId = window.setInterval(this.renderErrorFrame, 1000 / FPS);
   }
 
-  /** Maps a click to the stage: the badge toggles the user screen, anything else goes to it. */
+  /**
+   * Maps a click to the stage: the badge toggles the user screen, the login QR's Back box returns to
+   * the account list, and anything else goes to the user screen.
+   */
   private handleClick = (event: MouseEvent): void => {
     const rect = this.canvas.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * STAGE_WIDTH;
     const y = ((event.clientY - rect.top) / rect.height) * STAGE_HEIGHT;
+    const current = this.runner.current;
     if (this.badge.contains(x, y)) this.users.toggle();
-    else this.users.handleClick(x, y);
+    else if (
+      !this.users.isOpen() &&
+      current instanceof QrAnimation &&
+      current.hitsBack(x, y)
+    ) {
+      this.startIdle();
+      void this.users.show();
+    } else this.users.handleClick(x, y);
   };
 
   /**
