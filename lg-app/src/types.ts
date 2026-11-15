@@ -12,6 +12,7 @@ interface ServiceBridge {
 declare var WebOSServiceBridge: { new (): ServiceBridge } | undefined;
 
 interface TrackData {
+  title: string;
   imageUrl: string;
   durationMs: number;
   progressMs: number;

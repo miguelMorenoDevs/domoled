@@ -42,6 +42,7 @@ function memoryAt(now: number, overrides: Partial<PlaybackMemory> = {}) {
 const load = {
   kind: "load",
   track: {
+    title: "Song",
     imageUrl: "https://img.example/art.jpg",
     durationMs: 200_000,
     progressMs: 10_000,
@@ -149,6 +150,7 @@ test("playback: a repeated track restarts once past its end", () => {
     {
       kind: "load",
       track: {
+        title: "Song",
         imageUrl: "https://img.example/art.jpg",
         durationMs: 200_000,
         progressMs: 0,

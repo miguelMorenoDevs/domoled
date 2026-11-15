@@ -3,7 +3,12 @@ import type {
   AnimationPhaseState,
 } from "../../../../src/animator/types.js";
 import { BaseAnimation } from "../../../../src/animator/base.js";
-import { artGradient, drawCoverArt, roundRect } from "../../utils/canvas.js";
+import {
+  artGradient,
+  fillEllipse,
+  roundRect,
+  wrapText,
+} from "../../utils/canvas.js";
 import {
   FALLBACK_PALETTE,
   artPalette,
@@ -26,6 +31,15 @@ const RAIL = { x: 76, y: 152, width: 248, height: 6, radius: 3 };
 const STRING_BOTTOM_Y = 170;
 const KNOB = { x: 200, y: 173, radius: 3.5 };
 
+// The two illustrated hosts of the reference's broadcast clip, with their own colours.
+const HEAD_Y = 62;
+const HOSTS = [
+  { x: 62, skin: "#d8a47c", hair: "#2b2a2e", turn: 0 },
+  { x: 162, skin: "#f1c9a5", hair: "#8b5a2b", turn: 1 },
+] as const;
+const MOUTH = "#7a2a2a";
+const EYE = "#222222";
+
 function easeOutBack(progress: number): number {
   return 1 + 2 * Math.pow(progress - 1, 3) + Math.pow(progress - 1, 2);
 }
@@ -35,19 +49,19 @@ function easeInCubic(progress: number): number {
 }
 
 /**
- * A podcast episode from a video show: the projector screen drops from above with the episode's
- * artwork, a podcast badge and its progress, sways while it hangs, and rolls back up in the outro.
- * Same screen and timing as the login QR. At the end of the episode it holds its last frame until
- * the poller calls exit().
+ * A podcast episode from a video show: the projector screen drops from above playing the reference's
+ * broadcast clip, with two hosts taking turns to talk, the episode title and its progress, sways while
+ * it hangs, and rolls back up in the outro. Same screen and timing as the login QR; the clip is tinted
+ * from the episode's palette. At the end of the episode it holds its last frame until exit().
  */
 export class PodcastVideoAnimation extends BaseAnimation<CanvasContext> {
-  private readonly art: HTMLImageElement;
+  private readonly title: string;
   private readonly durationMs: number;
   private readonly palette: ArtPalette;
 
   constructor(track: TrackData, art: HTMLImageElement) {
     super(INTRO_MS, OUTRO_MS, track.durationMs);
-    this.art = art;
+    this.title = track.title.trim();
     this.durationMs = track.durationMs;
     this.palette = artPalette(sampleDominantColor(art)) ?? FALLBACK_PALETTE;
   }
@@ -121,53 +135,130 @@ export class PodcastVideoAnimation extends BaseAnimation<CanvasContext> {
     ctx.fill();
   }
 
-  /** The episode's artwork over a tinted backdrop, with the podcast badge and its progress bar. */
+  /** The clip, the episode title, the podcast badge and the progress bar, clipped to the screen. */
   private drawVideo(ctx: CanvasContext, elapsedMs: number): void {
     const { x, y, width, height } = VIDEO;
+    const seconds = elapsedMs / 1000;
+
     ctx.save();
     roundRect(ctx, x, y, width, height, VIDEO.radius);
     ctx.clip();
+    ctx.translate(x, y);
 
-    const backdrop = ctx.createLinearGradient(0, y, 0, y + height);
+    this.drawClip(ctx, seconds);
+    this.drawBadge(ctx);
+    this.drawTitle(ctx);
+    this.drawProgress(ctx, elapsedMs);
+
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.03 + 0.03 * Math.sin(seconds * 13) * Math.sin(seconds * 3)})`;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+  }
+
+  private drawClip(ctx: CanvasContext, seconds: number): void {
+    const backdrop = ctx.createLinearGradient(0, 0, 0, VIDEO.height);
     backdrop.addColorStop(0, rgba(this.palette.deep, 1));
     backdrop.addColorStop(1, rgba(this.palette.oppositeDeep, 1));
     ctx.fillStyle = backdrop;
-    ctx.fillRect(x, y, width, height);
+    ctx.fillRect(0, 0, VIDEO.width, VIDEO.height);
 
     ctx.save();
-    ctx.translate(x + width / 2, y + height / 2);
-    drawCoverArt(ctx, this.art, height);
+    ctx.globalAlpha = 0.18;
+    fillEllipse(ctx, 62, 60, 46, 46, rgba(this.palette.main, 1));
+    fillEllipse(ctx, 162, 60, 46, 46, rgba(this.palette.opposite, 1));
     ctx.restore();
 
-    const progress =
-      this.durationMs > 0
-        ? Math.min(1, Math.max(0, elapsedMs / this.durationMs))
-        : 0;
-    const scrim = ctx.createLinearGradient(0, y + height - 20, 0, y + height);
-    scrim.addColorStop(0, "rgba(0, 0, 0, 0)");
-    scrim.addColorStop(1, "rgba(0, 0, 0, 0.55)");
-    ctx.fillStyle = scrim;
-    ctx.fillRect(x, y + height - 20, width, 20);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
-    ctx.fillRect(x, y + height - 4, width, 4);
-    ctx.fillStyle = artGradient(ctx, x, x + width, this.palette);
-    ctx.fillRect(x, y + height - 4, width * progress, 4);
+    fillEllipse(ctx, 62, 116, 30, 26, rgba(this.palette.deep, 1));
+    fillEllipse(ctx, 162, 116, 30, 26, rgba(this.palette.oppositeDeep, 1));
 
-    roundRect(ctx, x + 6, y + 5, 46, 12, 6);
-    ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
-    ctx.fill();
+    // The hosts take turns every 3.2 s; only the talking one flaps its mouth.
+    const turn = Math.floor(seconds / 3.2) % 2;
+    for (const host of HOSTS) {
+      this.drawHost(ctx, host, seconds, turn === host.turn);
+    }
+  }
+
+  private drawHost(
+    ctx: CanvasContext,
+    host: (typeof HOSTS)[number],
+    seconds: number,
+    talking: boolean,
+  ): void {
+    const bob = talking
+      ? Math.sin(seconds * 5 + host.turn) * 1.2
+      : Math.sin(seconds * 1.5 + host.turn) * 0.6;
+
+    ctx.save();
+    ctx.translate(host.x, HEAD_Y + bob);
+
+    ctx.fillStyle = host.skin;
+    ctx.fillRect(-5, 12, 10, 16);
+
     ctx.beginPath();
-    ctx.arc(x + 13, y + 11, 2.8, 0, TAU);
+    ctx.arc(0, 0, 15, 0, TAU);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(0, -2, 15, Math.PI, TAU);
+    ctx.closePath();
+    ctx.fillStyle = host.hair;
+    ctx.fill();
+
+    ctx.fillStyle = EYE;
+    for (const eyeX of [-6, 6]) {
+      ctx.beginPath();
+      ctx.arc(eyeX, 1, 1.6, 0, TAU);
+      ctx.fill();
+    }
+
+    const mouth = talking
+      ? 1 + 3 * Math.abs(Math.sin(seconds * 9 + host.turn * 2))
+      : 0.8;
+    ctx.beginPath();
+    ctx.ellipse(0, 8, 4, mouth, 0, 0, TAU);
+    ctx.fillStyle = MOUTH;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  private drawBadge(ctx: CanvasContext): void {
+    ctx.beginPath();
+    ctx.arc(11, 11, 2.8, 0, TAU);
     ctx.fillStyle = rgba(this.palette.main, 1);
     ctx.fill();
     ctx.fillStyle = "#ffffff";
     ctx.font = "700 7px sans-serif";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText("PODCAST", x + 19, y + 12);
+    ctx.fillText("PODCAST", 17, 12);
+  }
 
-    ctx.fillStyle = `rgba(255, 255, 255, ${0.03 + 0.03 * Math.sin((elapsedMs / 1000) * 13) * Math.sin((elapsedMs / 1000) * 3)})`;
-    ctx.fillRect(x, y, width, height);
-    ctx.restore();
+  private drawTitle(ctx: CanvasContext): void {
+    if (!this.title) return;
+    const { width } = VIDEO;
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.fillRect(0, 98, width, 20);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "8.5px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    const lines = wrapText(ctx, this.title, width - 24).slice(0, 2);
+    lines.forEach((line, i) =>
+      ctx.fillText(line, width / 2, 111 - (lines.length - 1) * 4.5 + i * 9),
+    );
+  }
+
+  private drawProgress(ctx: CanvasContext, elapsedMs: number): void {
+    const { width, height } = VIDEO;
+    const progress =
+      this.durationMs > 0
+        ? Math.min(1, Math.max(0, elapsedMs / this.durationMs))
+        : 0;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+    ctx.fillRect(0, height - 4, width, 4);
+    ctx.fillStyle = artGradient(ctx, 0, width, this.palette);
+    ctx.fillRect(0, height - 4, width * progress, 4);
   }
 }

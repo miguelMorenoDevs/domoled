@@ -10,7 +10,7 @@ The TV app draws every state inside one 1080p meadow: sky, sun or moon, stars, c
 - Idle: a side-view calico leaps in, crouches and sits, then sleeps with z's, wakes to stretch and leaps out, with blinking, ear flicks and tail motion.
 - Playing: a translucent disc with the album art, a rim, a soft glow, expanding rings, orbiting flecks, sheen wedges and sparkles rises from below the meadow and sinks back in the outro. The glow, rim, rings, flecks, wedges and sparkles are tinted from the artwork's dominant colour (a main tone, a deeper shade, a light tint and the opposite hue); near-black or near-white grey artwork keeps the original pink, teal and gold palette.
 - Podcast: the episode's square cover pops in with a mic badge on its corner, broadcast squares ripple out, speech bars bounce under it and a progress line tracks the episode; the rim, bars and rings are tinted from the artwork's dominant colour.
-- Podcast video: when the episode's show is a video or mixed podcast (Spotify reports it as the show's `media_type`), the projector screen drops instead, with the cover, a podcast badge and the episode's progress bar; it rolls back up in the outro.
+- Podcast video: when the episode's show is a video or mixed podcast (Spotify reports it as the show's `media_type`), the projector screen drops instead, playing an illustrated broadcast clip: two hosts take turns to talk, the episode title sits in the caption band and a progress bar tracks the episode, all tinted from the artwork. Spotify does not expose the video stream, so the clip is our scene rather than the real video. It rolls back up in the outro.
 
 ## CD
 

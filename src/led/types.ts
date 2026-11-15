@@ -31,6 +31,7 @@ export interface AnimatorConfig {
 }
 
 export interface TrackData {
+  title: string;
   imageUrl: string;
   durationMs: number;
   progressMs: number;
