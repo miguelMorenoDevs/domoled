@@ -104,7 +104,7 @@ JSON
 
 - Express listens on **3000**. `GET /led/state` streams the current animation state to the LG TV app.
 - On win32/darwin the animator starts a WebSocket server on **8080** and streams frames.
-- Open `simulator.html` directly in a browser (double-click or `file://`); it connects to `ws://localhost:8080`. It is not served by Express — `public/` only holds the OAuth success page at `public/success.html`.
+- Open `simulator.html` directly in a browser (double-click or `file://`); it connects to `ws://localhost:8080`. It is not served by Express.
 - The simulator's "LG TV" view needs `pnpm lg:preview` once (see `docs/simulator.md`).
 
 ## Spotify OAuth setup
@@ -112,6 +112,6 @@ JSON
 - Redirect URI is hardcoded to `https://miguelmorenodevs.github.io/domoled`, which must match the Spotify app dashboard.
 - That GitHub Pages URL serves `index.html`, which forwards `code` + `state` to `http://<state>/spotify/callback`; `state` is the machine's local IP from `src/utils/network.ts`.
 - The redirect URI appears in both `src/spotify/client.ts` and `src/spotify/routes.ts`; changing it means updating both files and the Spotify dashboard.
-- `POST /spotify/login` returns the authorize URL and prints a QR code to the terminal. Scan it, approve, and the callback starts the animation.
+- `POST /spotify/login` returns the authorize URL and prints a QR code to the terminal. Scan it, approve, and the callback makes you the active user and redirects to the landing page.
 - With no active user (at boot or after `DELETE /spotify/users/active`), the matrix shows a short login QR pointing to `http://<localIP>:3000/spotify/login` (phone must be on the same LAN as the Pi). On win32/darwin, boot also logs the `simulator.html` file URL, and the simulator shows the QR too; `DELETE /spotify/users/active` shows it again.
 - Tokens are saved to `data/users.json` (relative to the working directory, created with mode `0600`, gitignored) on login, refresh and active-user changes, and reloaded on startup. Delete that file to log every user out.
