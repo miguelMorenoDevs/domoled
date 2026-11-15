@@ -1,6 +1,6 @@
 # domo-led
 
-Shows the album art of the Spotify track or podcast episode currently playing, animated on a 64x64 Raspberry Pi LED matrix.
+Manages a 64x64 Raspberry Pi LED matrix and an LG webOS TV app that show the album art of the Spotify track or podcast episode currently playing.
 
 The repo has four main parts:
 
