@@ -14,6 +14,7 @@ const QR_TOP = 20;
 // Device pixels per scene unit at the TV's 1080p render, so QR edges land on whole pixels.
 const HD_SCALE = 4.8;
 const TAU = Math.PI * 2;
+const BACK_BOX = { x: 8, y: 8, width: 58, height: 20 };
 
 function easeOutBack(progress: number): number {
   return 1 + 2 * Math.pow(progress - 1, 3) + Math.pow(progress - 1, 2);
@@ -25,14 +26,28 @@ function easeInCubic(progress: number): number {
 
 /**
  * The login QR on the projector screen: it drops from above during the intro, sways while it hangs,
- * and rolls back up during the outro.
+ * and rolls back up during the outro. With `hasBack`, a Back box sits in the corner for returning to
+ * the account list.
  */
 export class QrAnimation extends BaseAnimation<CanvasContext> {
   private readonly modules: boolean[][];
+  private readonly hasBack: boolean;
 
-  constructor(modules: boolean[][]) {
+  constructor(modules: boolean[][], hasBack: boolean) {
     super(INTRO_MS, OUTRO_MS);
     this.modules = modules;
+    this.hasBack = hasBack;
+  }
+
+  /** Whether a stage point lands on the Back box. */
+  hitsBack(x: number, y: number): boolean {
+    return (
+      this.hasBack &&
+      x >= BACK_BOX.x &&
+      x <= BACK_BOX.x + BACK_BOX.width &&
+      y >= BACK_BOX.y &&
+      y <= BACK_BOX.y + BACK_BOX.height
+    );
   }
 
   protected override draw(
@@ -43,6 +58,22 @@ export class QrAnimation extends BaseAnimation<CanvasContext> {
     ctx.translate(0, this.offsetAt(state, elapsedMs / 1000));
     this.drawScreen(ctx);
     ctx.restore();
+
+    if (this.hasBack) this.drawBack(ctx);
+  }
+
+  private drawBack(ctx: CanvasContext): void {
+    ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.fillRect(BACK_BOX.x, BACK_BOX.y, BACK_BOX.width, BACK_BOX.height);
+    ctx.font = "bold 10px sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(
+      "Back",
+      BACK_BOX.x + BACK_BOX.width / 2,
+      BACK_BOX.y + BACK_BOX.height / 2,
+    );
   }
 
   private offsetAt(state: AnimationPhaseState, seconds: number): number {

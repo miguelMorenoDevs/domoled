@@ -5,7 +5,6 @@ import type {
   MatrixOptions,
   RuntimeOptions,
 } from "rpi-led-matrix";
-import { createRequire } from "node:module";
 import { WebSocketServer, WebSocket } from "ws";
 import { createCanvas, loadImage, Canvas, Image } from "@napi-rs/canvas";
 import type {
@@ -22,13 +21,7 @@ import { CdAnimation } from "./animations/cd.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
 import { PodcastAnimation } from "./animations/podcast.js";
 import { AlbumArtLoadError } from "./errors.js";
-
-// qrcode-terminal's encoder returns the module grid; its public API only prints text.
-const requireQr = createRequire(import.meta.url);
-const QRCode = requireQr("qrcode-terminal/vendor/QRCode");
-const QRErrorCorrectLevel = requireQr(
-  "qrcode-terminal/vendor/QRCode/QRErrorCorrectLevel",
-);
+import { qrModules } from "../utils/qr.js";
 
 let LedMatrix: LedMatrixDriver;
 
@@ -248,10 +241,7 @@ export class CdAnimator {
 
     this.stop();
 
-    const qr = new QRCode(-1, QRErrorCorrectLevel.L);
-    qr.addData(url);
-    qr.make();
-    this.qrModules = qr.modules;
+    this.qrModules = qrModules(url);
 
     const frameDelay = 1000 / this.config.fps;
     this.intervalId = setInterval(this.renderQrFrame, frameDelay);

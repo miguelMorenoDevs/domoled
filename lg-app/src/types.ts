@@ -39,6 +39,12 @@ interface LoggedUser {
   avatarUrl: string | null;
 }
 
+// Mirrors LoginQr in src/spotify/types/api.ts on the server; keep the two in sync.
+interface LoginQr {
+  url: string;
+  modules: boolean[][];
+}
+
 type CanvasContext = CanvasRenderingContext2D;
 
 type CatPoseName = "sit" | "sleep" | "crouch" | "leap" | "stretch";

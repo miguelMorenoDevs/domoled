@@ -23,6 +23,12 @@ export interface LoggedUser {
   avatarUrl: string | null;
 }
 
+/** `GET /spotify/login/qr`: the connect link and its QR modules (`true` is dark). */
+export interface LoginQr {
+  url: string;
+  modules: boolean[][];
+}
+
 /** `GET /me`. Development Mode apps no longer receive `email` from it. */
 export interface UserProfile {
   id: string;
