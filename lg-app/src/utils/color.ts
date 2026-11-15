@@ -2,6 +2,15 @@ const SAMPLE_SIZE = 16;
 const MIN_CHROMA_SATURATION = 0.12;
 const MIN_SATURATION = 0.6;
 
+/** The reference palette, used when the artwork has no usable colour. */
+export const FALLBACK_PALETTE: ArtPalette = {
+  main: { r: 255, g: 93, b: 177 },
+  deep: { r: 224, g: 51, b: 143 },
+  light: { r: 242, g: 194, b: 139 },
+  opposite: { r: 76, g: 201, b: 217 },
+  oppositeDeep: { r: 42, g: 143, b: 181 },
+};
+
 interface ColorBucket extends Rgb {
   count: number;
 }
