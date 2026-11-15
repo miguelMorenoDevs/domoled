@@ -226,6 +226,7 @@ test("getCurrentSong returns the largest square album image", async (t) => {
     progressMs: 42000,
     isPlaying: true,
     contentType: "track",
+    hasVideo: false,
   });
 });
 
@@ -314,7 +315,54 @@ test("getCurrentSong returns the episode cover, duration and progress", async (t
     progressMs: 42000,
     isPlaying: true,
     contentType: "episode",
+    hasVideo: false,
   });
+});
+
+test("getCurrentSong marks episodes of a video show", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () =>
+      jsonResponse(
+        track({
+          item: {
+            type: "episode",
+            id: "episode-id",
+            uri: "spotify:episode:episode-id",
+            name: "Episode",
+            duration_ms: 3600000,
+            images: [{ url: "https://img/episode", height: 640, width: 640 }],
+            show: { media_type: "video" },
+          },
+          currently_playing_type: "episode",
+        }),
+      ),
+  });
+
+  assert.equal((await spotify.getCurrentSong())?.hasVideo, true);
+});
+
+test("getCurrentSong treats a mixed show as video", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/me/player/currently-playing": () =>
+      jsonResponse(
+        track({
+          item: {
+            type: "episode",
+            id: "episode-id",
+            uri: "spotify:episode:episode-id",
+            name: "Episode",
+            duration_ms: 3600000,
+            images: [{ url: "https://img/episode", height: 640, width: 640 }],
+            show: { media_type: "mixed" },
+          },
+          currently_playing_type: "episode",
+        }),
+      ),
+  });
+
+  assert.equal((await spotify.getCurrentSong())?.hasVideo, true);
 });
 
 test("getCurrentSong returns undefined for episodes without images", async (t) => {

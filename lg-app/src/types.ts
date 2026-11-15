@@ -12,10 +12,12 @@ interface ServiceBridge {
 declare var WebOSServiceBridge: { new (): ServiceBridge } | undefined;
 
 interface TrackData {
+  title: string;
   imageUrl: string;
   durationMs: number;
   progressMs: number;
   contentType: "track" | "episode";
+  hasVideo: boolean;
 }
 
 // Mirrors AnimatorState in src/led/types.ts on the server; keep the two in sync.

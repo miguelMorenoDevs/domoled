@@ -4,7 +4,7 @@ import type {
 } from "../../../../src/animator/types.js";
 import { BaseAnimation } from "../../../../src/animator/base.js";
 import { DEFAULT_CD_TIMING } from "../../../../src/animator/timing.js";
-import { roundRect } from "../../utils/canvas.js";
+import { artGradient, drawCoverArt, roundRect } from "../../utils/canvas.js";
 import {
   FALLBACK_PALETTE,
   artPalette,
@@ -159,7 +159,7 @@ export class PodcastAnimation extends BaseAnimation<CanvasContext> {
       ART_RADIUS,
     );
     ctx.clip();
-    this.drawArt(ctx);
+    drawCoverArt(ctx, this.art, ART_SIZE);
     ctx.restore();
 
     roundRect(
@@ -171,7 +171,12 @@ export class PodcastAnimation extends BaseAnimation<CanvasContext> {
       BORDER_RADIUS,
     );
     ctx.lineWidth = 2.5;
-    ctx.strokeStyle = this.rainbow(ctx, -BORDER_SIZE / 2, BORDER_SIZE / 2);
+    ctx.strokeStyle = artGradient(
+      ctx,
+      -BORDER_SIZE / 2,
+      BORDER_SIZE / 2,
+      this.palette,
+    );
     ctx.stroke();
     ctx.restore();
   }
@@ -219,10 +224,11 @@ export class PodcastAnimation extends BaseAnimation<CanvasContext> {
   ): void {
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = this.rainbow(
+    ctx.fillStyle = artGradient(
       ctx,
       -PROGRESS_HALF_WIDTH,
       PROGRESS_HALF_WIDTH,
+      this.palette,
     );
     for (let i = 0; i < BARS; i++) {
       const amplitude =
@@ -268,10 +274,11 @@ export class PodcastAnimation extends BaseAnimation<CanvasContext> {
       ctx.beginPath();
       ctx.moveTo(-PROGRESS_HALF_WIDTH, PROGRESS_Y);
       ctx.lineTo(x, PROGRESS_Y);
-      ctx.strokeStyle = this.rainbow(
+      ctx.strokeStyle = artGradient(
         ctx,
         -PROGRESS_HALF_WIDTH,
         PROGRESS_HALF_WIDTH,
+        this.palette,
       );
       ctx.stroke();
     }
@@ -281,37 +288,5 @@ export class PodcastAnimation extends BaseAnimation<CanvasContext> {
     ctx.fillStyle = "#ffffff";
     ctx.fill();
     ctx.restore();
-  }
-
-  /** The cover's horizontal rim gradient: the artwork's main tone, a light tint and its opposite hue. */
-  private rainbow(
-    ctx: CanvasContext,
-    from: number,
-    to: number,
-  ): CanvasGradient {
-    const gradient = ctx.createLinearGradient(from, 0, to, 0);
-    gradient.addColorStop(0, rgba(this.palette.main, 1));
-    gradient.addColorStop(0.5, rgba(this.palette.light, 1));
-    gradient.addColorStop(1, rgba(this.palette.opposite, 1));
-    return gradient;
-  }
-
-  /** The square artwork, cropped to its centre so it fills the cover. */
-  private drawArt(ctx: CanvasContext): void {
-    const { art } = this;
-    if (art.width <= 0 || art.height <= 0) return;
-    const side = Math.min(art.width, art.height);
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(
-      art,
-      (art.width - side) / 2,
-      (art.height - side) / 2,
-      side,
-      side,
-      -ART_SIZE / 2,
-      -ART_SIZE / 2,
-      ART_SIZE,
-      ART_SIZE,
-    );
   }
 }

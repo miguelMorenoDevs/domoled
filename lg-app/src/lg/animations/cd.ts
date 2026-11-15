@@ -12,6 +12,7 @@ import {
   rgba,
   sampleDominantColor,
 } from "../../utils/color.js";
+import { artGradient, drawCoverArt } from "../../utils/canvas.js";
 
 const DISK_CENTER = "#2b3f5e";
 const DISK_EDGE = "#0e1a2e";
@@ -216,10 +217,7 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
     ctx.arc(0, 0, RADIUS, 0, TAU);
     ctx.fill();
 
-    const rim = ctx.createLinearGradient(-RADIUS, 0, RADIUS, 0);
-    rim.addColorStop(0, rgba(this.palette.main, 1));
-    rim.addColorStop(0.5, rgba(this.palette.light, 1));
-    rim.addColorStop(1, rgba(this.palette.opposite, 1));
+    const rim = artGradient(ctx, -RADIUS, RADIUS, this.palette);
     ctx.beginPath();
     ctx.arc(0, 0, RADIUS - 1, 0, TAU);
     ctx.lineWidth = 3;
@@ -263,7 +261,7 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
     ctx.beginPath();
     ctx.arc(0, 0, THUMB_RADIUS, 0, TAU);
     ctx.clip();
-    this.drawArt(ctx);
+    drawCoverArt(ctx, this.art, THUMB_RADIUS * 2);
     ctx.restore();
 
     ctx.beginPath();
@@ -282,25 +280,5 @@ export class CdAnimation extends BaseAnimation<CanvasContext> {
     ctx.restore();
 
     ctx.restore();
-  }
-
-  private drawArt(ctx: CanvasContext): void {
-    const { art } = this;
-    if (art.width <= 0 || art.height <= 0) return;
-    const side = Math.min(art.width, art.height);
-    const sourceX = (art.width - side) / 2;
-    const sourceY = (art.height - side) / 2;
-    ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(
-      art,
-      sourceX,
-      sourceY,
-      side,
-      side,
-      -THUMB_RADIUS,
-      -THUMB_RADIUS,
-      THUMB_RADIUS * 2,
-      THUMB_RADIUS * 2,
-    );
   }
 }

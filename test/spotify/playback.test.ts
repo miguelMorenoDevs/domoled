@@ -23,6 +23,7 @@ function song(overrides: Partial<GetCurrentlyPlayedSong> = {}) {
     progressMs: 10_000,
     isPlaying: true,
     contentType: "track" as const,
+    hasVideo: false,
     ...overrides,
   };
 }
@@ -41,10 +42,12 @@ function memoryAt(now: number, overrides: Partial<PlaybackMemory> = {}) {
 const load = {
   kind: "load",
   track: {
+    title: "Song",
     imageUrl: "https://img.example/art.jpg",
     durationMs: 200_000,
     progressMs: 10_000,
     contentType: "track",
+    hasVideo: false,
   },
   isPlaying: true,
 } as const;
@@ -147,10 +150,12 @@ test("playback: a repeated track restarts once past its end", () => {
     {
       kind: "load",
       track: {
+        title: "Song",
         imageUrl: "https://img.example/art.jpg",
         durationMs: 200_000,
         progressMs: 0,
         contentType: "track",
+        hasVideo: false,
       },
       isPlaying: true,
     },

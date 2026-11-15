@@ -53,6 +53,10 @@ export interface EpisodeObject {
   name: string;
   duration_ms: number;
   images: ImageObject[];
+  /** "audio", "video" or "mixed"; absent from older responses. */
+  show?: {
+    media_type?: string;
+  };
 }
 
 export interface DisallowsObject {

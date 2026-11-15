@@ -54,10 +54,12 @@ export function playbackTransition(
   // A track that has run past its end restarts from the top when Spotify repeats it.
   if (!prev || prev.trackId !== song.id || expectedMs >= prev.durationMs) {
     const track = {
+      title: song.title,
       imageUrl: song.image,
       durationMs: song.durationMs,
       progressMs: song.progressMs,
       contentType: song.contentType,
+      hasVideo: song.hasVideo,
     };
     return {
       memory,

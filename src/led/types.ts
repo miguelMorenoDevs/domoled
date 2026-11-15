@@ -31,10 +31,13 @@ export interface AnimatorConfig {
 }
 
 export interface TrackData {
+  title: string;
   imageUrl: string;
   durationMs: number;
   progressMs: number;
   contentType: "track" | "episode";
+  /** The episode's show is a video or mixed podcast; tracks are never video. */
+  hasVideo: boolean;
 }
 
 export type CanvasContext = ReturnType<Canvas["getContext"]>;
