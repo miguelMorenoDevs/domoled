@@ -29,10 +29,15 @@ export class ProfileBadge {
     image.src = avatarUrl;
   }
 
+  /** Whether a stage point lands on the badge, with a little slack for the pointer. */
+  contains(x: number, y: number): boolean {
+    const { cx, cy } = center();
+    return Math.hypot(x - cx, y - cy) <= RADIUS + 4;
+  }
+
   /** Draws over the current transform, which the caller sets to the 400x225 stage. */
   draw(ctx: CanvasRenderingContext2D): void {
-    const cx = STAGE_WIDTH - MARGIN - RADIUS;
-    const cy = STAGE_HEIGHT - MARGIN - RADIUS;
+    const { cx, cy } = center();
 
     ctx.save();
     ctx.beginPath();
@@ -73,4 +78,11 @@ export class ProfileBadge {
   private initial(): string {
     return Array.from(this.displayName?.trim() ?? "")[0]?.toUpperCase() ?? "?";
   }
+}
+
+function center(): { cx: number; cy: number } {
+  return {
+    cx: STAGE_WIDTH - MARGIN - RADIUS,
+    cy: STAGE_HEIGHT - MARGIN - RADIUS,
+  };
 }

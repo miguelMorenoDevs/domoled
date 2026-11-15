@@ -1,6 +1,7 @@
 import type { Animation } from "../../../src/animator/types.js";
 import { AnimationRunner } from "../../../src/animator/runner.js";
 import { ProfileBadge } from "./badge.js";
+import { UserScreen } from "./user-screen.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
 import { CdAnimation } from "./animations/cd.js";
 import { PodcastAnimation } from "./animations/podcast.js";
@@ -28,6 +29,7 @@ export class LgAnimator {
   private readonly ctx: CanvasContext;
   private readonly runner = new AnimationRunner<CanvasContext>();
   private readonly badge = new ProfileBadge();
+  private readonly users = new UserScreen(() => this.redraw());
   private errorMessage = "";
   private intervalId: number | null = null;
 
@@ -38,6 +40,7 @@ export class LgAnimator {
     this.ctx = canvas.getContext("2d")!;
     this.fitToWindow();
     window.addEventListener("resize", this.fitToWindow);
+    canvas.addEventListener("click", this.handleClick);
   }
 
   /** Renders at 1080p and scales the element to the window, so 4K panels get a full screen too. */
@@ -50,8 +53,11 @@ export class LgAnimator {
     this.canvas.style.height = `${Math.round(SCREEN_HEIGHT * factor)}px`;
   };
 
-  setProfile(profile: Pick<SpotifyStatus, "displayName" | "avatarUrl">): void {
+  setProfile(
+    profile: Pick<SpotifyStatus, "activeUser" | "displayName" | "avatarUrl">,
+  ): void {
     this.badge.setProfile(profile);
+    this.users.setActiveId(profile.activeUser);
   }
 
   play(art: HTMLImageElement, track: TrackData, positionMs: number): void {
@@ -112,6 +118,24 @@ export class LgAnimator {
     this.intervalId = window.setInterval(this.renderErrorFrame, 1000 / FPS);
   }
 
+  /** Maps a click to the stage: the badge toggles the user screen, anything else goes to it. */
+  private handleClick = (event: MouseEvent): void => {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * STAGE_WIDTH;
+    const y = ((event.clientY - rect.top) / rect.height) * STAGE_HEIGHT;
+    if (this.badge.contains(x, y)) this.users.toggle();
+    else this.users.handleClick(x, y);
+  };
+
+  /**
+   * Redraws the frame a paused track holds, so the user screen shows while the loop is stopped. An
+   * error ring keeps its own loop and needs nothing.
+   */
+  private redraw(): void {
+    const animation = this.runner.current;
+    if (animation) this.drawStageWith(animation);
+  }
+
   private stop(): void {
     if (this.intervalId !== null) {
       window.clearInterval(this.intervalId);
@@ -170,6 +194,7 @@ export class LgAnimator {
       elapsedMs: this.runner.elapsedMs(),
     });
     drawNightOverlay(this.ctx, sky);
+    this.users.draw(this.ctx);
     this.badge.draw(this.ctx);
   }
 
@@ -214,6 +239,7 @@ export class LgAnimator {
     wrapText(ctx, this.errorMessage, STAGE_WIDTH * 0.8).forEach((line, i) =>
       ctx.fillText(line, cx, cy + radius + 14 + i * 16),
     );
+    this.users.draw(ctx);
     this.badge.draw(ctx);
   };
 
