@@ -4,6 +4,7 @@ import { SpotifyApiError } from "./errors.js";
 import { describeFailure } from "../utils/failure.js";
 import type {
   GetCurrentlyPlayedSong,
+  SpotifyProfile,
   SpotifyStatus,
   SpotifyStatusTrack,
 } from "./types/api.js";
@@ -136,9 +137,16 @@ export function lastPlaybackTrack(): SpotifyStatusTrack | null {
 export function buildSpotifyStatus(
   activeUser: string | null,
   track: SpotifyStatusTrack | null,
+  profile: SpotifyProfile | null,
 ): SpotifyStatus {
   const shown = activeUser ? track : null;
-  return { activeUser, playing: shown !== null, track: shown };
+  return {
+    activeUser,
+    displayName: profile?.displayName ?? null,
+    avatarUrl: profile?.avatarUrl ?? null,
+    playing: shown !== null,
+    track: shown,
+  };
 }
 
 async function apply(

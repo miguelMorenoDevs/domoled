@@ -22,6 +22,19 @@ function loadTrack(track: TrackData, positionMs: number): void {
   art.src = track.imageUrl;
 }
 
+async function refreshProfile(): Promise<void> {
+  try {
+    const res = await fetch(LED_SERVER_URL + "/spotify/status", {
+      cache: "no-store",
+    });
+    animator.setProfile((await res.json()) as SpotifyStatus);
+  } catch {
+    // Keep the last picture; the next poll retries.
+  }
+}
+refreshProfile();
+window.setInterval(refreshProfile, 5000);
+
 const CONNECTION_ERROR = "Cannot reach the LED server.";
 // Without this, a stream that never opens leaves the TV black.
 const startupTimer = window.setTimeout(

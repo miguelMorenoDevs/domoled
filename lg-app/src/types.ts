@@ -25,6 +25,12 @@ type ScreenState =
   | { kind: "qr"; modules: boolean[][] }
   | { kind: "error"; message: string };
 
+// Mirrors SpotifyStatus in src/spotify/types/api.ts on the server, for the profile fields the TV reads; keep the two in sync.
+interface SpotifyStatus {
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
 type CanvasContext = CanvasRenderingContext2D;
 
 type CatPoseName = "sit" | "sleep" | "crouch" | "leap" | "stretch";

@@ -127,9 +127,15 @@ router.get("/callback", async (req: Request, res: Response) => {
 });
 
 // Read by the landing page every 5 s. It is served to the LAN, so it is not loopback-only.
+// The TV app loads this from file://, so it needs the CORS header like /led/state.
 router.get("/status", (_req: Request, res: Response) => {
+  res.set("Access-Control-Allow-Origin", "*");
   res.json(
-    buildSpotifyStatus(SpotifyClient.getActiveUser(), lastPlaybackTrack()),
+    buildSpotifyStatus(
+      SpotifyClient.getActiveUser(),
+      lastPlaybackTrack(),
+      SpotifyClient.getActiveUserProfile(),
+    ),
   );
 });
 
