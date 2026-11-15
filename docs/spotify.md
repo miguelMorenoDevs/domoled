@@ -15,16 +15,27 @@
 
 ## Playback
 
-- Polls the active user's currently playing item every 5 s and follows it: a new track loads, pausing or resuming on Spotify pauses or resumes the animation, a position drift over 2 s seeks, and nothing playing shows the idle cat.
+- Polls the active user's currently playing item every 2 s and follows it: a new track loads, pausing or resuming on Spotify pauses or resumes the animation, a position drift over 2 s seeks, and nothing playing shows the idle cat.
+- The poller starts on boot with an active user, after a login and when the active user is switched.
+- When a track ends sooner than 2 s, the next poll runs at the track end plus 500 ms. If Spotify still reports the old track at that poll, it retries every 500 ms, up to 3 times, then goes back to the normal schedule.
 - Starts at the track's current playback position, so logging in mid-song continues instead of restarting.
 - A `429` waits `Retry-After` (or doubles the interval, capped at 60 s).
 - Access tokens refresh automatically, with one retry when the API returns `401`. A refresh token that Spotify rejects (`invalid_grant`) is removed and the login QR is shown again.
 - Spotify API failures are errors, not "nothing playing": non-2xx responses, timeouts (10 s per request) and malformed payloads make the callback return `502`. A `429` forwards `Retry-After`.
 
+## Status
+
+- `GET /spotify/status` returns the active user (`activeUser`), its Spotify `displayName` and profile picture `avatarUrl`, whether a track is playing (`playing`), and its `track` title and artist. `track` is `null` when paused, idle or no user is active.
+- `displayName` and `avatarUrl` are stored at login. `avatarUrl` is `null` when Spotify sent no picture or no user is active; users logged in before that field existed show `null` until their next login.
+- It reads the poller's last known state and does not call Spotify.
+- The landing page (`/connect.html`) reads it every 5 s and shows the connected user and the track or "Nothing playing". The route is served to the LAN, so it exposes the active user's Spotify user id to anyone on the network.
+- While a user is connected, the landing page has a "Disconnect" button that calls `DELETE /spotify/users/active` and reloads the page. The route is loopback-only, so the button works only when the page is opened on the Pi itself; from another device it shows an error.
+
 ## Users
 
 - Tokens for several users are saved to `data/users.json` (relative to the working directory, created with mode `0600`, gitignored) on login, refresh and active-user changes, and reloaded on startup. Entries are keyed by Spotify user id, because Development Mode apps no longer receive an `email` from `GET /me`.
 - `GET /spotify/users` lists them as `{ id, displayName, avatarUrl }[]` (never tokens), `POST /spotify/users/active` switches the active user with a `{ "userId": "..." }` body and `DELETE /spotify/users/:userId` removes one. Removing the active user shows the login QR.
+- `GET /spotify/login/qr` returns the connect link (`url`) and its QR `modules` for the TV's "Add user" screen. It is reachable from the LAN with CORS and does not change what the matrix shows.
 - `GET /spotify/users` and `POST /spotify/users/active` are reachable from the LAN and send `Access-Control-Allow-Origin: *` (the TV app calls them). Any device on the LAN can list accounts and switch the active one, the same audience that can already read the active user id from `/spotify/status`. `DELETE` routes accept only requests from the local machine (`403` otherwise). Login and callback stay reachable from the LAN.
 - To hand the display to someone else, `DELETE /spotify/users/active`: the login QR comes back and the previous user stays stored. To forget that person's login too, `DELETE /spotify/users/:userId`.
 - To log every user out, stop the server and delete `data/users.json`. Deleting it while the server runs does nothing: the tokens are also held in memory, and the next save recreates the file.
