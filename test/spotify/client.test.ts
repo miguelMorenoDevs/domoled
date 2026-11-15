@@ -28,11 +28,12 @@ function jsonResponse(body: unknown, status = 200) {
 
 function mockSpotify(t: TestContext, routes: Record<string, () => Response>) {
   t.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
-    const url = String(input);
+    // Routes match the path, so the currently-playing query is ignored.
+    const url = String(input).split("?")[0]!;
     for (const [suffix, handler] of Object.entries(routes)) {
       if (url.endsWith(suffix)) return handler();
     }
-    throw new Error("Unexpected fetch: " + url);
+    throw new Error("Unexpected fetch: " + String(input));
   });
 }
 
@@ -146,7 +147,8 @@ test("a login whose /me lookup fails keeps the previous active user and store", 
     globalThis,
     "fetch",
     async (input: string | URL | Request, init?: RequestInit) => {
-      if (String(input).endsWith("/me/player/currently-playing")) {
+      const url = String(input).split("?")[0]!;
+      if (url.endsWith("/me/player/currently-playing")) {
         playingAuth = (init?.headers as Record<string, string>)[
           "Authorization"
         ];
@@ -228,6 +230,25 @@ test("getCurrentSong returns the largest square album image", async (t) => {
     contentType: "track",
     hasVideo: false,
   });
+});
+
+test("getCurrentSong asks for episodes on the currently-playing endpoint", async (t) => {
+  await login(t);
+
+  let requested: string | undefined;
+  t.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    requested = String(input);
+    return jsonResponse(track());
+  });
+
+  await spotify.getCurrentSong();
+
+  assert.equal(
+    requested?.endsWith(
+      "/me/player/currently-playing?additional_types=episode",
+    ),
+    true,
+  );
 });
 
 test("getCurrentSong returns the largest image when no album image is square", async (t) => {
@@ -418,7 +439,7 @@ test("getCurrentSong refreshes the token once on 401 and retries", async (t) => 
     globalThis,
     "fetch",
     async (input: string | URL | Request, init?: RequestInit) => {
-      const url = String(input);
+      const url = String(input).split("?")[0]!;
       if (url.endsWith("/token")) {
         refreshCalls++;
         assert.equal(
@@ -475,7 +496,7 @@ test("logged users, active user and refresh token survive a restart", async (t) 
     globalThis,
     "fetch",
     async (input: string | URL | Request, init?: RequestInit) => {
-      const url = String(input);
+      const url = String(input).split("?")[0]!;
       if (url.endsWith("/token")) {
         assert.equal(
           String(init?.body).includes("refresh_token=refresh"),

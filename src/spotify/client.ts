@@ -308,8 +308,9 @@ class SpotifyClient {
   }
 
   async getCurrentSong(): Promise<GetCurrentlyPlayedSong | undefined> {
+    // Without additional_types the endpoint reports episodes as an empty item.
     const track = await this.fetch(
-      "/me/player/currently-playing",
+      "/me/player/currently-playing?additional_types=episode",
       isGetCurrentSongResponse,
     );
 
