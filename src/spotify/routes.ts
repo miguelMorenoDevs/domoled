@@ -10,6 +10,7 @@ import {
   UserNotLoggedError,
 } from "./errors.js";
 import { getLocalIP } from "../utils/network.js";
+import { allowAnyOrigin } from "../utils/http.js";
 import { cdAnimator } from "../led/animator.js";
 import { AlbumArtLoadError } from "../led/errors.js";
 import { requireLoopback } from "./guard.js";
@@ -139,16 +140,16 @@ router.get("/status", (_req: Request, res: Response) => {
   );
 });
 
-router.get("/users", requireLoopback, async (_req: Request, res: Response) => {
-  const users = await SpotifyClient.getLoggedUsers();
-  res.send({
-    users,
-  });
+// Read and switched by the TV app, so they are reachable from the LAN; tokens are never returned.
+router.options(["/users", "/users/active"], allowAnyOrigin);
+
+router.get("/users", allowAnyOrigin, async (_req: Request, res: Response) => {
+  res.json(await SpotifyClient.getLoggedUsers());
 });
 
 router.post(
   "/users/active",
-  requireLoopback,
+  allowAnyOrigin,
   async (req: Request, res: Response) => {
     try {
       const { userId } = req.body;

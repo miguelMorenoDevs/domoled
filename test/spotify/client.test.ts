@@ -103,7 +103,9 @@ test("setActiveUser rejects with UserNotLoggedError for an unknown user id", asy
 test("login stores the user under their Spotify id and makes it active", async (t) => {
   await login(t);
 
-  assert.ok((await spotify.getLoggedUsers()).includes("user-id"));
+  assert.ok(
+    (await spotify.getLoggedUsers()).map((user) => user.id).includes("user-id"),
+  );
   assert.equal(await spotify.hasActiveUser(), true);
 });
 
@@ -116,7 +118,7 @@ test("a login whose /me lookup fails keeps the previous active user and store", 
 
   const storePath = path.join(storeDir, "data", "users.json");
   const storeBefore = readFileSync(storePath, "utf8");
-  const usersBefore = await spotify.getLoggedUsers();
+  const usersBefore = (await spotify.getLoggedUsers()).map((user) => user.id);
 
   mockSpotify(t, {
     "/token": () =>
@@ -131,7 +133,10 @@ test("a login whose /me lookup fails keeps the previous active user and store", 
       error.status === 500,
   );
 
-  assert.deepEqual(await spotify.getLoggedUsers(), usersBefore);
+  assert.deepEqual(
+    (await spotify.getLoggedUsers()).map((user) => user.id),
+    usersBefore,
+  );
   assert.equal(await spotify.hasActiveUser(), true);
   assert.equal(readFileSync(storePath, "utf8"), storeBefore);
   assert.equal(storeBefore.includes('"temp"'), false);
@@ -410,7 +415,11 @@ test("logged users, active user and refresh token survive a restart", async (t) 
 
   const restartedModule = "../../src/spotify/client.js?restart=1";
   const { default: restarted } = await import(restartedModule);
-  assert.ok((await restarted.getLoggedUsers()).includes("user-id"));
+  assert.ok(
+    (await restarted.getLoggedUsers())
+      .map((user: { id: string }) => user.id)
+      .includes("user-id"),
+  );
   assert.equal(await restarted.hasActiveUser(), true);
 
   let playingCalls = 0;
@@ -532,7 +541,10 @@ test("removeUser clears the active user and removes its tokens from the store", 
 
   assert.equal(await spotify.removeUser("user-id"), true);
 
-  assert.equal((await spotify.getLoggedUsers()).includes("user-id"), false);
+  assert.equal(
+    (await spotify.getLoggedUsers()).map((user) => user.id).includes("user-id"),
+    false,
+  );
   assert.equal(await spotify.hasActiveUser(), false);
   const stored = JSON.parse(
     readFileSync(path.join(storeDir, "data", "users.json"), "utf8"),
@@ -551,7 +563,10 @@ test("removeUser keeps the active user when another user is removed", async (t) 
 
   assert.equal(await spotify.removeUser("user-id"), false);
 
-  assert.equal((await spotify.getLoggedUsers()).includes("user-id"), false);
+  assert.equal(
+    (await spotify.getLoggedUsers()).map((user) => user.id).includes("user-id"),
+    false,
+  );
   assert.equal(await spotify.hasActiveUser(), true);
   const stored = JSON.parse(
     readFileSync(path.join(storeDir, "data", "users.json"), "utf8"),
@@ -663,7 +678,10 @@ test("an invalid_grant refresh removes the user's tokens and throws SpotifyAuthR
       error instanceof SpotifyAuthRevokedError && error.userId === "user-id",
   );
 
-  assert.equal((await spotify.getLoggedUsers()).includes("user-id"), false);
+  assert.equal(
+    (await spotify.getLoggedUsers()).map((user) => user.id).includes("user-id"),
+    false,
+  );
   assert.equal(await spotify.hasActiveUser(), false);
   const stored = JSON.parse(
     readFileSync(path.join(storeDir, "data", "users.json"), "utf8"),
@@ -688,5 +706,8 @@ test("a 500 on refresh keeps the user's tokens for a later retry", async (t) => 
   );
 
   assert.equal(await spotify.hasActiveUser(), true);
-  assert.deepEqual((await spotify.getLoggedUsers()).includes("user-id"), true);
+  assert.deepEqual(
+    (await spotify.getLoggedUsers()).map((user) => user.id).includes("user-id"),
+    true,
+  );
 });

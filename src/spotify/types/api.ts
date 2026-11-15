@@ -16,6 +16,13 @@ export interface SpotifyProfile {
   avatarUrl: string | null;
 }
 
+/** One entry of `GET /spotify/users`. Tokens never leave the server. */
+export interface LoggedUser {
+  id: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
 /** `GET /me`. Development Mode apps no longer receive `email` from it. */
 export interface UserProfile {
   id: string;

@@ -7,6 +7,7 @@ import {
   isUserProfile,
   type GetCurrentlyPlayedSong,
   type GetUserTokenOptions,
+  type LoggedUser,
   type SpotifyProfile,
   type StoredUsers,
   type UserTokens,
@@ -267,8 +268,12 @@ class SpotifyClient {
     };
   }
 
-  async getLoggedUsers() {
-    return Array.from(this.users_map.keys());
+  async getLoggedUsers(): Promise<LoggedUser[]> {
+    return Array.from(this.users_map, ([id, tokens]) => ({
+      id,
+      displayName: tokens.display_name ?? null,
+      avatarUrl: tokens.image_url ?? null,
+    }));
   }
 
   async hasActiveUser() {
@@ -280,9 +285,7 @@ class SpotifyClient {
   }
 
   async setActiveUser(userId: string) {
-    const loggedUsers = await this.getLoggedUsers();
-
-    if (!loggedUsers.includes(userId)) throw new UserNotLoggedError(userId);
+    if (!this.users_map.has(userId)) throw new UserNotLoggedError(userId);
 
     this.active_user = userId;
     this.saveStore();

@@ -25,8 +25,16 @@ type ScreenState =
   | { kind: "qr"; modules: boolean[][] }
   | { kind: "error"; message: string };
 
-// Mirrors SpotifyStatus in src/spotify/types/api.ts on the server, for the profile fields the TV reads; keep the two in sync.
+// Mirrors SpotifyStatus in src/spotify/types/api.ts on the server, for the fields the TV reads; keep the two in sync.
 interface SpotifyStatus {
+  activeUser: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
+// Mirrors LoggedUser in src/spotify/types/api.ts on the server; keep the two in sync.
+interface LoggedUser {
+  id: string;
   displayName: string | null;
   avatarUrl: string | null;
 }

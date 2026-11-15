@@ -88,6 +88,8 @@ Without a TV, `simulator.html` has an "LG TV" view that runs the same app. Build
 
 ## Visuals
 
+Clicking the profile badge (the magic remote pointer on the TV) opens the account list over the scene. Pick an account to make it active; Close or the badge returns to the animation. The list is drawn on the paused frame too, so it works while a track is paused.
+
 The app draws in the reference scene's 400x225 units and renders at 1080p, fitting the canvas to the screen. The meadow (sky, sun or moon, stars, clouds, hills, grass and flowers) follows the TV's local time of day and sits under every state; `lg-app/src/lg/scene.ts` owns it. The projector screen, the calico and the disc are `BaseAnimation` subclasses in `lg-app/src/lg/animations/`, so they share the intro/loop/outro lifecycle and timing with the matrix.
 
 ## Notes
