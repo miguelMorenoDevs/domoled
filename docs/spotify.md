@@ -11,7 +11,7 @@
 - `POST /spotify/login` returns the authorize URL and prints a QR code to the terminal. Scan it with a phone on the same LAN and approve.
 - With no active user (at boot, or after `DELETE /spotify/users/active`), the matrix shows a login QR. It points to `http://<localIP>:3000/connect.html`, a landing page whose "Connect my Spotify" button goes to `/spotify/login`.
 - Each login uses a random, single-use `state` nonce (10 min expiry). The callback rejects missing, unknown or expired states with `400`.
-- The callback shows `public/success.html` and starts the animation. If nothing is playing, the idle cat shows instead (`200` with a message asking you to start a track and log in again).
+- The callback makes the logged-in user active (replacing any other connected user), starts the poller and redirects to the landing page (`/connect.html`). The poller then loads the track, or shows the idle cat when nothing is playing.
 
 ## Playback
 

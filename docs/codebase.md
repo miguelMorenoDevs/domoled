@@ -17,4 +17,4 @@ The app has four layers:
 - `src/utils/`: pure helpers used across modules.
 - `test/`: automated tests, run by `pnpm test`.
 - `lg-app/`: LG webOS TV app. It reuses the shared animator code and has its own scene and drawing. It is built separately from the server. `build-preview.mjs` bundles the same app for the simulator's "LG TV" view.
-- Static pages: the OAuth flow pages and the browser simulator.
+- Static pages: the landing page the OAuth callback redirects to, and the browser simulator.
