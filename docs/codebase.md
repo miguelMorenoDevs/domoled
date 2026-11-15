@@ -11,10 +11,10 @@ The app has four layers:
 
 ## Module map
 
-- `src/spotify/`: Spotify OAuth, API client, playback polling, routes and types. Routes include `GET /spotify/status`, which returns the last polled playback and the active user for the landing page.
+- `src/spotify/`: Spotify OAuth, API client, playback polling, routes and types. Routes include `GET /spotify/status`, which returns the last polled playback, the active user and its profile for the landing page and the TV.
 - `src/animator/`: shared animation lifecycle, state machine, playback clock and timing.
 - `src/led/`: matrix output, simulator stream, animations for the matrix, and the event stream route.
 - `src/utils/`: pure helpers used across modules.
 - `test/`: automated tests, run by `pnpm test`.
-- `lg-app/`: LG webOS TV app. It reuses the shared animator code and has its own scene and drawing. It is built separately from the server. `build-preview.mjs` bundles the same app for the simulator's "LG TV" view.
+- `lg-app/`: LG webOS TV app (its profile badge is `src/lg/badge.ts`). It reuses the shared animator code and has its own scene and drawing. It is built separately from the server. `build-preview.mjs` bundles the same app for the simulator's "LG TV" view.
 - Static pages: the landing page the OAuth callback redirects to, and the browser simulator.

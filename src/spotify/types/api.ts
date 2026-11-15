@@ -5,11 +5,23 @@ export type GetUserTokenOptions =
 export interface UserTokens {
   access_token: string;
   refresh_token: string;
+  /** Absent on users stored before profiles were kept; they get it on their next login. */
+  display_name?: string | null;
+  image_url?: string | null;
+}
+
+/** The profile fields the TV shows, from `GET /me`. */
+export interface SpotifyProfile {
+  displayName: string | null;
+  avatarUrl: string | null;
 }
 
 /** `GET /me`. Development Mode apps no longer receive `email` from it. */
 export interface UserProfile {
   id: string;
+  display_name?: string | null;
+  /** Largest image first. */
+  images?: { url: string }[];
 }
 
 export function isUserProfile(value: unknown): value is UserProfile {
@@ -80,6 +92,8 @@ export interface SpotifyStatusTrack {
 
 export interface SpotifyStatus {
   activeUser: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
   playing: boolean;
   track: SpotifyStatusTrack | null;
 }

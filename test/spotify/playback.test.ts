@@ -299,25 +299,41 @@ test("poller: a 429 backs off and the next successful reply resets the delay", a
 test("status: idle when nothing plays or no user is active", () => {
   assert.equal(statusTrack(undefined), null);
   assert.equal(statusTrack(song({ isPlaying: false })), null);
-  assert.deepEqual(buildSpotifyStatus(null, null), {
+  assert.deepEqual(buildSpotifyStatus(null, null, null), {
     activeUser: null,
+    displayName: null,
+    avatarUrl: null,
     playing: false,
     track: null,
   });
   assert.deepEqual(
-    buildSpotifyStatus(null, { title: "Song", artist: "Artist" }),
-    { activeUser: null, playing: false, track: null },
+    buildSpotifyStatus(null, { title: "Song", artist: "Artist" }, null),
+    {
+      activeUser: null,
+      displayName: null,
+      avatarUrl: null,
+      playing: false,
+      track: null,
+    },
   );
 });
 
 test("status: shows the active user and the playing track", () => {
   const track = statusTrack(song());
   assert.deepEqual(track, { title: "Song", artist: "Artist" });
-  assert.deepEqual(buildSpotifyStatus("user@example.com", track), {
-    activeUser: "user@example.com",
-    playing: true,
-    track: { title: "Song", artist: "Artist" },
-  });
+  assert.deepEqual(
+    buildSpotifyStatus("user@example.com", track, {
+      displayName: "Ada",
+      avatarUrl: "https://img/ada",
+    }),
+    {
+      activeUser: "user@example.com",
+      displayName: "Ada",
+      avatarUrl: "https://img/ada",
+      playing: true,
+      track: { title: "Song", artist: "Artist" },
+    },
+  );
 });
 
 async function flush() {

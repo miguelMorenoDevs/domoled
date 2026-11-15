@@ -7,6 +7,7 @@ import {
   isUserProfile,
   type GetCurrentlyPlayedSong,
   type GetUserTokenOptions,
+  type SpotifyProfile,
   type StoredUsers,
   type UserTokens,
 } from "./types/api.js";
@@ -183,7 +184,10 @@ class SpotifyClient {
     } else {
       const activeUser = this.active_user;
       if (!activeUser) throw Error("There is no active user");
-      this.users_map.set(activeUser, tokens);
+      this.users_map.set(activeUser, {
+        ...this.users_map.get(activeUser),
+        ...tokens,
+      });
     }
 
     this.saveStore();
@@ -252,6 +256,15 @@ class SpotifyClient {
     this.users_map.delete(userId);
     if (this.active_user === userId) this.active_user = undefined;
     this.saveStore();
+  }
+
+  getActiveUserProfile(): SpotifyProfile | null {
+    if (!this.active_user) return null;
+    const tokens = this.users_map.get(this.active_user);
+    return {
+      displayName: tokens?.display_name ?? null,
+      avatarUrl: tokens?.image_url ?? null,
+    };
   }
 
   async getLoggedUsers() {
@@ -351,7 +364,13 @@ class SpotifyClient {
     const profile: unknown = await readBody("/me", () => res.json());
     if (!isUserProfile(profile)) throw new SpotifyResponseError("/me");
 
-    this.users_map.set(profile.id, tokens);
+    const displayName = profile.display_name ?? null;
+    const imageUrl = profile.images?.[0]?.url ?? null;
+    this.users_map.set(profile.id, {
+      ...tokens,
+      display_name: displayName,
+      image_url: imageUrl,
+    });
     this.active_user = profile.id;
   }
 }

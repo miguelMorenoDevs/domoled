@@ -1,5 +1,6 @@
 import type { Animation } from "../../../src/animator/types.js";
 import { AnimationRunner } from "../../../src/animator/runner.js";
+import { ProfileBadge } from "./badge.js";
 import { CalicoCatAnimation } from "./animations/calico.js";
 import { CdAnimation } from "./animations/cd.js";
 import { PodcastAnimation } from "./animations/podcast.js";
@@ -26,6 +27,7 @@ export class LgAnimator {
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasContext;
   private readonly runner = new AnimationRunner<CanvasContext>();
+  private readonly badge = new ProfileBadge();
   private errorMessage = "";
   private intervalId: number | null = null;
 
@@ -47,6 +49,10 @@ export class LgAnimator {
     this.canvas.style.width = `${Math.round(SCREEN_WIDTH * factor)}px`;
     this.canvas.style.height = `${Math.round(SCREEN_HEIGHT * factor)}px`;
   };
+
+  setProfile(profile: Pick<SpotifyStatus, "displayName" | "avatarUrl">): void {
+    this.badge.setProfile(profile);
+  }
 
   play(art: HTMLImageElement, track: TrackData, positionMs: number): void {
     if (this.waitForExit(() => this.play(art, track, positionMs))) return;
@@ -164,6 +170,7 @@ export class LgAnimator {
       elapsedMs: this.runner.elapsedMs(),
     });
     drawNightOverlay(this.ctx, sky);
+    this.badge.draw(this.ctx);
   }
 
   /**
@@ -207,6 +214,7 @@ export class LgAnimator {
     wrapText(ctx, this.errorMessage, STAGE_WIDTH * 0.8).forEach((line, i) =>
       ctx.fillText(line, cx, cy + radius + 14 + i * 16),
     );
+    this.badge.draw(ctx);
   };
 
   /**

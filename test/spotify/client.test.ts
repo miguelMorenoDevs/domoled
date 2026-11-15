@@ -36,11 +36,14 @@ function mockSpotify(t: TestContext, routes: Record<string, () => Response>) {
   });
 }
 
-function loginRoutes(userId = "user-id"): Record<string, () => Response> {
+function loginRoutes(
+  userId = "user-id",
+  profile: Record<string, unknown> = {},
+): Record<string, () => Response> {
   return {
     "/token": () =>
       jsonResponse({ access_token: "access", refresh_token: "refresh" }),
-    "/me": () => jsonResponse({ id: userId }),
+    "/me": () => jsonResponse({ id: userId, ...profile }),
   };
 }
 
@@ -149,6 +152,58 @@ test("a login whose /me lookup fails keeps the previous active user and store", 
   );
   await spotify.getCurrentSong();
   assert.equal(playingAuth, "Bearer access");
+});
+
+test("login stores the display name and largest profile image for the status route", async (t) => {
+  mockSpotify(
+    t,
+    loginRoutes("user-id", {
+      display_name: "Ada",
+      images: [
+        { url: "https://img/profile-640", height: 640, width: 640 },
+        { url: "https://img/profile-64", height: 64, width: 64 },
+      ],
+    }),
+  );
+  await spotify.getUserToken({ grant_type: "authorization_code", token: "c" });
+
+  assert.deepEqual(spotify.getActiveUserProfile(), {
+    displayName: "Ada",
+    avatarUrl: "https://img/profile-640",
+  });
+});
+
+test("a refresh keeps the stored profile fields", async (t) => {
+  mockSpotify(t, loginRoutes("user-id", { display_name: "Ada" }));
+  await spotify.getUserToken({ grant_type: "authorization_code", token: "c" });
+
+  mockSpotify(t, {
+    "/token": () => jsonResponse({ access_token: "refreshed" }),
+  });
+  await spotify.getUserToken({ grant_type: "refresh_token" });
+
+  assert.deepEqual(spotify.getActiveUserProfile(), {
+    displayName: "Ada",
+    avatarUrl: null,
+  });
+});
+
+test("a user stored before profiles were kept has null profile fields", async () => {
+  writeFileSync(
+    path.join(storeDir, "data", "users.json"),
+    JSON.stringify({
+      users: { "legacy-id": { access_token: "a", refresh_token: "r" } },
+      active_user: "legacy-id",
+    }),
+  );
+
+  const restartedModule = "../../src/spotify/client.js?restart=legacy-profile";
+  const { default: restarted } = await import(restartedModule);
+
+  assert.deepEqual(restarted.getActiveUserProfile(), {
+    displayName: null,
+    avatarUrl: null,
+  });
 });
 
 test("getCurrentSong returns the largest square album image", async (t) => {
@@ -348,6 +403,8 @@ test("logged users, active user and refresh token survive a restart", async (t) 
   assert.deepEqual(stored.users["user-id"], {
     access_token: "access",
     refresh_token: "refresh",
+    display_name: null,
+    image_url: null,
   });
   assert.equal(stored.active_user, "user-id");
 
