@@ -53,6 +53,23 @@
         .button:hover {
             background-color: #1ed760;
         }
+        .disconnect {
+            background: none;
+            border: 1px solid #535353;
+            border-radius: 500px;
+            color: #fff;
+            cursor: pointer;
+            font: inherit;
+            font-weight: 700;
+            margin-top: 12px;
+            padding: 12px 28px;
+        }
+        .disconnect:hover {
+            border-color: #fff;
+        }
+        .disconnect[hidden] {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -60,16 +77,31 @@
         <h1>Connect your Spotify</h1>
         <p>Log in with Spotify so your current track plays on the LED matrix.</p>
         <a class="button" href="/spotify/login">Connect my Spotify</a>
+        <button id="disconnect" class="disconnect" type="button" hidden>Disconnect</button>
         <p id="status"></p>
     </main>
     <script>
         const status = document.getElementById("status");
+        const disconnect = document.getElementById("disconnect");
+
+        disconnect.addEventListener("click", async () => {
+            disconnect.disabled = true;
+            try {
+                const res = await fetch("/spotify/users/active", { method: "DELETE" });
+                if (!res.ok) throw new Error(String(res.status));
+                location.reload();
+            } catch {
+                disconnect.disabled = false;
+                status.textContent = "Could not disconnect";
+            }
+        });
 
         async function refresh() {
             try {
                 const res = await fetch("/spotify/status", { cache: "no-store" });
                 if (!res.ok) throw new Error(String(res.status));
                 const s = await res.json();
+                disconnect.hidden = !s.activeUser;
                 const user = s.activeUser ? "Connected as " + s.activeUser : "Not connected";
                 const track = s.track
                     ? "Now playing: " + s.track.title + (s.track.artist ? " by " + s.track.artist : "")
