@@ -26,4 +26,5 @@
 - Tokens for several users are saved to `data/users.json` (relative to the working directory, created with mode `0600`, gitignored) on login, refresh and active-user changes, and reloaded on startup. Entries are keyed by Spotify user id, because Development Mode apps no longer receive an `email` from `GET /me`.
 - `GET /spotify/users` lists them, `POST /spotify/users/active` switches the active user with a `{ "userId": "..." }` body and `DELETE /spotify/users/:userId` removes one. Removing the active user shows the login QR.
 - The user admin routes accept only requests from the local machine (`403` otherwise). Login and callback stay reachable from the LAN.
-- Delete `data/users.json` to log every user out.
+- To hand the display to someone else, `DELETE /spotify/users/active`: the login QR comes back and the previous user stays stored. To forget that person's login too, `DELETE /spotify/users/:userId`.
+- To log every user out, stop the server and delete `data/users.json`. Deleting it while the server runs does nothing: the tokens are also held in memory, and the next save recreates the file.
