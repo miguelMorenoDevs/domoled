@@ -348,11 +348,6 @@ class SpotifyClient {
       isPlaying: track.is_playing,
       contentType:
         track.currently_playing_type === "episode" ? "episode" : "track",
-      // The Web API has no per-episode video flag; the show's media type is the closest signal.
-      hasVideo:
-        item.type === "episode" &&
-        (item.show?.media_type === "video" ||
-          item.show?.media_type === "mixed"),
     };
   }
 
