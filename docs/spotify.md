@@ -15,7 +15,7 @@
 
 ## Playback
 
-- Polls the active user's currently playing item every 2 s and follows it: a new track loads, pausing or resuming on Spotify pauses or resumes the animation, a position drift over 2 s seeks, and nothing playing shows the idle cat.
+- Polls the active user's currently playing item every 2 s and follows it: a new track loads, pausing or resuming on Spotify pauses or resumes the animation, a position drift over 2 s seeks, and nothing playing shows the idle cat. The request asks for episodes (`additional_types=episode`); without it Spotify reports them as an empty item and podcasts never load.
 - The poller starts on boot with an active user, after a login and when the active user is switched.
 - When a track ends sooner than 2 s, the next poll runs at the track end plus 500 ms. If Spotify still reports the old track at that poll, it retries every 500 ms, up to 3 times, then goes back to the normal schedule.
 - Starts at the track's current playback position, so logging in mid-song continues instead of restarting.
