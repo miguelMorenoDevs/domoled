@@ -1,31 +1,23 @@
 # domo-led
 
-Animates the album art of the Spotify track or podcast episode currently playing on a 64x64 Raspberry Pi LED matrix, with a browser simulator for development on non-Pi machines.
+Shows the album art of the Spotify track or podcast episode currently playing, animated on a 64x64 Raspberry Pi LED matrix.
 
-## Features
+The repo has four main parts:
 
-- Spotify OAuth login via QR code, with the code relayed from GitHub Pages to the local device, followed by a redirect to the landing page. Each login uses a random, single-use `state` nonce (10 min expiry); the callback rejects missing, unknown or expired states with `400`.
-- With no active user (on boot or after `DELETE /spotify/users/active`), the matrix shows a login QR (`/connect.html` on the LAN, a landing page whose "Connect my Spotify" button goes to `/spotify/login` and then Spotify), then the idle cat after login, then the song. On win32/darwin, boot also prints the simulator URL to the console, and the simulator shows the QR the same way the matrix does.
-- CD-style animation: intro that slides up while fading in to full opacity at its midpoint, rotating album art with silver rim and center hole, floating motion, light sheen, and an outro that is the intro in reverse (full opacity, then fades out while sliding down). A track holds its last frame at its end until the poller reports what plays next; when the track is replaced or the QR or idle cat takes over, the fade-out plays once before the new content appears.
-- Podcast episode animation: the artwork stays on the matrix while a dark shadow rises from the bottom edge, ripples across it and sinks back. The shadow is tinted from the artwork's dominant colour, so each episode gets its own palette. It uses the same intro, loop and outro as the CD; tracks keep the CD.
-- Starts at the track's current playback position, so logging in mid-song continues instead of restarting the animation.
-- Polls the active user's currently playing item every 2 s, or at the track end when a track ends sooner (plus 500 ms), and follows it. If Spotify still reports the old track at that poll, it retries every 500 ms, up to 3 times: a new track loads, pausing or resuming on Spotify pauses or resumes the animation, a position drift over 2 s seeks, and nothing playing shows the idle cat. A `429` waits `Retry-After` (or doubles the interval, capped at 60 s). The poller starts on boot with an active user, after a login and when the active user is switched.
-- `GET /spotify/status` returns the active user (`activeUser`), the user's Spotify `displayName` and profile picture `avatarUrl` (`null` when Spotify sent none or no user is active; stored at login, so users logged in before this change show `null` until their next login), whether a track is playing (`playing`) and its `track` title and artist, or `null` when paused, idle or no user is active. It reads the poller's last known state and does not call Spotify. The landing page (`/connect.html`) polls it every 5 s and shows the connected user and the track or "Nothing playing". While a user is connected, the landing page shows a "Disconnect" button that calls `DELETE /spotify/users/active` and reloads the page; the matrix goes back to the login QR. That route is loopback-only, so the button works only when the page is opened on the Pi itself; from another device it shows an error. The route is open to the LAN like the landing page, so it exposes the active user's Spotify user id to anyone on the network.
-- Multi-user token store persisted to `data/users.json`, keyed by Spotify user id, reloaded on startup, with an active-user switch and removal of a stored user (`DELETE /spotify/users/:userId`, which shows the login QR if that user was active). `GET /spotify/users` returns each stored user's `id`, `displayName` and `avatarUrl` (never tokens), and `POST /spotify/users/active` switches the active user; both are reachable from the LAN with CORS so the TV app can call them. Removing the active user (`DELETE /spotify/users/active`) and removing a stored user are loopback-only (`403` otherwise); login and callback stay reachable from the LAN.
-- Automatic Spotify access-token refresh with a single retry when the API returns `401`. A refresh token that Spotify rejects (`invalid_grant`) is removed from the store and the login QR is shown again.
-- Spotify API failures are reported as errors, not as "nothing playing": non-2xx responses, timeouts (10 s per request) and malformed payloads make the callback return `502`, and a `429` forwards `Retry-After`.
-- When a playback poll fails, the matrix shows a red X and the TV shows a red ring with an X and the reason. The next successful poll clears it and loads the track again.
-- Automatic matrix mock on Windows/macOS plus a live WebSocket frame stream for `simulator.html`, which also has an "LG TV" view that previews the TV app (`pnpm lg:preview`).
-- LG webOS TV app (`lg-app/`, webOS 5+): a 1080p meadow scene whose sky, sun or moon, hills and ground follow the TV's clock, running the matrix animations' timing with its own drawing: the login QR drops on a projector screen, a side-view calico sleeps with z's and stretches, and a translucent disc with the album art rises for a track, its glow, rim, rings, flecks and sparkles tinted from the artwork's dominant colour (podcast episodes keep their full-screen artwork and rising shadow). A round profile picture of the active user sits in the bottom-right corner in every state (first letter of the name when there is no picture). Clicking it opens a full-screen account list over the scene, marking the active user; picking another switches to it, and Close returns to the animation. It follows the server's `GET /led/state` event stream, reads `GET /spotify/status` every 5 s for the profile, shows the failure ring when it cannot reach the server, and keeps the TV's screensaver from interrupting playback. Build, install and launch it on the TV with `pnpm lg:rebuild` (or step by step with `pnpm lg:package` and `pnpm exec ares-install`; see `docs/tv.md`). Merging a change that touches `lg-app/` or the shared animator code it bundles installs and launches it on the TV automatically through `.github/workflows/lg-deploy.yml`.
-- Clear `502` response when the Spotify album art cannot be loaded, instead of a generic `400`.
-- Idle calico cat animation while authenticated with nothing playing: it jumps in from the left and lies down with its eyes closing once (intro), then sleeps; it loops by sleeping 10 s, standing up, stretching for 4 s and lying back down to sleep, until it is replaced (loop). When a track starts or the login QR is shown, it opens its eyes and jumps out to the right once (outro) before the new content appears. It returns when playback stops or ends.
-- A successful login makes that user the active one (replacing any other connected user), starts the poller and redirects to the landing page (`/connect.html`), which shows the active user and track. With nothing playing, the idle cat shows.
-- GitHub issue agent: Issues created with `ai-ready` + `auto` are implemented, reviewed and auto-merged through Actions. A maintainer comment `implement` on an open `ai-ready` issue implements it too, but the PR waits for a human to merge. PRs the agent opens get the `ai-developed` label. A maintainer comment `change: <request>` on an `ai-developed` PR makes the agent push the change to its branch, and on an open `ai-ready` issue it rewrites the issue body. Merged PRs close their linked issues even when GitHub's native auto-close misses them.
-- The issue implementation and PR review agents load the ponytail skill (`.opencode/skills/ponytail/`), which keeps changes minimal and reviews focused on real problems.
-- Pre-commit hook (`.githooks/pre-commit`, installed by `pnpm install`) runs build, lint, format check and tests before each commit. On Windows it checks CRLF line endings (`pnpm format:check:crlf`); elsewhere it checks LF (`pnpm format:check`). Bypass with `git commit --no-verify`.
+- **LED matrix animator** (`src/`): a Node server on the Pi that polls Spotify and drives the matrix with CD, podcast, idle and login animations.
+- **Browser simulator** (`public/simulator.html`): runs the matrix in a browser for development on machines without a Pi.
+- **LG TV app** (`lg-app/`): a webOS app that draws the same states full screen on an LG TV.
+- **Spotify login**: OAuth through a QR code, with several users and an active one.
 
 ## Docs
 
-- `docs/setup.md` — install, env vars, commands, simulator, OAuth setup.
-- `docs/codebase.md` — architecture overview and module map.
-- [GitHub Issues](https://github.com/miguelMorenoDevs/domoled/issues) — known bugs and deferred work.
+- `docs/setup.md`: install, env vars, commands, simulator, OAuth setup.
+- `docs/codebase.md`: architecture overview and module map.
+- `docs/development.md`: development workflow and the pre-commit hook.
+- `docs/animations.md`: what each animation shows and how it runs.
+- `docs/spotify.md`: login, playback polling and user management.
+- `docs/simulator.md`: the browser simulator and its views.
+- `docs/tv.md`: the LG TV app.
+- `docs/agents.md`: the GitHub issue and review agents.
+- `docs/review-app.md`: the GitHub App used by the review workflow.
+- [GitHub Issues](https://github.com/miguelMorenoDevs/domoled/issues): known bugs and deferred work.

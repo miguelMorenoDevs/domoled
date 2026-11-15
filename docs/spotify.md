@@ -15,11 +15,21 @@
 
 ## Playback
 
-- Polls the active user's currently playing item every 5 s and follows it: a new track loads, pausing or resuming on Spotify pauses or resumes the animation, a position drift over 2 s seeks, and nothing playing shows the idle cat.
+- Polls the active user's currently playing item every 2 s and follows it: a new track loads, pausing or resuming on Spotify pauses or resumes the animation, a position drift over 2 s seeks, and nothing playing shows the idle cat.
+- The poller starts on boot with an active user, after a login and when the active user is switched.
+- When a track ends sooner than 2 s, the next poll runs at the track end plus 500 ms. If Spotify still reports the old track at that poll, it retries every 500 ms, up to 3 times, then goes back to the normal schedule.
 - Starts at the track's current playback position, so logging in mid-song continues instead of restarting.
 - A `429` waits `Retry-After` (or doubles the interval, capped at 60 s).
 - Access tokens refresh automatically, with one retry when the API returns `401`. A refresh token that Spotify rejects (`invalid_grant`) is removed and the login QR is shown again.
 - Spotify API failures are errors, not "nothing playing": non-2xx responses, timeouts (10 s per request) and malformed payloads make the callback return `502`. A `429` forwards `Retry-After`.
+
+## Status
+
+- `GET /spotify/status` returns the active user (`activeUser`), its Spotify `displayName` and profile picture `avatarUrl`, whether a track is playing (`playing`), and its `track` title and artist. `track` is `null` when paused, idle or no user is active.
+- `displayName` and `avatarUrl` are stored at login. `avatarUrl` is `null` when Spotify sent no picture or no user is active; users logged in before that field existed show `null` until their next login.
+- It reads the poller's last known state and does not call Spotify.
+- The landing page (`/connect.html`) reads it every 5 s and shows the connected user and the track or "Nothing playing". The route is served to the LAN, so it exposes the active user's Spotify user id to anyone on the network.
+- While a user is connected, the landing page has a "Disconnect" button that calls `DELETE /spotify/users/active` and reloads the page. The route is loopback-only, so the button works only when the page is opened on the Pi itself; from another device it shows an error.
 
 ## Users
 
