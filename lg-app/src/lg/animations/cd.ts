@@ -6,16 +6,13 @@ import type {
 import { BaseAnimation } from "../../../../src/animator/base.js";
 import { DEFAULT_CD_TIMING } from "../../../../src/animator/timing.js";
 import { cdCurveAt } from "../../../../src/utils/cd-curve.js";
-import { artPalette, rgba, sampleDominantColor } from "../../utils/color.js";
+import {
+  FALLBACK_PALETTE,
+  artPalette,
+  rgba,
+  sampleDominantColor,
+} from "../../utils/color.js";
 
-/** The palette of the original reference disc, used when the artwork has no usable colour. */
-const FALLBACK_PALETTE: ArtPalette = {
-  main: { r: 255, g: 93, b: 177 },
-  deep: { r: 224, g: 51, b: 143 },
-  light: { r: 242, g: 194, b: 139 },
-  opposite: { r: 76, g: 201, b: 217 },
-  oppositeDeep: { r: 42, g: 143, b: 181 },
-};
 const DISK_CENTER = "#2b3f5e";
 const DISK_EDGE = "#0e1a2e";
 const THUMB_BACK = "#0b1626";

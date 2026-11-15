@@ -9,7 +9,7 @@ The TV app draws every state inside one 1080p meadow: sky, sun or moon, stars, c
 - Login QR: a white projector screen drops from the top with the QR and "Scan to log in", sways while it hangs, and rolls back up when the state changes.
 - Idle: a side-view calico leaps in, crouches and sits, then sleeps with z's, wakes to stretch and leaps out, with blinking, ear flicks and tail motion.
 - Playing: a translucent disc with the album art, a rim, a soft glow, expanding rings, orbiting flecks, sheen wedges and sparkles rises from below the meadow and sinks back in the outro. The glow, rim, rings, flecks, wedges and sparkles are tinted from the artwork's dominant colour (a main tone, a deeper shade, a light tint and the opposite hue); near-black or near-white grey artwork keeps the original pink, teal and gold palette.
-- Podcast episodes keep the artwork with the tinted rising wave, cropped to fill the screen; they are not part of the meadow scene yet.
+- Podcast: the episode's square cover pops in with a mic badge on its corner, broadcast squares ripple out, speech bars bounce under it and a progress line tracks the episode; the rim, bars and rings are tinted from the artwork's dominant colour.
 
 ## CD
 
