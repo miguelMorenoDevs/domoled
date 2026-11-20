@@ -105,10 +105,17 @@ JSON
 `android-app/` is a Gradle (Kotlin) app that hosts the same LG TV web bundle in a `WebView` inside a `DreamService`, so it runs as the Fire TV screensaver. It needs a JDK 17+ and the Android SDK (`ANDROID_HOME`).
 
 ```sh
-pnpm android:build   # lg:build, copy lg-app/dist into android-app assets, gradlew assembleDebug
-adb install -r android-app/app/build/outputs/apk/debug/app-debug.apk
-adb shell settings put secure screensaver_components com.domo.led/.dream.LedDreamService
+pnpm android:build    # lg:build, copy lg-app/dist into android-app assets, gradlew assembleDebug
+pnpm android:rebuild  # android:build, then install and screensaver
 ```
+
+`android-app/deploy.mjs` talks to the device with `adb` and reads the device address from `FIRETV_HOST` (`address:port`), which must be set in the environment:
+
+- `node android-app/deploy.mjs connect`: `adb connect` when the device is not already online.
+- `node android-app/deploy.mjs install [apk]`: `adb install -r` of the given APK, or the newest debug build.
+- `node android-app/deploy.mjs screensaver`: sets the LED app as the dream and prints each value back.
+- `node android-app/deploy.mjs restore`: puts the Amazon screensaver back and resets `screen_off_timeout` to the platform default.
+- `node android-app/deploy.mjs uninstall`: uninstalls the app, then restores.
 
 It needs `lg-app/config.js` (see `lg-app/config.example.js`). The generated assets and Gradle output are gitignored.
 

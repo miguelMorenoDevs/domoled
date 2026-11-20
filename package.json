@@ -10,6 +10,7 @@
     "lg:package": "pnpm lg:build && ares-package lg-app/dist --outdir lg-app/out",
     "lg:preview": "node lg-app/build-preview.mjs",
     "android:build": "pnpm lg:build && node android-app/copy-assets.mjs && node android-app/assemble.mjs",
+    "android:rebuild": "pnpm android:build && node android-app/deploy.mjs install && node android-app/deploy.mjs screensaver",
     "lg:rebuild": "pnpm lg:package && pnpm exec ares-install --device tv lg-app/out/com.domo.led_1.0.0_all.ipk && pnpm exec ares-launch --device tv com.domo.led",
     "lint": "eslint .",
     "format": "prettier --write .",
