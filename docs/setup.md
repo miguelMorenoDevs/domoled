@@ -100,6 +100,18 @@ JSON
 
 `lg-app/` is a webOS app that shows the matrix animations full screen on an LG TV. Install and setup steps live in `docs/tv.md`.
 
+## Fire TV app
+
+`android-app/` is a Gradle (Kotlin) app that hosts the same LG TV web bundle in a `WebView` inside a `DreamService`, so it runs as the Fire TV screensaver. It needs a JDK 17+ and the Android SDK (`ANDROID_HOME`).
+
+```sh
+pnpm android:build   # lg:build, copy lg-app/dist into android-app assets, gradlew assembleDebug
+adb install -r android-app/app/build/outputs/apk/debug/app-debug.apk
+adb shell settings put secure screensaver_components com.domo.led/.dream.LedDreamService
+```
+
+It needs `lg-app/config.js` (see `lg-app/config.example.js`). The generated assets and Gradle output are gitignored.
+
 ## Ports and simulator
 
 - Express listens on **3000**. `GET /led/state` streams the current animation state to the LG TV app.

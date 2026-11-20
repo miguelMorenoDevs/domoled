@@ -7,6 +7,7 @@ The repo has four main parts:
 - **LED matrix animator** (`src/`): a Node server on the Pi that polls Spotify and drives the matrix with CD, podcast, idle and login animations.
 - **Browser simulator** (`public/simulator.html`): runs the matrix in a browser for development on machines without a Pi.
 - **LG TV app** (`lg-app/`): a webOS app that draws the same states full screen on an LG TV, with its own scene.
+- **Fire TV app** (`android-app/`): an Android dream (screensaver) and a launcher app that show the LG TV app in a WebView full screen. Build with `pnpm android:build`.
 - **Spotify login**: OAuth through a QR code, with several users and an active one.
 
 ## Docs

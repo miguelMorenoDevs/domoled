@@ -6,3 +6,8 @@ data
 lg-app/config.js
 lg-app/out
 lg-app/preview
+android-app/app/src/main/assets/
+android-app/app/build/
+android-app/build/
+android-app/.gradle/
+android-app/local.properties
