@@ -20,6 +20,10 @@ Both triggers run the reusable `.github/workflows/issue-implement.yml`, which ru
 - The reviewer only decides: it approves, and GitHub merges if auto-merge is enabled, or it requests changes with the problem in the review body. Approval needs the app described in [review-app.md](review-app.md).
 - `GITHUB_TOKEN` events do not trigger workflows, so the skill requests the review itself with `gh workflow run pr-review.yml -f pr=<n>` after opening the PR.
 
+## Orchestrating an epic
+
+`.opencode/skills/epic/SKILL.md` runs an epic from the maintainer's session: it reads every linked issue, starts each ready `ai-ready` issue with an `implement` comment, runs independent issues in parallel, and waits for an issue's blockers to merge. It watches each PR until the reviewer approves or requests changes, sends requests back as `change: <problem>`, requests a fresh review after each push, and merges once the approval covers the head commit and CI passes. Issues that change `.github/workflows/` are implemented in that session instead, because the app token cannot push workflow files; those PRs ask for review with `@miguelmoreno-reviewer`.
+
 ## Models and secrets
 
 - Both workflows need the `OPENCODE_CLIENT_ID` secret. They exchange their GitHub Actions OIDC token for a short-lived OpenCode token (`id-token: write`), in `.github/scripts/opencode-login.sh`. Both HTTP calls retry up to 3 times with a 5-second delay, and failures name the step that failed.
