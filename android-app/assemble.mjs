@@ -3,14 +3,12 @@ import path from "node:path";
 
 const appDir = import.meta.dirname;
 const win = process.platform === "win32";
+const variant =
+  process.argv[2] === "release" ? "assembleRelease" : "assembleDebug";
 
 // shell is needed on Windows to run gradlew.bat; POSIX runs the executable directly.
-execFileSync(
-  path.join(appDir, win ? "gradlew.bat" : "gradlew"),
-  ["assembleDebug"],
-  {
-    cwd: appDir,
-    stdio: "inherit",
-    shell: win,
-  },
-);
+execFileSync(path.join(appDir, win ? "gradlew.bat" : "gradlew"), [variant], {
+  cwd: appDir,
+  stdio: "inherit",
+  shell: win,
+});

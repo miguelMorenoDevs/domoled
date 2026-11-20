@@ -20,6 +20,29 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    // Release signing comes from android-app/keystore.properties, which is gitignored and written by CI.
+    // Without it, assembleRelease produces an unsigned APK, so a local build still works.
+    signingConfigs {
+        val keystore = rootProject.file("keystore.properties")
+        if (keystore.exists()) {
+            create("release") {
+                val properties = java.util.Properties().apply {
+                    keystore.inputStream().use { load(it) }
+                }
+                storeFile = file(properties.getProperty("storeFile"))
+                storePassword = properties.getProperty("storePassword")
+                keyAlias = properties.getProperty("keyAlias")
+                keyPassword = properties.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            signingConfigs.findByName("release")?.let { signingConfig = it }
+        }
+    }
 }
 
 kotlin {
