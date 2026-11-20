@@ -1,0 +1,115 @@
+name: firetv release
+
+# Manual only. Builds a signed release APK, publishes it as a release asset and,
+# when asked, installs it on the stick from a runner on the same network.
+#
+# Repository secrets:
+#   LED_SERVER_URL           server address baked into the bundle
+#   ANDROID_KEYSTORE_BASE64  base64 of the release keystore (one password for store and key)
+#   ANDROID_STORE_PASSWORD   keystore and key password
+#   ANDROID_KEY_ALIAS        key alias inside the keystore
+#   FIRETV_HOST              device address, used by the install job only
+#
+# The install job needs a self-hosted runner labelled `firetv` on the LAN. Its adb key has to be
+# authorized on the device once, and the wireless debugging port can change after a reboot.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v1.0.0
+        required: true
+      install:
+        description: Install on the device after building
+        type: boolean
+        default: false
+
+concurrency:
+  group: firetv-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - uses: android-actions/setup-android@v3
+
+      - run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Write lg-app/config.js
+        env:
+          LED_SERVER_URL: ${{ secrets.LED_SERVER_URL }}
+        run: echo "var LED_SERVER_URL = \"$LED_SERVER_URL\";" > lg-app/config.js
+
+      - name: Write the release signing config
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          cat > android-app/keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.jks
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_STORE_PASSWORD
+          EOF
+
+      - run: pnpm android:build:release
+
+      - name: Verify the signature
+        run: |
+          "$ANDROID_SDK_ROOT/build-tools/34.0.0/apksigner" verify --print-certs android-app/app/build/outputs/apk/release/app-release.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firetv-apk
+          path: android-app/app/build/outputs/apk/release/app-release.apk
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes "Fire TV app $TAG"
+          gh release upload "$TAG" android-app/app/build/outputs/apk/release/app-release.apk --clobber
+
+  install:
+    if: inputs.install
+    needs: build
+    runs-on: [self-hosted, firetv]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firetv-apk
+          path: dist
+
+      - name: Install and activate
+        env:
+          FIRETV_HOST: ${{ secrets.FIRETV_HOST }}
+        run: |
+          node android-app/deploy.mjs install "$PWD/dist/app-release.apk"
+          node android-app/deploy.mjs screensaver
