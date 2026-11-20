@@ -34,6 +34,7 @@ export class LgAnimator {
     () => void this.showAddUserQr(),
   );
   private errorMessage = "";
+  private offline = false;
   private intervalId: number | null = null;
   private readonly passive: boolean;
 
@@ -147,11 +148,21 @@ export class LgAnimator {
     }
   }
 
+  /** Passive: keeps the idle scene and marks it offline. Interactive: the error card with the message. */
   showError(message: string): void {
+    if (this.passive) {
+      this.setOffline(true);
+      this.startIdle();
+      return;
+    }
     if (this.waitForExit(() => this.showError(message))) return;
     this.stop();
     this.errorMessage = message;
     this.intervalId = window.setInterval(this.renderErrorFrame, 1000 / FPS);
+  }
+
+  setOffline(offline: boolean): void {
+    this.offline = offline;
   }
 
   /**
@@ -241,7 +252,26 @@ export class LgAnimator {
       elapsedMs: this.runner.elapsedMs(),
     });
     drawNightOverlay(this.ctx, sky);
+    if (this.offline) this.drawOfflineIndicator(this.ctx);
     this.drawControls(this.ctx);
+  }
+
+  /** A small pill that drifts slowly, so a long outage leaves no static bright spot. */
+  private drawOfflineIndicator(ctx: CanvasContext): void {
+    const x = 8;
+    const y = 8 + Math.sin(performance.now() / 1000 / 7) * 1.5;
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+    ctx.fillRect(x, y, 54, 14);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+    ctx.beginPath();
+    ctx.arc(x + 7, y + 7, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = "7px sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText("offline", x + 14, y + 7);
+    ctx.restore();
   }
 
   /** The account list and profile badge; a passive animator draws neither. */
