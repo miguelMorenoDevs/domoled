@@ -1,5 +1,6 @@
 dist/
 node_modules/
+android-app/app/src/main/assets/
 pnpm-lock.yaml
 index.html
 simulator.html
