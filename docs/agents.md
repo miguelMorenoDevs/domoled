@@ -22,7 +22,7 @@ Both triggers run the reusable `.github/workflows/issue-implement.yml`, which ru
 
 ## Orchestrating an epic
 
-`.opencode/skills/epic/SKILL.md` runs an epic from the maintainer's session: it reads every linked issue, starts each ready `ai-ready` issue with an `implement` comment, runs independent issues in parallel, and waits for an issue's blockers to merge. It watches each PR until the reviewer approves or requests changes, sends requests back as `change: <problem>`, requests a fresh review after each push, and merges once the approval covers the head commit and CI passes. Issues that change `.github/workflows/` are implemented in that session instead, because the app token cannot push workflow files; those PRs ask for review with `@miguelmoreno-reviewer`.
+`.opencode/skills/epic/SKILL.md` runs an epic from the maintainer's session: it reads every linked issue, starts each ready `ai-ready` issue with an `implement` comment, runs independent issues in parallel, and waits for an issue's blockers to merge. It watches each PR until the reviewer approves or requests changes, sends requests back as `change: <problem>`, requests a fresh review after each push, and merges once the approval covers the head commit and CI passes. Issues that change `.github/workflows/` are delegated like any other, because the implementation job checks out with the app token, which has `Workflows: write`. Only a `change:` cycle on such a PR is fixed in that session, since `ai-change` pushes with `GITHUB_TOKEN`; those PRs ask for review with `@miguelmoreno-reviewer`.
 
 ## Models and secrets
 

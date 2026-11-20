@@ -11,7 +11,7 @@ You lead the epic; the workflow agents implement the issues you delegate. One ep
 
 - Never merge without an approving review submitted after the current head commit, and never merge with failing checks.
 - Never start an issue before its blockers are merged.
-- Never delegate an issue that changes `.github/workflows/`. The app token cannot push workflow files; do it yourself and use the mention review.
+- Never send a `change:` request to a PR that changes `.github/workflows/`: the change agent pushes with `GITHUB_TOKEN`, which lacks the workflows permission. Fix those changes yourself (step 5). Implementation is not affected — the implement job checks out with the app token, which has `Workflows: write`.
 - One action per comment: exactly `implement` on an issue, `change: <specific fix>` on an `ai-developed` PR.
 - Never claim a check you did not run. Hardware, live Spotify and TV checks are not yours to claim.
 - Wait for real state: a PR, a new commit, a review, a merge. Do not infer success from a workflow starting.
@@ -20,7 +20,7 @@ You lead the epic; the workflow agents implement the issues you delegate. One ep
 
 1. Resolve the epic: `gh issue view <epic> --json number,title,body,labels,state`.
 2. Collect its members: native sub-issues, else the task list or issue list in the body. Do not treat every `#N` mention as a member; dependencies and references are not members. If the epic does not list its issues, ask instead of guessing.
-3. Read each member completely: `gh issue view <n> --json number,title,body,labels,state,comments`. Record the `## Dependencies`, `## Scope`, `## Expected` and `## Verification` sections.
+3. Read each member completely: `gh issue view <n> --json number,title,body,labels,state,comments,blockedBy`. Record its blocked-by relations, `## Scope`, `## Expected` and `## Verification` sections.
 4. Map existing PRs once: `gh pr list --state open --limit 100 --json number,title,body,url,headRefName,headRefOid,isDraft` and match `Closes/Fixes/Resolves #<n>` in each body. An issue with an open PR is in flight: watch it, do not start a second one.
 5. Classify each issue:
    - `closed` — done.
@@ -28,10 +28,10 @@ You lead the epic; the workflow agents implement the issues you delegate. One ep
    - `ai-ready` + open PR — in flight.
    - `ai-ready` + no PR + blockers merged — ready.
    - open + unmerged blocker — blocked.
-   - touches `.github/workflows/` — self mode.
+   - touches `.github/workflows/` — delegated normally; only its `change:` cycles are self-fixed (step 5).
    - needs hardware or another manual step no agent can do — not delegable; report it and leave it for the user.
 
-Write the plan down before acting: issue, dependency, scope, mode (delegate/self/watch), next action.
+Write the plan down before acting: issue, dependency, scope, mode (delegate/watch/fix locally), next action.
 
 ## 2. Choose what runs in parallel
 
@@ -51,7 +51,7 @@ State the batch and the serialized items in one short line before starting, with
 - Send all comments for the batch before waiting. Each issue has its own concurrency group, so they run in parallel.
 - Never comment `implement` twice while a run is pending; the second run queues.
 - Wait for a PR whose body links the issue. Poll every 60-90 s, up to 30 min. On failure inspect `gh run list --workflow=issue-implement-comment.yml --limit 10` and `gh run view <id> --log-failed`, then report that issue as blocked. Retry once at most.
-- If the run fails because it tried to push `.github/workflows/`, switch that issue to self mode in step 5.
+- A workflow-touching issue is delegated normally. Only a later `change:` cycle on it is self-fixed, because `ai-change` cannot push those files (step 5).
 
 ## 4. Watch, request changes, merge
 
@@ -77,16 +77,16 @@ Decision order:
 
 CI runs on the implement push, but the `change:` agent pushes with `GITHUB_TOKEN`, which does not start CI on the new head. Check the new head on the PR branch with the `pr` skill commands before merging, and say in the report that you ran them.
 
-The review timeout is 20 min and the change timeout is 30 min. On timeout, inspect the run logs, report, and keep other PRs moving.
+Wait up to 20 minutes for a review and up to 30 for a change run; none of those workflows sets a timeout of its own. If nothing lands, inspect the run logs, report, and keep other PRs moving.
 
-## 5. Workflow-touching issues: self mode
+## 5. Change cycles on workflow PRs
 
-An issue is self mode when its scope or solution includes `.github/workflows/`. The workflow agent cannot push those files.
+`ai-change.yml` checks out with `GITHUB_TOKEN`, which has no workflows permission, so a `change:` comment cannot modify `.github/workflows/`. Delegation is not affected: `issue-implement.yml` checks out with the app token, which has `Workflows: write`, so a workflow issue is implemented by the agent like any other.
 
-1. Do not comment `implement`. Implement it yourself with the `issue` skill: verify, branch from `main`, smallest complete change, run the `pr` skill checks, open the PR with `Closes #<n>` and the `ai-developed` label, no auto-merge.
-2. Ask for review by commenting `@miguelmoreno-reviewer` on the PR. This replaces the review dispatch in the `issue` skill.
-3. Wait for the review. On request-changes, fix and push locally, run the checks, comment the mention again, and wait. Repeat until approved.
-4. Merge only after a fresh approval and green checks, as in step 4. Do not send `change:` on a workflow PR: `ai-change` cannot push workflow files either.
+1. Watch a workflow PR like any other PR.
+2. On request-changes, fix it yourself with the `issue` and `pr` skills: branch from the PR branch, make the smallest complete change, run the checks, push.
+3. Ask for review by commenting `@miguelmoreno-reviewer` on the PR, then wait. Repeat until approved.
+4. Merge only after a fresh approval and green checks, as in step 4.
 
 Keep delegated PRs moving while you work; check them between edits and test runs.
 
