@@ -28,6 +28,9 @@ concurrency:
   group: firetv-release
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -55,6 +58,20 @@ jobs:
       - run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Check the secrets
+        env:
+          LED_SERVER_URL: ${{ secrets.LED_SERVER_URL }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          for name in LED_SERVER_URL ANDROID_KEYSTORE_BASE64 ANDROID_STORE_PASSWORD ANDROID_KEY_ALIAS; do
+            if [ -z "${!name}" ]; then
+              echo "missing $name secret"
+              exit 1
+            fi
+          done
 
       - name: Write lg-app/config.js
         env:
