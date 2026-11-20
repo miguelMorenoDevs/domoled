@@ -1,14 +1,9 @@
 package com.domo.led.dream
 
-import android.content.pm.ApplicationInfo
-import android.graphics.Color
 import android.service.dreams.DreamService
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.webkit.WebViewAssetLoader
-import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
+import com.domo.led.scene.SCENE_URL
+import com.domo.led.scene.createSceneWebView
 
 class LedDreamService : DreamService() {
     private var webView: WebView? = null
@@ -18,29 +13,9 @@ class LedDreamService : DreamService() {
         setFullscreen(true)
         setInteractive(false)
 
-        // http, not https: the Pi serves plain HTTP, and an https page would make those requests mixed content.
-        val assets = WebViewAssetLoader.Builder()
-            .addPathHandler("/assets/", AssetsPathHandler(this))
-            .build()
-
-        val view = WebView(this).apply {
-            setBackgroundColor(Color.BLACK)
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = false
-            webViewClient = object : WebViewClient() {
-                override fun shouldInterceptRequest(
-                    view: WebView,
-                    request: WebResourceRequest,
-                ): WebResourceResponse? = assets.shouldInterceptRequest(request.url)
-            }
-        }
-        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
-            WebView.setWebContentsDebuggingEnabled(true)
-        }
-
+        val view = createSceneWebView(this, "$SCENE_URL?passive=1")
         webView = view
         setContentView(view)
-        view.loadUrl("http://appassets.androidplatform.net/assets/index.html")
     }
 
     override fun onDreamingStarted() {
