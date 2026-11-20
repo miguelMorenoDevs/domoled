@@ -1,8 +1,12 @@
 import { LgAnimator } from "./lg/animator.js";
 import { holdScreenSaver } from "./lg/screensaver.js";
 
+// The Fire TV dream loads index.html?passive=1; the app and the browser preview load index.html.
+const passive =
+  new URLSearchParams(window.location.search).get("passive") === "1";
 const animator = new LgAnimator(
   document.getElementById("screen") as HTMLCanvasElement,
+  passive,
 );
 holdScreenSaver();
 

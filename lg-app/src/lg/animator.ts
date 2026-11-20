@@ -35,15 +35,18 @@ export class LgAnimator {
   );
   private errorMessage = "";
   private intervalId: number | null = null;
+  private readonly passive: boolean;
 
-  constructor(canvas: HTMLCanvasElement) {
+  /** A passive animator (the Fire TV dream) has no badge, account list or click handling. */
+  constructor(canvas: HTMLCanvasElement, passive = false) {
     this.canvas = canvas;
+    this.passive = passive;
     canvas.width = SCREEN_WIDTH;
     canvas.height = SCREEN_HEIGHT;
     this.ctx = canvas.getContext("2d")!;
     this.fitToWindow();
     window.addEventListener("resize", this.fitToWindow);
-    canvas.addEventListener("click", this.handleClick);
+    if (!passive) canvas.addEventListener("click", this.handleClick);
   }
 
   /** Renders at 1080p and scales the element to the window, so 4K panels get a full screen too. */
@@ -111,7 +114,7 @@ export class LgAnimator {
 
   /** Shows the login QR; the Back box appears only while at least one account is logged in. */
   async showQr(modules: boolean[][]): Promise<void> {
-    this.startQr(modules, await this.hasLoggedUsers());
+    this.startQr(modules, !this.passive && (await this.hasLoggedUsers()));
   }
 
   /** Opens the login QR from the account list, which closes once the QR is ready. */
@@ -238,8 +241,14 @@ export class LgAnimator {
       elapsedMs: this.runner.elapsedMs(),
     });
     drawNightOverlay(this.ctx, sky);
-    this.users.draw(this.ctx);
-    this.badge.draw(this.ctx);
+    this.drawControls(this.ctx);
+  }
+
+  /** The account list and profile badge; a passive animator draws neither. */
+  private drawControls(ctx: CanvasContext): void {
+    if (this.passive) return;
+    this.users.draw(ctx);
+    this.badge.draw(ctx);
   }
 
   /**
@@ -283,8 +292,7 @@ export class LgAnimator {
     wrapText(ctx, this.errorMessage, STAGE_WIDTH * 0.8).forEach((line, i) =>
       ctx.fillText(line, cx, cy + radius + 14 + i * 16),
     );
-    this.users.draw(ctx);
-    this.badge.draw(ctx);
+    this.drawControls(ctx);
   };
 
   /**

@@ -90,6 +90,8 @@ Without a TV, `simulator.html` has an "LG TV" view that runs the same app. Build
 
 A round profile picture of the active user sits in the bottom-right corner in every state. It shows the first letter of the name when there is no picture, and the app reads `GET /spotify/status` every 5 s for it.
 
+The Fire TV dream loads the same bundle at `index.html?passive=1`. A passive screen has no badge, no account list and no click handler, and its login QR has no Back box. It still shows the QR and every other state the server sends.
+
 Clicking the profile badge (the magic remote pointer on the TV) opens the account list over the scene. Pick an account to make it active; Close or the badge returns to the animation. The list is drawn on the paused frame too, so it works while a track is paused.
 
 "Add user" in that list shows the login QR on the projector screen, the same code the matrix shows (from `GET /spotify/login/qr`). A Back box returns to the list only once an account is logged in; the TV returns to the animation after the phone completes the login.
