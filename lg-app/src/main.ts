@@ -50,6 +50,7 @@ const source = new EventSource(LED_SERVER_URL + "/led/state");
 source.onerror = () => animator.showError(CONNECTION_ERROR);
 source.onmessage = (event) => {
   window.clearTimeout(startupTimer);
+  animator.setOffline(false);
   const state = JSON.parse(event.data) as ScreenState;
   pendingArt = null;
   if (state.kind === "track") loadTrack(state.track, state.positionMs);
