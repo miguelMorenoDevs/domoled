@@ -4,7 +4,15 @@ import prettier from "eslint-config-prettier";
 
 export default tseslint.config(
   // lg-app/ is one classic browser script with global declarations, so the root lint rules do not fit it; its tsconfig checks types.
-  { ignores: ["dist/**", "dist-test/**", "node_modules/**", "lg-app/**"] },
+  {
+    ignores: [
+      "dist/**",
+      "dist-test/**",
+      "node_modules/**",
+      "lg-app/**",
+      "android-app/**",
+    ],
+  },
   js.configs.recommended,
   tseslint.configs.recommended,
   prettier,
