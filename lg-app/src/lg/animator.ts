@@ -12,8 +12,8 @@ import {
   SCENE_SCALE,
   STAGE_HEIGHT,
   STAGE_WIDTH,
+  MeadowBackdrop,
   drawNightOverlay,
-  drawScene,
 } from "./scene.js";
 import { wrapText } from "../utils/canvas.js";
 
@@ -27,6 +27,7 @@ export class LgAnimator {
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasContext;
   private readonly runner = new AnimationRunner<CanvasContext>();
+  private readonly backdrop = new MeadowBackdrop();
   private readonly badge = new ProfileBadge();
   private readonly users = new UserScreen(
     () => this.redraw(),
@@ -239,7 +240,7 @@ export class LgAnimator {
   private drawStageWith(animation: Animation<CanvasContext>): void {
     this.clearScreen("#000");
     this.stageTransform();
-    const sky = drawScene(
+    const sky = this.backdrop.draw(
       this.ctx,
       performance.now() / 1000,
       this.currentHour(),
@@ -287,7 +288,11 @@ export class LgAnimator {
     const { ctx } = this;
     this.clearScreen("#000");
     this.stageTransform();
-    const sky = drawScene(ctx, performance.now() / 1000, this.currentHour());
+    const sky = this.backdrop.draw(
+      ctx,
+      performance.now() / 1000,
+      this.currentHour(),
+    );
     drawNightOverlay(ctx, sky);
 
     ctx.save();
