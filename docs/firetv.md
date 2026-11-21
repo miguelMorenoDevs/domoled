@@ -37,7 +37,7 @@ bash android-app/build-native.sh
 
 ### Spotify Connect
 
-The app's launcher activity (not the dream) registers the TV as a Spotify Connect device while it is open. The phone lists it as **DomoLED TV**. Playback follows the server's active user: the TV fetches `GET /spotify/stream-token` with `TV_TOKEN` (the same value as `tv-app/config.js`), logs the native session in with that access token, and keeps the session until the app closes. The TV stores no refresh token and does not log the access token.
+The app's launcher activity (not the dream) registers the TV as a Spotify Connect device while it is open. The phone lists it as **DomoLED TV**. Playback follows the server's active user: the TV fetches `GET /spotify/stream-token` with `TV_TOKEN` (the same value as `tv-app/config.js`), logs the native session in with that access token, and re-checks the server every 10 s (or sooner, before `expiresAt`). The session follows the active user: switching accounts on the TV moves the device to that account within about 10 s. The TV stores no refresh token and does not log the access token.
 
 The session plays into a discard sink for now: the phone shows the device and controls work, but there is no sound until the AAudio sink lands (#198). When the session drops, for example on lost network or a dead connection, the app fetches a fresh token and reconnects with backoff. Readable reasons (no active user, login expired, server unreachable, Spotify refused) appear as a toast; they do not replace the scene's error card, which the server drives.
 

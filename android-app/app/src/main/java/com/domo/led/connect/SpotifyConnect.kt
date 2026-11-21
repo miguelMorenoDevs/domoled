@@ -45,18 +45,26 @@ class SpotifyConnect private constructor(
             }
             var backoffMs = MIN_BACKOFF_MS
             var lastReason: String? = null
+            var sessionUserId: String? = null
             while (running) {
                 try {
                     val token = fetchToken()
-                    val error = Librespot.nativeStart(token, DEVICE_NAME)
-                    if (error != null) throw Failure(error)
-                    if (!running) return
+                    if (token == null) {
+                        Librespot.nativeStop()
+                        sessionUserId = null
+                        throw Failure("No Spotify user is active.")
+                    }
+                    if (sessionUserId != token.userId || !Librespot.nativeIsAlive()) {
+                        Librespot.nativeStop()
+                        sessionUserId = null
+                        val error = Librespot.nativeStart(token.accessToken, DEVICE_NAME)
+                        if (error != null) throw Failure(error)
+                        sessionUserId = token.userId
+                    }
                     backoffMs = MIN_BACKOFF_MS
                     lastReason = null
-                    while (running && Librespot.nativeIsAlive()) Thread.sleep(POLL_MS)
-                    Librespot.nativeStop()
-                    if (running) Log.w(TAG, "Spotify Connect session dropped, reconnecting")
-                    Thread.sleep(MIN_BACKOFF_MS)
+                    val untilExpiry = token.expiresAt - System.currentTimeMillis()
+                    Thread.sleep(minOf(REFRESH_MS, maxOf(untilExpiry, MIN_BACKOFF_MS)))
                 } catch (failure: Failure) {
                     if (failure.reason != lastReason) {
                         lastReason = failure.reason
@@ -74,7 +82,7 @@ class SpotifyConnect private constructor(
     }
 
     // The token is returned to the native layer only; it is never logged or reported.
-    private fun fetchToken(): String {
+    private fun fetchToken(): StreamToken? {
         val connection = URL("$serverUrl/spotify/stream-token").openConnection() as HttpURLConnection
         try {
             connection.connectTimeout = TIMEOUT_MS
@@ -82,14 +90,19 @@ class SpotifyConnect private constructor(
             connection.setRequestProperty("X-TV-Token", tvToken)
             when (val status = connection.responseCode) {
                 200 -> {}
+                404 -> return null
                 401 -> throw Failure("Spotify login expired. Log in again from the TV.")
                 403 -> throw Failure("The server refused the TV token.")
-                404 -> throw Failure("No Spotify user is active. Add one from the TV.")
                 502 -> throw Failure("Spotify could not complete the request.")
                 else -> throw Failure("The server answered with status $status.")
             }
             val body = connection.inputStream.bufferedReader().use { it.readText() }
-            return JSONObject(body).getString("accessToken")
+            val json = JSONObject(body)
+            return StreamToken(
+                userId = json.getString("userId"),
+                accessToken = json.getString("accessToken"),
+                expiresAt = json.getLong("expiresAt"),
+            )
         } catch (error: IOException) {
             throw Failure("Could not reach the server.")
         } catch (error: org.json.JSONException) {
@@ -101,13 +114,15 @@ class SpotifyConnect private constructor(
 
     private class Failure(val reason: String) : Exception(reason)
 
+    private class StreamToken(val userId: String, val accessToken: String, val expiresAt: Long)
+
     companion object {
         /** The name the phone lists. Documented in docs/firetv.md. */
         const val DEVICE_NAME = "DomoLED TV"
 
         private const val TAG = "SpotifyConnect"
         private const val TIMEOUT_MS = 10_000
-        private const val POLL_MS = 5_000L
+        private const val REFRESH_MS = 10_000L
         private const val MIN_BACKOFF_MS = 2_000L
         private const val MAX_BACKOFF_MS = 60_000L
 
