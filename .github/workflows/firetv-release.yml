@@ -53,10 +53,6 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - run: |
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager "platforms;android-34" "build-tools;34.0.0"
-
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Check the secrets
@@ -96,7 +92,7 @@ jobs:
 
       - name: Verify the signature
         run: |
-          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs android-app/app/build/outputs/apk/release/app-release.apk
+          "$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner" verify --print-certs android-app/app/build/outputs/apk/release/app-release.apk
 
       - uses: actions/upload-artifact@v4
         with:
