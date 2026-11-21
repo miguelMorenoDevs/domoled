@@ -14,13 +14,22 @@ class LedActivity : Activity() {
     private var webView: WebView? = null
     private var spotifyConnect: SpotifyConnect? = null
     private val passive by lazy { intent.getBooleanExtra(EXTRA_PASSIVE, false) }
+    // Only touched on the UI thread. The listener runs on the holder thread and hops over.
+    private var playerError: String? = null
+    private var pageReady = false
     private val connectListener = object : SpotifyConnect.Listener {
         override fun onFailure(message: String) {
-            runOnUiThread { webView?.evaluateJavascript("window.showPlayerError(${org.json.JSONObject.quote(message)})", null) }
+            runOnUiThread {
+                playerError = message
+                sendPlayerState()
+            }
         }
 
         override fun onConnected() {
-            runOnUiThread { webView?.evaluateJavascript("window.clearPlayerError()", null) }
+            runOnUiThread {
+                playerError = null
+                sendPlayerState()
+            }
         }
     }
 
@@ -32,7 +41,10 @@ class LedActivity : Activity() {
         if (passive) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         val url = if (passive) "$SCENE_URL?passive=1" else SCENE_URL
-        val view = createSceneWebView(this, url)
+        val view = createSceneWebView(this, url) {
+            pageReady = true
+            sendPlayerState()
+        }
         webView = view
         setContentView(view)
         // The dream never touches the player; the app reports which librespot it ships.
@@ -50,6 +62,14 @@ class LedActivity : Activity() {
         spotifyConnect?.stop()
         spotifyConnect = null
         super.onStop()
+    }
+
+    // Evaluating before the page loads would reach the outgoing document, so it waits for onReady.
+    private fun sendPlayerState() {
+        if (!pageReady) return
+        val script = playerError?.let { "window.showPlayerError(${org.json.JSONObject.quote(it)})" }
+            ?: "window.clearPlayerError()"
+        webView?.evaluateJavascript(script, null)
     }
 
     private fun reportNativeLibrary() {

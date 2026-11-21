@@ -162,6 +162,7 @@ router.get("/stream-token", requireTv, async (_req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     if (error instanceof SpotifyAuthRevokedError) {
+      cdAnimator.showQr(loginQrUrl());
       res.status(401).send("Spotify login expired. Log in again from the TV.");
       return;
     }
