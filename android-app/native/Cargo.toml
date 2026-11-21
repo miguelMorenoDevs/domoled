@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = ["jni"]
+
+[profile.release]
+panic = "abort"
+opt-level = "z"
+lto = "thin"
+strip = "symbols"
+codegen-units = 1

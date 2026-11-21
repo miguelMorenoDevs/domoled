@@ -23,6 +23,18 @@ pnpm android:build    # tv:build, copy tv-app/dist into the app assets, gradlew 
 
 The debug APK lands in `android-app/app/build/outputs/apk/debug/`. `pnpm android:build:release` makes the release APK, which is signed only when `android-app/keystore.properties` exists (see Release below).
 
+### Native library
+
+The player is native: `android-app/native/` is a Rust workspace whose `librespot_jni` crate builds `librespot_jni.so` for the stick's 32-bit ARM. CI runs `android-app/build-native.sh`, which cross-compiles with the NDK for `armv7-linux-androideabi` and copies the library into `app/src/main/jniLibs/armeabi-v7a/` for Gradle to package. `jniLibs` is gitignored: a local build without Rust still works, but warns that the APK ships no native library.
+
+The script needs a Rust toolchain with the `armv7-linux-androideabi` target and the Android NDK:
+
+```sh
+bash android-app/build-native.sh
+```
+
+`librespot-core` is pinned to `0.8.0`, with `vergen` / `vergen-gitcl` / `vergen-lib` at `9.0.6` / `1.0.8` / `0.1.6`, the versions in librespot's own lockfile: its build script breaks with a newer resolution. `ring` is pointed at the NDK compiler through forwarder scripts the build creates, because its build looks up an alias the NDK no longer ships. librespot is MIT licensed; the notice is `android-app/native/LICENSE-librespot`.
+
 ## Install and activate as the screensaver
 
 With `TV_HOST` set:
@@ -131,3 +143,5 @@ When the stream from the Pi drops, the dream keeps drawing the idle scene and sh
 ## Build layout
 
 `tv-app/` sources, built by `pnpm tv:build`, are the bundle. `android-app/copy-assets.mjs` copies `index.html`, `app.js` and `config.js` into the APK assets at build time, and `WebViewAssetLoader` serves them at `http://appassets.androidplatform.net/assets/`. The `passive=1` query is the only difference between the dream and the app.
+
+`android-app/native/` is the Rust workspace behind `librespot_jni.so`; `android-app/build-native.sh` builds it into `android-app/app/src/main/jniLibs/armeabi-v7a/`, which Gradle packages. The APK carries that one ABI, matching the device.
