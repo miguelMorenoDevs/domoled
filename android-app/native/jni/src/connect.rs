@@ -2,6 +2,7 @@
 //! The access token comes from the server (`GET /spotify/stream-token`) and is only used to log
 //! in; the session keeps its own connection afterwards.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
@@ -12,7 +13,7 @@ use librespot_core::Session;
 use librespot_playback::config::PlayerConfig;
 use librespot_playback::mixer::softmixer::SoftMixer;
 use librespot_playback::mixer::{Mixer, MixerConfig};
-use librespot_playback::player::Player;
+use librespot_playback::player::{Player, PlayerEvent};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 
@@ -20,14 +21,23 @@ use crate::sink::AaudioSink;
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// The action codes the Kotlin `Librespot` object sends. Keep in sync with `Librespot.kt`.
+pub const ACTION_PLAY: i32 = 0;
+pub const ACTION_PAUSE: i32 = 1;
+pub const ACTION_PLAY_PAUSE: i32 = 2;
+pub const ACTION_NEXT: i32 = 3;
+pub const ACTION_PREVIOUS: i32 = 4;
+
 struct Live {
     session: Session,
     spirc: Spirc,
     task: JoinHandle<()>,
+    events: JoinHandle<()>,
 }
 
 static RUNTIME: OnceLock<Runtime> = OnceLock::new();
 static LIVE: Mutex<Option<Live>> = Mutex::new(None);
+static PLAYING: AtomicBool = AtomicBool::new(false);
 
 fn runtime() -> Result<&'static Runtime, String> {
     if let Some(runtime) = RUNTIME.get() {
@@ -65,6 +75,18 @@ pub fn start(access_token: &str, name: &str) -> Result<(), String> {
                 mixer.get_soft_volume(),
                 || Box::new(AaudioSink::open()),
             );
+            let mut player_events = player.get_player_event_channel();
+            let events = tokio::spawn(async move {
+                while let Some(event) = player_events.recv().await {
+                    match event {
+                        PlayerEvent::Playing { .. } => PLAYING.store(true, Ordering::SeqCst),
+                        PlayerEvent::Paused { .. }
+                        | PlayerEvent::Stopped { .. }
+                        | PlayerEvent::EndOfTrack { .. } => PLAYING.store(false, Ordering::SeqCst),
+                        _ => {}
+                    }
+                }
+            });
 
             let config = ConnectConfig {
                 name: name.to_owned(),
@@ -79,6 +101,7 @@ pub fn start(access_token: &str, name: &str) -> Result<(), String> {
                 session,
                 spirc,
                 task: tokio::spawn(task),
+                events,
             })
         })
         .await
@@ -98,7 +121,38 @@ pub fn stop() {
         let _ = live.spirc.shutdown();
         live.session.shutdown();
         live.task.abort();
+        live.events.abort();
     }
+    PLAYING.store(false, Ordering::SeqCst);
+}
+
+/// Plays, pauses, skips. A no-op when no session is running.
+pub fn control(action: i32) {
+    let Ok(guard) = LIVE.lock() else { return };
+    let Some(live) = guard.as_ref() else { return };
+    match action {
+        ACTION_PLAY => {
+            let _ = live.spirc.play();
+        }
+        ACTION_PAUSE => {
+            let _ = live.spirc.pause();
+        }
+        ACTION_PLAY_PAUSE => {
+            let _ = live.spirc.play_pause();
+        }
+        ACTION_NEXT => {
+            let _ = live.spirc.next();
+        }
+        ACTION_PREVIOUS => {
+            let _ = live.spirc.prev();
+        }
+        _ => {}
+    }
+}
+
+/// True while the player reports a track playing.
+pub fn is_playing() -> bool {
+    PLAYING.load(Ordering::SeqCst)
 }
 
 /// False once the session has dropped its connection or the Connect task has ended.

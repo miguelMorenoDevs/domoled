@@ -2,6 +2,7 @@ package com.domo.led.dream
 
 import android.service.dreams.DreamService
 import android.webkit.WebView
+import com.domo.led.player.PlayerHolder
 import com.domo.led.scene.SCENE_URL
 import com.domo.led.scene.createSceneWebView
 
@@ -20,11 +21,13 @@ class LedDreamService : DreamService() {
 
     override fun onDreamingStarted() {
         super.onDreamingStarted()
+        PlayerHolder.dreamStarted(applicationContext)
         webView?.resumeTimers()
         webView?.onResume()
     }
 
     override fun onDreamingStopped() {
+        PlayerHolder.dreamStopped(applicationContext)
         webView?.pauseTimers()
         webView?.onPause()
         super.onDreamingStopped()
