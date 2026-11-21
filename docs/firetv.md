@@ -13,7 +13,7 @@ The Fire TV runs nothing on the Pi. It reads `GET /led/state` and `GET /spotify/
 - ADB debugging enabled on the stick (Settings, My Fire TV, Developer options). Note the stick's address; the scripts read it from `TV_HOST`.
 - JDK 17 and the Android SDK, with `ANDROID_HOME` set and `adb` on `PATH`.
 - `pnpm install` run once at the repo root.
-- `tv-app/config.js`, copied from `tv-app/config.example.js`, with `LED_SERVER_URL` set to `http://<pi-address>:3000`. The build bakes it into the bundle, so changing the server address means rebuilding. The file is gitignored; do not commit it.
+- `tv-app/config.js`, copied from `tv-app/config.example.js`, with `LED_SERVER_URL` set to `http://<pi-address>:3000` and `TV_TOKEN` set to the server's `TV_TOKEN`. The build bakes both into the bundle, so changing the server address or the token means rebuilding. The file is gitignored; do not commit it.
 
 ## Build
 
@@ -105,6 +105,7 @@ The build job writes the signing config from secrets, builds with `pnpm android:
 Secrets:
 
 - `LED_SERVER_URL`: server address baked into the bundle.
+- `TV_TOKEN`: the server's `TV_TOKEN`, baked into the bundle and sent as `X-TV-Token` to the account routes. Without it the account list and user switching fail with `403`.
 - `ANDROID_KEYSTORE_BASE64`: base64 of the release keystore, for example `base64 -w0 release.jks | gh secret set ANDROID_KEYSTORE_BASE64`.
 - `ANDROID_STORE_PASSWORD`: the keystore and key password (the workflow uses one password for both).
 - `ANDROID_KEY_ALIAS`: the key alias inside the keystore.

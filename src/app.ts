@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 
 import SpotifyClient from "./spotify/client.js";
 import spotifyRouter, { loginQrUrl } from "./spotify/routes.js";
+import { warnIfTvTokenUnset } from "./spotify/guard.js";
 import { cdAnimator } from "./led/animator.js";
 import ledRouter from "./led/routes.js";
 import { startPlaybackPoller } from "./spotify/playback.js";
@@ -18,6 +19,7 @@ app.use(express.static("public"));
 
 app.listen(3000, async () => {
   console.log("Server running on port 3000");
+  warnIfTvTokenUnset();
   if (await SpotifyClient.hasActiveUser()) {
     cdAnimator.startIdle();
     startPlaybackPoller(SpotifyClient, cdAnimator);

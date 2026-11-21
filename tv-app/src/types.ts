@@ -2,6 +2,8 @@
 
 // Defined by config.js, which loads before app.js.
 declare var LED_SERVER_URL: string;
+// Sent as X-TV-Token to the account routes; must match TV_TOKEN on the server.
+declare var TV_TOKEN: string;
 
 interface TrackData {
   title: string;

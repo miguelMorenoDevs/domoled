@@ -8,7 +8,7 @@ The repo has four main parts:
 - **Browser simulator** (`public/simulator.html`): runs the matrix in a browser for development on machines without a Pi.
 - **TV app** (`tv-app/`): the full-screen web app with its own scene, drawn on the TV. The remote's arrows and OK drive the profile badge, the account list and the login QR.
 - **Fire TV app** (`android-app/`): an Android dream (screensaver, passive: no profile badge or account list; when the Pi is unreachable it keeps the idle cat scene with a small "offline" pill instead of an error card) and a launcher app that show the TV app in a WebView full screen. Build with `pnpm android:build`; `pnpm android:rebuild` also installs it over adb and sets it as the screensaver. Setup, release and rollback are in `docs/firetv.md`.
-- **Spotify login**: OAuth through a QR code, with several users and an active one.
+- **Spotify login**: OAuth through a QR code, with several users and an active one. The TV's account list and user switching need the shared `TV_TOKEN` (see `docs/setup.md`).
 
 ## Docs
 

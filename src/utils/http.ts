@@ -17,7 +17,7 @@ export function allowAnyOrigin(
   }
   res.set({
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-TV-Token",
   });
   res.sendStatus(204);
 }

@@ -35,6 +35,9 @@ test("an OPTIONS preflight is answered 204 without calling the route", () => {
   const { calls, headers } = run("OPTIONS");
   assert.deepEqual(calls, { status: 204, next: false });
   assert.equal(headers["Access-Control-Allow-Origin"], "*");
-  assert.equal(headers["Access-Control-Allow-Headers"], "Content-Type");
+  assert.equal(
+    headers["Access-Control-Allow-Headers"],
+    "Content-Type, X-TV-Token",
+  );
   assert.match(headers["Access-Control-Allow-Methods"] ?? "", /POST/);
 });
