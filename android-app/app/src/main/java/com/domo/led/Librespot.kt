@@ -29,5 +29,22 @@ object Librespot {
 
     internal external fun nativeIsAlive(): Boolean
 
+    internal external fun nativeControl(action: Int)
+
+    internal external fun nativeIsPlaying(): Boolean
+
+    /** Same codes as `native/jni/src/connect.rs`. */
+    const val ACTION_PLAY = 0
+    const val ACTION_PAUSE = 1
+    const val ACTION_PLAY_PAUSE = 2
+    const val ACTION_NEXT = 3
+    const val ACTION_PREVIOUS = 4
+
+    fun control(action: Int) {
+        if (available) nativeControl(action)
+    }
+
+    fun isPlaying(): Boolean = available && nativeIsPlaying()
+
     private const val TAG = "Librespot"
 }

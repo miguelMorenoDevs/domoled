@@ -45,6 +45,14 @@ The app shows a small overlay at the bottom of the screen when playback is unava
 
 The app reads `LED_SERVER_URL` and `TV_TOKEN` from the bundled `config.js`. A build without that file runs the scene and skips the Connect device.
 
+### Playback, focus and the remote
+
+Playback is app-mode only. The launcher app (`LedActivity`) starts the Connect device and the native session; the dream never does. Leaving the app or starting the dream pauses playback within a second, releases audio focus and removes the device from the phone's list. Returning reconnects without reloading the WebView and resumes only if the player was playing when it left. Resuming needs Spotify to still hold the device's paused context; if it does not, the phone shows paused and you press play.
+
+Audio focus is held from the moment the session is up until the app leaves or the dream starts. Losing focus to another app pauses playback, and regaining it resumes only if it was playing before the loss. The app holds focus while paused too, so another app's audio is paused or ducked while the launcher app is open.
+
+The remote's media keys control playback while the app is in front: play/pause, play, pause, next and previous. The arrows and OK still drive the WebView. The dream does not handle media keys beyond dismissing on any key.
+
 ## Install and activate as the screensaver
 
 With `TV_HOST` set:

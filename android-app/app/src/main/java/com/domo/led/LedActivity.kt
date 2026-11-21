@@ -7,12 +7,12 @@ import android.view.KeyEvent
 import android.view.WindowManager
 import android.webkit.WebView
 import com.domo.led.connect.SpotifyConnect
+import com.domo.led.player.PlayerHolder
 import com.domo.led.scene.SCENE_URL
 import com.domo.led.scene.createSceneWebView
 
 class LedActivity : Activity() {
     private var webView: WebView? = null
-    private var spotifyConnect: SpotifyConnect? = null
     private val passive by lazy { intent.getBooleanExtra(EXTRA_PASSIVE, false) }
     // Only touched on the UI thread. The listener runs on the holder thread and hops over.
     private var playerError: String? = null
@@ -54,13 +54,11 @@ class LedActivity : Activity() {
     // The Connect device is listed only while the app is open; the dream never starts it.
     override fun onStart() {
         super.onStart()
-        if (passive || spotifyConnect != null) return
-        spotifyConnect = SpotifyConnect.fromAssets(assets, connectListener)?.also { it.start() }
+        if (!passive) PlayerHolder.appStarted(applicationContext, connectListener)
     }
 
     override fun onStop() {
-        spotifyConnect?.stop()
-        spotifyConnect = null
+        if (!passive) PlayerHolder.appStopped(applicationContext)
         super.onStop()
     }
 
@@ -82,7 +80,22 @@ class LedActivity : Activity() {
             finish()
             return true
         }
+        if (!passive && event.action == KeyEvent.ACTION_DOWN) {
+            mediaAction(event.keyCode)?.let {
+                Librespot.control(it)
+                return true
+            }
+        }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun mediaAction(keyCode: Int): Int? = when (keyCode) {
+        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> Librespot.ACTION_PLAY_PAUSE
+        KeyEvent.KEYCODE_MEDIA_PLAY -> Librespot.ACTION_PLAY
+        KeyEvent.KEYCODE_MEDIA_PAUSE -> Librespot.ACTION_PAUSE
+        KeyEvent.KEYCODE_MEDIA_NEXT -> Librespot.ACTION_NEXT
+        KeyEvent.KEYCODE_MEDIA_PREVIOUS -> Librespot.ACTION_PREVIOUS
+        else -> null
     }
 
     override fun onDestroy() {
