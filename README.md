@@ -7,7 +7,7 @@ The repo has four main parts:
 - **LED matrix animator** (`src/`): a Node server on the Pi that polls Spotify and drives the matrix with CD, podcast, idle and login animations.
 - **Browser simulator** (`public/simulator.html`): runs the matrix in a browser for development on machines without a Pi.
 - **LG TV app** (`lg-app/`): a webOS app that draws the same states full screen on an LG TV, with its own scene. The remote's arrows and OK drive the profile badge, the account list and the login QR.
-- **Fire TV app** (`android-app/`): an Android dream (screensaver, passive: no profile badge or account list; when the Pi is unreachable it keeps the idle cat scene with a small "offline" pill instead of an error card) and a launcher app that show the LG TV app in a WebView full screen. Build with `pnpm android:build`; `pnpm android:rebuild` also installs it over adb and sets it as the screensaver.
+- **Fire TV app** (`android-app/`): an Android dream (screensaver, passive: no profile badge or account list; when the Pi is unreachable it keeps the idle cat scene with a small "offline" pill instead of an error card) and a launcher app that show the LG TV app in a WebView full screen. Build with `pnpm android:build`; `pnpm android:rebuild` also installs it over adb and sets it as the screensaver. Setup, release and rollback are in `docs/firetv.md`.
 - **Spotify login**: OAuth through a QR code, with several users and an active one.
 
 ## Docs
@@ -19,6 +19,7 @@ The repo has four main parts:
 - `docs/spotify.md`: login, playback polling and user management.
 - `docs/simulator.md`: the browser simulator and its views.
 - `docs/tv.md`: the LG TV app.
+- `docs/firetv.md`: the Fire TV app, its screensaver setup, release and rollback.
 - `docs/agents.md`: the GitHub issue and review agents.
 - `docs/review-app.md`: the GitHub App used by the review workflow.
 - [GitHub Issues](https://github.com/miguelMorenoDevs/domoled/issues): known bugs and deferred work.

@@ -6,7 +6,7 @@ The app has four layers:
 
 - **Spotify integration**: OAuth login, token storage, and polling of the currently playing item.
 - **Animator**: turns playback state into animations. It is shared by every output target and owns the animation lifecycle, state machine and timing.
-- **Outputs**: the LED matrix on the Raspberry Pi, the browser simulator, and the LG TV app. Each target draws the animations in its own code.
+- **Outputs**: the LED matrix on the Raspberry Pi, the browser simulator, the LG TV app, and the Fire TV app. Each target draws the animations in its own code; the Fire TV app reuses the LG TV bundle.
 - **Web server**: serves the OAuth and login pages, the user admin API, and the event stream the TV reads.
 
 ## Module map
