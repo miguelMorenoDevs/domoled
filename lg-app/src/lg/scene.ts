@@ -111,16 +111,8 @@ const FLOWERS: readonly (readonly [number, number, number, string])[] = [
   [120, 198, 2.5, "#ffd54f"],
 ];
 
-/**
- * Draws the meadow behind every TV state and returns the sky it used, so the night overlay can be
- * laid over the content on top. `hour` is the local hour of the day (0..24).
- */
-export function drawScene(
-  ctx: CanvasContext,
-  seconds: number,
-  hour: number,
-): SkySnapshot {
-  const sky = skyAt(hour);
+/** The static meadow for one sky: everything except the twinkling stars. */
+function drawBackdrop(ctx: CanvasContext, sky: SkySnapshot): void {
   const bodyX = sky.bodyX * STAGE_WIDTH;
   const bodyY = sky.bodyY * STAGE_HEIGHT;
 
@@ -129,16 +121,6 @@ export function drawScene(
   gradient.addColorStop(1, sky.skyBottom);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, STAGE_WIDTH, 190);
-
-  ctx.save();
-  ctx.globalAlpha = sky.stars * (0.85 + 0.15 * Math.sin(seconds * 2));
-  ctx.fillStyle = "#ffffff";
-  for (const [x, y, radius] of STARS) {
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
 
   ctx.save();
   ctx.globalAlpha = sky.glowOpacity * 0.9;
@@ -224,8 +206,53 @@ export function drawScene(
     ctx.fillStyle = color;
     ctx.fill();
   }
+}
 
-  return sky;
+/** The stars twinkle every frame, so they are drawn live over the cached backdrop. */
+function drawStars(
+  ctx: CanvasContext,
+  seconds: number,
+  sky: SkySnapshot,
+): void {
+  ctx.save();
+  ctx.globalAlpha = sky.stars * (0.85 + 0.15 * Math.sin(seconds * 2));
+  ctx.fillStyle = "#ffffff";
+  for (const [x, y, radius] of STARS) {
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/**
+ * Draws the meadow behind every TV state from an offscreen copy of the backdrop, redrawn only when
+ * the minute of the day changes, and returns the sky it used so the night overlay can follow it.
+ */
+export class MeadowBackdrop {
+  private readonly canvas = document.createElement("canvas");
+  private readonly ctx: CanvasContext;
+  private minute = -1;
+
+  constructor() {
+    this.canvas.width = RENDER_WIDTH;
+    this.canvas.height = RENDER_HEIGHT;
+    this.ctx = this.canvas.getContext("2d")!;
+  }
+
+  /** `hour` is the local hour of the day (0..24); the sky is sampled per minute, so it moves smoothly. */
+  draw(target: CanvasContext, seconds: number, hour: number): SkySnapshot {
+    const minute = Math.floor(hour * 60);
+    const sky = skyAt(minute / 60);
+    if (minute !== this.minute) {
+      this.minute = minute;
+      this.ctx.setTransform(SCENE_SCALE, 0, 0, SCENE_SCALE, 0, 0);
+      drawBackdrop(this.ctx, sky);
+    }
+    target.drawImage(this.canvas, 0, 0, STAGE_WIDTH, STAGE_HEIGHT);
+    drawStars(target, seconds, sky);
+    return sky;
+  }
 }
 
 /** The night tint the reference lays over everything, content included. */
