@@ -1,14 +1,12 @@
-import { LgAnimator } from "./lg/animator.js";
-import { holdScreenSaver } from "./lg/screensaver.js";
+import { TvAnimator } from "./tv/animator.js";
 
 // The Fire TV dream loads index.html?passive=1; the app and the browser preview load index.html.
 const passive =
   new URLSearchParams(window.location.search).get("passive") === "1";
-const animator = new LgAnimator(
+const animator = new TvAnimator(
   document.getElementById("screen") as HTMLCanvasElement,
   passive,
 );
-holdScreenSaver();
 
 // Only the newest track's art is played; an older one still loading is dropped.
 let pendingArt: HTMLImageElement | null = null;

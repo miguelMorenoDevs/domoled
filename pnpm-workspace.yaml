@@ -1,5 +1,4 @@
 allowBuilds:
-  "@webos-tools/cli": true
   canvas: false
   cpu-features: false
   esbuild: false

@@ -1,6 +1,6 @@
 # Animations
 
-Every animation runs through the shared lifecycle in `src/animator/`: an intro plays once, the loop runs until an exit is requested, and an outro plays once. The LED matrix (`src/led/animations/`) and the [LG TV app](tv.md) (`lg-app/src/lg/animations/`) draw them separately, so the visuals can differ.
+Every animation runs through the shared lifecycle in `src/animator/`: an intro plays once, the loop runs until an exit is requested, and an outro plays once. The LED matrix (`src/led/animations/`) and the TV app (`tv-app/src/tv/animations/`) draw them separately, so the visuals can differ.
 
 ## TV scene
 

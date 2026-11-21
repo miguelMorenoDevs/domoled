@@ -6,7 +6,7 @@ const config = path.join(appDir, "config.js");
 
 if (!existsSync(config))
   throw new Error(
-    "Missing lg-app/config.js: copy lg-app/config.example.js and set LED_SERVER_URL",
+    "Missing tv-app/config.js: copy tv-app/config.example.js and set LED_SERVER_URL",
   );
 
 cpSync(path.join(appDir, "static"), path.join(appDir, "dist"), {
