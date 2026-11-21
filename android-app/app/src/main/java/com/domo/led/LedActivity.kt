@@ -3,8 +3,6 @@ package com.domo.led
 import android.app.Activity
 import android.os.Bundle
 import android.view.KeyEvent
-import android.view.WindowInsets
-import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.webkit.WebView
 import com.domo.led.scene.SCENE_URL
@@ -16,11 +14,9 @@ class LedActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setDecorFitsSystemWindows(false)
-        window.insetsController?.apply {
-            hide(WindowInsets.Type.systemBars())
-            systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
+        // No insets controller here: on API 30 getInsetsController() touches the DecorView, which
+        // does not exist yet, and throws. The fullscreen theme plus this flag is enough on a TV.
+        window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         if (passive) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         val url = if (passive) "$SCENE_URL?passive=1" else SCENE_URL
