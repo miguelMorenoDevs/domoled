@@ -130,6 +130,7 @@ export class UserScreen {
     try {
       const res = await fetch(LED_SERVER_URL + "/spotify/users", {
         cache: "no-store",
+        headers: { "X-TV-Token": TV_TOKEN },
       });
       this.users = (await res.json()) as LoggedUser[];
       this.notice = "No accounts logged in.";
@@ -149,7 +150,10 @@ export class UserScreen {
       try {
         const res = await fetch(LED_SERVER_URL + "/spotify/users/active", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-TV-Token": TV_TOKEN,
+          },
           body: JSON.stringify({ userId }),
         });
         if (res.ok) this.activeId = userId;

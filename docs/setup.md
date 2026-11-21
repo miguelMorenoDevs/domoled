@@ -22,9 +22,10 @@ Copy `.env.example` to `.env`:
 ```sh
 SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
+TV_TOKEN=
 ```
 
-Both are required: `src/spotify/client.ts` throws at import time when either is missing, so the server will not start. `.env` is only loaded by `pnpm dev` (`tsx --env-file=.env`); a compiled `node dist/app.js` does not load it.
+The first two are required: `src/spotify/client.ts` throws at import time when either is missing, so the server will not start. `TV_TOKEN` is the shared secret the TV app sends as `X-TV-Token` to `GET /spotify/users` and `POST /spotify/users/active`. Set it to a long random string and put the same value in `tv-app/config.js`. Without it those two routes refuse every caller that is not on the local machine (`403`), and the server logs a warning at boot. `.env` is only loaded by `pnpm dev` (`tsx --env-file=.env`); a compiled `node dist/app.js` does not load it.
 
 ## Run
 

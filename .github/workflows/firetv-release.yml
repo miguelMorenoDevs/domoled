@@ -5,6 +5,7 @@ name: firetv release
 #
 # Repository secrets:
 #   LED_SERVER_URL           server address baked into the bundle
+#   TV_TOKEN                 shared secret the TV sends to the account routes
 #   ANDROID_KEYSTORE_BASE64  base64 of the release keystore (one password for store and key)
 #   ANDROID_STORE_PASSWORD   keystore and key password
 #   ANDROID_KEY_ALIAS        key alias inside the keystore
@@ -62,11 +63,12 @@ jobs:
       - name: Check the secrets
         env:
           LED_SERVER_URL: ${{ secrets.LED_SERVER_URL }}
+          TV_TOKEN: ${{ secrets.TV_TOKEN }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          for name in LED_SERVER_URL ANDROID_KEYSTORE_BASE64 ANDROID_STORE_PASSWORD ANDROID_KEY_ALIAS; do
+          for name in LED_SERVER_URL TV_TOKEN ANDROID_KEYSTORE_BASE64 ANDROID_STORE_PASSWORD ANDROID_KEY_ALIAS; do
             if [ -z "${!name}" ]; then
               echo "missing $name secret"
               exit 1
@@ -76,7 +78,12 @@ jobs:
       - name: Write tv-app/config.js
         env:
           LED_SERVER_URL: ${{ secrets.LED_SERVER_URL }}
-        run: echo "var LED_SERVER_URL = \"$LED_SERVER_URL\";" > tv-app/config.js
+          TV_TOKEN: ${{ secrets.TV_TOKEN }}
+        run: |
+          {
+            echo "var LED_SERVER_URL = \"$LED_SERVER_URL\";"
+            echo "var TV_TOKEN = \"$TV_TOKEN\";"
+          } > tv-app/config.js
 
       - name: Write the release signing config
         env:

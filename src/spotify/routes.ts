@@ -15,7 +15,7 @@ import { allowAnyOrigin } from "../utils/http.js";
 import { qrModules } from "../utils/qr.js";
 import { cdAnimator } from "../led/animator.js";
 import { AlbumArtLoadError } from "../led/errors.js";
-import { requireLoopback } from "./guard.js";
+import { requireLoopback, requireTv } from "./guard.js";
 import { consumeOAuthState, createOAuthState } from "./oauth-state.js";
 import {
   buildSpotifyStatus,
@@ -149,16 +149,22 @@ router.get("/status", (_req: Request, res: Response) => {
   );
 });
 
-// Read and switched by the TV app, so they are reachable from the LAN; tokens are never returned.
+// Read and switched by the TV app, so they are reachable from the LAN but need the TV token; tokens are never returned.
 router.options(["/users", "/users/active"], allowAnyOrigin);
 
-router.get("/users", allowAnyOrigin, async (_req: Request, res: Response) => {
-  res.json(await SpotifyClient.getLoggedUsers());
-});
+router.get(
+  "/users",
+  allowAnyOrigin,
+  requireTv,
+  async (_req: Request, res: Response) => {
+    res.json(await SpotifyClient.getLoggedUsers());
+  },
+);
 
 router.post(
   "/users/active",
   allowAnyOrigin,
+  requireTv,
   async (req: Request, res: Response) => {
     try {
       const { userId } = req.body;

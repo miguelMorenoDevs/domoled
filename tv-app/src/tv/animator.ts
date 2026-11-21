@@ -152,6 +152,7 @@ export class TvAnimator {
     try {
       const res = await fetch(LED_SERVER_URL + "/spotify/users", {
         cache: "no-store",
+        headers: { "X-TV-Token": TV_TOKEN },
       });
       return ((await res.json()) as LoggedUser[]).length > 0;
     } catch {

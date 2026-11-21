@@ -7,7 +7,7 @@ name: firetv debug
 # generated key, which means a new build cannot be installed over an older one (uninstall first);
 # the app holds no local state, so nothing is lost.
 #
-# Needs LED_SERVER_URL, the same secret the other deploy workflows use.
+# Needs LED_SERVER_URL and TV_TOKEN, the same secrets the other deploy workflows use.
 #
 # The ubuntu runner image already has the Android SDK (ANDROID_HOME) with platform 34, so no setup
 # action or sdkmanager call is needed.
@@ -53,16 +53,24 @@ jobs:
       - name: Check the secrets
         env:
           LED_SERVER_URL: ${{ secrets.LED_SERVER_URL }}
+          TV_TOKEN: ${{ secrets.TV_TOKEN }}
         run: |
-          if [ -z "$LED_SERVER_URL" ]; then
-            echo "missing LED_SERVER_URL secret"
-            exit 1
-          fi
+          for name in LED_SERVER_URL TV_TOKEN; do
+            if [ -z "${!name}" ]; then
+              echo "missing $name secret"
+              exit 1
+            fi
+          done
 
       - name: Write tv-app/config.js
         env:
           LED_SERVER_URL: ${{ secrets.LED_SERVER_URL }}
-        run: echo "var LED_SERVER_URL = \"$LED_SERVER_URL\";" > tv-app/config.js
+          TV_TOKEN: ${{ secrets.TV_TOKEN }}
+        run: |
+          {
+            echo "var LED_SERVER_URL = \"$LED_SERVER_URL\";"
+            echo "var TV_TOKEN = \"$TV_TOKEN\";"
+          } > tv-app/config.js
 
       - name: Build the native library
         run: bash android-app/build-native.sh
