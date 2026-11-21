@@ -4,7 +4,7 @@ import { cdAnimator } from "./animator.js";
 
 const router: Router = Router();
 
-// Server-Sent Events: the LG TV app mirrors the animation from these state changes.
+// Server-Sent Events: the TV app mirrors the animation from these state changes.
 router.get("/state", (req: Request, res: Response) => {
   res.set({
     "Content-Type": "text/event-stream",

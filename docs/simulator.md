@@ -4,7 +4,7 @@ On win32/darwin there is no LED matrix, so the animator mocks it and streams eac
 
 ## Ports
 
-- **3000**: Express. Serves the Spotify routes, the `public/` pages and `GET /led/state` (Server-Sent Events, used by the [LG TV app](tv.md)).
+- **3000**: Express. Serves the Spotify routes, the `public/` pages and `GET /led/state` (Server-Sent Events, used by the TV app).
 - **8080**: WebSocket frame stream, started on win32/darwin only.
 
 ## Simulator
@@ -14,15 +14,15 @@ Open `simulator.html` directly in a browser (double-click or `file://`). It conn
 The dropdown in the top-left switches between two views:
 
 - **LED matrix**: the frames streamed from the server, as above.
-- **LG TV**: the [LG TV app](tv.md) running in the browser. It reads `GET /led/state` from `http://localhost:3000` and draws the same animations, so the TV visuals can be checked without a TV. The view fills the browser window.
+- **TV**: the TV app running in the browser. It reads `GET /led/state` from `http://localhost:3000` and draws the same animations, so the TV visuals can be checked without a TV. The view fills the browser window.
 
-Build the LG TV view's bundle once, and again after any change to `lg-app/src/`:
+Build the TV view's bundle once, and again after any change to `tv-app/src/`:
 
 ```sh
-pnpm lg:preview   # writes lg-app/preview/app.js (gitignored)
+pnpm tv:preview   # writes tv-app/preview/app.js (gitignored)
 ```
 
-The preview needs no `lg-app/config.js`: it always points at `localhost:3000`, so the server must run on the same machine as the browser. The bundle loads the first time you pick "LG TV", and an alert tells you to run `pnpm lg:preview` if it is missing.
+The preview needs no `tv-app/config.js`: it always points at `localhost:3000`, so the server must run on the same machine as the browser. The bundle loads the first time you pick "TV", and an alert tells you to run `pnpm tv:preview` if it is missing.
 
 It is not served by Express: `public/` only holds the pages the phone and the Spotify callback open (`public/connect.html`).
 

@@ -69,10 +69,10 @@ jobs:
             fi
           done
 
-      - name: Write lg-app/config.js
+      - name: Write tv-app/config.js
         env:
           LED_SERVER_URL: ${{ secrets.LED_SERVER_URL }}
-        run: echo "var LED_SERVER_URL = \"$LED_SERVER_URL\";" > lg-app/config.js
+        run: echo "var LED_SERVER_URL = \"$LED_SERVER_URL\";" > tv-app/config.js
 
       - name: Write the release signing config
         env:

@@ -30,14 +30,14 @@
             /* image-rendering ensures the pixels stay sharp and chunky, not blurry! */
             image-rendering: pixelated; 
         }
-        #lg-view {
+        #tv-view {
             position: fixed;
             inset: 0;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        #lg-view canvas {
+        #tv-view canvas {
             display: block;
             max-width: 100%;
             max-height: 100%;
@@ -60,7 +60,7 @@
 
     <select id="view">
         <option value="matrix">LED matrix</option>
-        <option value="lg">LG TV</option>
+        <option value="tv">TV</option>
     </select>
 
     <div id="matrix-view">
@@ -71,38 +71,38 @@
         </div>
     </div>
 
-    <div id="lg-view" hidden>
+    <div id="tv-view" hidden>
         <canvas id="screen"></canvas>
     </div>
 
     <script>
         const viewEl = document.getElementById('view');
         const matrixView = document.getElementById('matrix-view');
-        const lgView = document.getElementById('lg-view');
+        const tvView = document.getElementById('tv-view');
         const statusEl = document.getElementById('status');
         const screen = document.getElementById('matrix-screen');
-        let lgLoaded = false;
+        let tvLoaded = false;
 
         // Loaded on first use: the TV app opens its own event stream as soon as it runs.
-        function showLgView() {
-            lgView.hidden = false;
-            if (lgLoaded) return;
-            lgLoaded = true;
+        function showTvView() {
+            tvView.hidden = false;
+            if (tvLoaded) return;
+            tvLoaded = true;
             const script = document.createElement('script');
-            script.src = 'lg-app/preview/app.js';
+            script.src = 'tv-app/preview/app.js';
             script.onerror = () => {
-                lgView.hidden = true;
+                tvView.hidden = true;
                 viewEl.value = 'matrix';
-                alert('LG TV preview is not built. Run "pnpm lg:preview" first.');
+                alert('TV preview is not built. Run "pnpm tv:preview" first.');
             };
             document.body.appendChild(script);
         }
 
         viewEl.addEventListener('change', () => {
-            const isLg = viewEl.value === 'lg';
-            matrixView.hidden = isLg;
-            if (isLg) showLgView();
-            else lgView.hidden = true;
+            const isTv = viewEl.value === 'tv';
+            matrixView.hidden = isTv;
+            if (isTv) showTvView();
+            else tvView.hidden = true;
         });
 
         function connect() {

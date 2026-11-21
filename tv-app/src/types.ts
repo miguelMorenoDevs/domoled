@@ -3,14 +3,6 @@
 // Defined by config.js, which loads before app.js.
 declare var LED_SERVER_URL: string;
 
-/** The TV's Luna bridge global; the browser preview doesn't have it. */
-interface ServiceBridge {
-  onservicecallback: (message: string) => void;
-  call(uri: string, params: string): void;
-}
-
-declare var WebOSServiceBridge: { new (): ServiceBridge } | undefined;
-
 interface TrackData {
   title: string;
   imageUrl: string;

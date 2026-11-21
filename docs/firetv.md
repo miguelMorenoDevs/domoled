@@ -1,11 +1,11 @@
 # Fire TV setup
 
-`android-app/` is an Android app for the Fire TV Stick. It runs the same web bundle as the LG TV app (`lg-app/`) inside a WebView, in two hosts:
+`android-app/` is an Android app for the Fire TV Stick. It runs the TV app's bundle (`tv-app/`) inside a WebView, in two hosts:
 
 - **The dream** (`LedDreamService`) is the screensaver. It loads `index.html?passive=1`: passive, so there is no profile badge, account list or pointer UI. Any remote key dismisses it.
 - **The app** (`LedActivity`, launcher icon) loads `index.html`: interactive, so you can switch accounts, add a user with the login QR, and read a connection error. The remote's arrows and OK drive it.
 
-The Fire TV runs nothing on the Pi. It reads `GET /led/state` and `GET /spotify/status` from the server at `LED_SERVER_URL`, the same as the LG TV app. This guide covers the Fire TV only; the webOS TV is in `docs/tv.md`.
+The Fire TV runs nothing on the Pi. It reads `GET /led/state` and `GET /spotify/status` from the server at `LED_SERVER_URL`. This guide covers the Fire TV only.
 
 ## Requirements
 
@@ -13,12 +13,12 @@ The Fire TV runs nothing on the Pi. It reads `GET /led/state` and `GET /spotify/
 - ADB debugging enabled on the stick (Settings, My Fire TV, Developer options). Note the stick's address; the scripts read it from `TV_HOST`.
 - JDK 17 and the Android SDK, with `ANDROID_HOME` set and `adb` on `PATH`.
 - `pnpm install` run once at the repo root.
-- `lg-app/config.js`, copied from `lg-app/config.example.js`, with `LED_SERVER_URL` set to `http://<pi-address>:3000`. The build bakes it into the bundle, so changing the server address means rebuilding. The file is gitignored; do not commit it.
+- `tv-app/config.js`, copied from `tv-app/config.example.js`, with `LED_SERVER_URL` set to `http://<pi-address>:3000`. The build bakes it into the bundle, so changing the server address means rebuilding. The file is gitignored; do not commit it.
 
 ## Build
 
 ```sh
-pnpm android:build    # lg:build, copy lg-app/dist into the app assets, gradlew assembleDebug
+pnpm android:build    # tv:build, copy tv-app/dist into the app assets, gradlew assembleDebug
 ```
 
 The debug APK lands in `android-app/app/build/outputs/apk/debug/`. `pnpm android:build:release` makes the release APK, which is signed only when `android-app/keystore.properties` exists (see Release below).
@@ -121,7 +121,7 @@ These are the Fire OS 8.1 behaviours found on the device (Fire OS 8.1.8, Android
 - **The idle transition never happens.** `stay_on_while_plugged_in` keeps the stick awake, so the dream never starts. Check with `adb shell settings get global stay_on_while_plugged_in`; it must be `0`. Turn off the stick's "Stay awake" option if it is not.
 - **A manual test does not start the dream.** Use the force-start command in Verify; it does not wait for the screen-off timeout.
 - **Install fails with a signature mismatch.** An older build was signed with another key. Run `node android-app/deploy.mjs uninstall`, then install again.
-- **The scene looks scaled or blurry.** The WebView lays out at 960x540 CSS pixels at device pixel ratio 2 on a 1080p display, and the canvas is scaled by CSS to that viewport. The render size is set in `lg-app/src/lg/scene.ts`. If the output is 4K, switch it to 1080p in Settings.
+- **The scene looks scaled or blurry.** The WebView lays out at 960x540 CSS pixels and reports `devicePixelRatio` 4, even in 1080p output mode, because it uses the display's initial (4K) size for its scale factor. The canvas is scaled by CSS to that viewport and the render size is set in `tv-app/src/tv/scene.ts`. If the output is 4K, switch it to 1080p in Settings.
 - **The dream shows the idle scene with an "offline" pill, or the app shows the error card.** The Pi is not reachable from the stick. Check that `LED_SERVER_URL` in the installed bundle is right and that the Pi is on the same LAN.
 
 ## Offline behaviour
@@ -130,4 +130,4 @@ When the stream from the Pi drops, the dream keeps drawing the idle scene and sh
 
 ## Build layout
 
-`lg-app/` sources, built by `pnpm lg:build`, are the bundle. `android-app/copy-assets.mjs` copies `index.html`, `app.js` and `config.js` into the APK assets at build time, and `WebViewAssetLoader` serves them at `http://appassets.androidplatform.net/assets/`. The `passive=1` query is the only difference between the dream and the app. The folder name `lg-app/` is historical, since the bundle now also runs on Fire TV; it is not renamed.
+`tv-app/` sources, built by `pnpm tv:build`, are the bundle. `android-app/copy-assets.mjs` copies `index.html`, `app.js` and `config.js` into the APK assets at build time, and `WebViewAssetLoader` serves them at `http://appassets.androidplatform.net/assets/`. The `passive=1` query is the only difference between the dream and the app.

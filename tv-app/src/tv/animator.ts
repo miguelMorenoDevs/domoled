@@ -30,7 +30,7 @@ const STEP_KEYS: Record<string, number> = {
  * Same lifecycle as CdAnimator in src/led/animator.ts (shared AnimationRunner), drawing the meadow
  * scene and the animations on top of it at the render size.
  */
-export class LgAnimator {
+export class TvAnimator {
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasContext;
   private readonly runner = new AnimationRunner<CanvasContext>();

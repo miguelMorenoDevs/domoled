@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    // Type check only: esbuild (lg:build) bundles lg-app/src/main.ts into one classic script, because webOS 5 blocks module scripts from file://.
+    // Type check only: esbuild (tv:build) bundles tv-app/src/main.ts into one classic script for the
+    // WebView, which keeps the app a single file inside the APK.
     "noEmit": true,
     "target": "es2017",
     "lib": ["es2017", "dom"],

@@ -96,16 +96,21 @@ JSON
 
 `dismiss_stale_reviews` drops the approval on every push, and the `synchronize` run re-approves. `enforce_admins` also stops the repo owner from bypassing the gate. Without this protection, auto-merge still merges immediately once enabled.
 
-## LG TV app
+## TV app
 
-`lg-app/` is a webOS app that shows the matrix animations full screen on an LG TV. Install and setup steps live in `docs/tv.md`.
+`tv-app/` is the full-screen web app that draws the matrix animations on a TV, with its own scene. It is the bundle the Fire TV app hosts, and the browser simulator shows it in its "TV" view.
+
+```sh
+pnpm tv:build     # type check, bundle to tv-app/dist/app.js, copy the static files
+pnpm tv:preview   # bundle for the simulator's TV view, pointed at localhost
+```
 
 ## Fire TV app
 
-`android-app/` is a Gradle (Kotlin) app that hosts the same LG TV web bundle in a `WebView` inside a `DreamService`, so it runs as the Fire TV screensaver. It needs a JDK 17+ and the Android SDK (`ANDROID_HOME`). The full guide (device setup, release, rollback, troubleshooting) is in `docs/firetv.md`.
+`android-app/` is a Gradle (Kotlin) app that hosts the TV bundle in a `WebView` inside a `DreamService`, so it runs as the Fire TV screensaver. It needs a JDK 17+ and the Android SDK (`ANDROID_HOME`). The full guide (device setup, release, rollback, troubleshooting) is in `docs/firetv.md`.
 
 ```sh
-pnpm android:build    # lg:build, copy lg-app/dist into android-app assets, gradlew assembleDebug
+pnpm android:build    # tv:build, copy tv-app/dist into android-app assets, gradlew assembleDebug
 pnpm android:rebuild  # android:build, then install and screensaver
 ```
 
@@ -117,14 +122,14 @@ pnpm android:rebuild  # android:build, then install and screensaver
 - `node android-app/deploy.mjs restore`: puts the Amazon screensaver back and resets `screen_off_timeout` to the platform default.
 - `node android-app/deploy.mjs uninstall`: uninstalls the app, then restores.
 
-It needs `lg-app/config.js` (see `lg-app/config.example.js`). The generated assets and Gradle output are gitignored.
+It needs `tv-app/config.js` (see `tv-app/config.example.js`). The generated assets and Gradle output are gitignored.
 
 ## Ports and simulator
 
-- Express listens on **3000**. `GET /led/state` streams the current animation state to the LG TV app and the Fire TV app (the same web bundle).
+- Express listens on **3000**. `GET /led/state` streams the current animation state to the TV app (Fire TV and the simulator's TV view).
 - On win32/darwin the animator starts a WebSocket server on **8080** and streams frames.
 - Open `simulator.html` directly in a browser (double-click or `file://`); it connects to `ws://localhost:8080`. It is not served by Express.
-- The simulator's "LG TV" view needs `pnpm lg:preview` once (see `docs/simulator.md`).
+- The simulator's "TV" view needs `pnpm tv:preview` once (see `docs/simulator.md`).
 
 ## Spotify OAuth setup
 

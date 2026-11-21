@@ -3,9 +3,8 @@ node_modules
 .env
 dist-test
 data
-lg-app/config.js
-lg-app/out
-lg-app/preview
+tv-app/config.js
+tv-app/preview
 android-app/app/src/main/assets/
 android-app/app/build/
 android-app/build/
