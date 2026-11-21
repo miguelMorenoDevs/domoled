@@ -1,9 +1,15 @@
 import { skyAt } from "../../../src/utils/sky.js";
 import type { SkySnapshot } from "../../../src/utils/sky.js";
 
-/** The reference scene's coordinate space; the animator scales it up to 1080p. */
+/** The reference scene's coordinate space; the animator scales it up to the render size. */
 export const STAGE_WIDTH = 400;
 export const STAGE_HEIGHT = 225;
+
+// Measured on the Fire TV: a 1080p canvas runs at ~15 fps, 1280x720 holds the 30 fps target.
+// Kept 16:9 so the stage fills the canvas exactly.
+export const RENDER_WIDTH = 1280;
+export const RENDER_HEIGHT = 720;
+export const SCENE_SCALE = RENDER_WIDTH / STAGE_WIDTH;
 
 const STARS: readonly (readonly [number, number, number])[] = [
   [30, 20, 1.2],

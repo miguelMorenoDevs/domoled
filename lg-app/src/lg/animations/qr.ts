@@ -4,6 +4,7 @@ import type {
 } from "../../../../src/animator/types.js";
 import { BaseAnimation } from "../../../../src/animator/base.js";
 import { roundRect } from "../../utils/canvas.js";
+import { SCENE_SCALE } from "../scene.js";
 
 const INTRO_MS = 1400;
 const OUTRO_MS = 1000;
@@ -11,8 +12,8 @@ const DROP = 210;
 const SCREEN_CENTER_X = 200;
 const QR_SIZE = 112;
 const QR_TOP = 20;
-// Device pixels per scene unit at the TV's 1080p render, so QR edges land on whole pixels.
-const HD_SCALE = 4.8;
+// Render pixels per scene unit, so QR edges land on whole pixels at any render size.
+const HD_SCALE = SCENE_SCALE;
 const TAU = Math.PI * 2;
 const BACK_BOX = { x: 8, y: 8, width: 58, height: 20 };
 
