@@ -7,6 +7,9 @@ import { CdAnimation } from "./animations/cd.js";
 import { PodcastAnimation } from "./animations/podcast.js";
 import { QrAnimation } from "./animations/qr.js";
 import {
+  RENDER_HEIGHT,
+  RENDER_WIDTH,
+  SCENE_SCALE,
   STAGE_HEIGHT,
   STAGE_WIDTH,
   drawNightOverlay,
@@ -14,15 +17,11 @@ import {
 } from "./scene.js";
 import { wrapText } from "../utils/canvas.js";
 
-// The scene is authored in 400x225 units and rendered at 1080p for the TV.
-const SCREEN_WIDTH = 1920;
-const SCREEN_HEIGHT = 1080;
-const SCENE_SCALE = SCREEN_WIDTH / STAGE_WIDTH;
 const FPS = 30;
 
 /**
  * Same lifecycle as CdAnimator in src/led/animator.ts (shared AnimationRunner), drawing the meadow
- * scene and the animations on top of it at 1080p.
+ * scene and the animations on top of it at the render size.
  */
 export class LgAnimator {
   private readonly canvas: HTMLCanvasElement;
@@ -42,22 +41,22 @@ export class LgAnimator {
   constructor(canvas: HTMLCanvasElement, passive = false) {
     this.canvas = canvas;
     this.passive = passive;
-    canvas.width = SCREEN_WIDTH;
-    canvas.height = SCREEN_HEIGHT;
+    canvas.width = RENDER_WIDTH;
+    canvas.height = RENDER_HEIGHT;
     this.ctx = canvas.getContext("2d")!;
     this.fitToWindow();
     window.addEventListener("resize", this.fitToWindow);
     if (!passive) canvas.addEventListener("click", this.handleClick);
   }
 
-  /** Renders at 1080p and scales the element to the window, so 4K panels get a full screen too. */
+  /** Renders at the 16:9 render size and scales the element to the window, so any panel gets a full screen. */
   private fitToWindow = (): void => {
     const factor = Math.min(
-      window.innerWidth / SCREEN_WIDTH,
-      window.innerHeight / SCREEN_HEIGHT,
+      window.innerWidth / RENDER_WIDTH,
+      window.innerHeight / RENDER_HEIGHT,
     );
-    this.canvas.style.width = `${Math.round(SCREEN_WIDTH * factor)}px`;
-    this.canvas.style.height = `${Math.round(SCREEN_HEIGHT * factor)}px`;
+    this.canvas.style.width = `${Math.round(RENDER_WIDTH * factor)}px`;
+    this.canvas.style.height = `${Math.round(RENDER_HEIGHT * factor)}px`;
   };
 
   setProfile(
