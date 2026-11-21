@@ -12,10 +12,10 @@ const stockScreensaver =
 const debugDir = path.join(appDir, "app", "build", "outputs", "apk", "debug");
 
 function host() {
-  const value = process.env["FIRETV_HOST"];
-  if (!value)
-    throw new Error("missing FIRETV_HOST (address:port of the Fire TV)");
-  return value;
+  const value = process.env["TV_HOST"];
+  if (!value) throw new Error("missing TV_HOST (address of the Fire TV)");
+  // adb addresses a network device as host:port; the default wireless debugging port is 5555.
+  return value.includes(":") ? value : `${value}:5555`;
 }
 
 function adb(step, args) {
