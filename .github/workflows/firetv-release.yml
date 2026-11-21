@@ -8,7 +8,7 @@ name: firetv release
 #   ANDROID_KEYSTORE_BASE64  base64 of the release keystore (one password for store and key)
 #   ANDROID_STORE_PASSWORD   keystore and key password
 #   ANDROID_KEY_ALIAS        key alias inside the keystore
-#   FIRETV_HOST              device address, used by the install job only
+#   TV_HOST                  device address, used by the install job only (defaults to port 5555)
 #
 # The install job needs a self-hosted runner labelled `firetv` on the LAN. Its adb key has to be
 # authorized on the device once, and the wireless debugging port can change after a reboot.
@@ -126,7 +126,7 @@ jobs:
 
       - name: Install and activate
         env:
-          FIRETV_HOST: ${{ secrets.FIRETV_HOST }}
+          TV_HOST: ${{ secrets.TV_HOST }}
         run: |
           node android-app/deploy.mjs install "$PWD/dist/app-release.apk"
           node android-app/deploy.mjs screensaver

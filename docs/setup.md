@@ -109,7 +109,7 @@ pnpm android:build    # lg:build, copy lg-app/dist into android-app assets, grad
 pnpm android:rebuild  # android:build, then install and screensaver
 ```
 
-`android-app/deploy.mjs` talks to the device with `adb` and reads the device address from `FIRETV_HOST` (`address:port`), which must be set in the environment:
+`android-app/deploy.mjs` talks to the device with `adb` and reads the device address from `TV_HOST`, the same secret the deploy workflows use, which must be set in the environment. A value without a port gets `:5555`, the wireless debugging port.
 
 - `node android-app/deploy.mjs connect`: `adb connect` when the device is not already online.
 - `node android-app/deploy.mjs install [apk]`: `adb install -r` of the given APK, or the newest debug build.
