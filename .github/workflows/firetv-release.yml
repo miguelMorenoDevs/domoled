@@ -53,6 +53,10 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7-linux-androideabi
+
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Check the secrets
@@ -88,7 +92,13 @@ jobs:
           keyPassword=$ANDROID_STORE_PASSWORD
           EOF
 
+      - name: Build the native library
+        run: bash android-app/build-native.sh
+
       - run: pnpm android:build:release
+
+      - name: Check the native library is packaged
+        run: unzip -l android-app/app/build/outputs/apk/release/app-release.apk | grep librespot_jni
 
       - name: Verify the signature
         run: |
