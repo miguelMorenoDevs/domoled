@@ -9,7 +9,8 @@ import android.util.Log
 object Librespot {
     val version: String? by lazy {
         try {
-            System.loadLibrary("librespot_jni")
+            // loadLibrary prefixes lib: this maps to librespot_jni.so.
+            System.loadLibrary("respot_jni")
             nativeVersion()
         } catch (error: UnsatisfiedLinkError) {
             Log.e(TAG, "native library unavailable", error)
