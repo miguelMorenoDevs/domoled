@@ -13,6 +13,12 @@ interface TrackData {
   contentType: "track" | "episode";
 }
 
+// Set by main.ts for the Fire TV app to call through evaluateJavascript.
+interface Window {
+  showPlayerError: (message: string) => void;
+  clearPlayerError: () => void;
+}
+
 // Mirrors AnimatorState in src/led/types.ts on the server; keep the two in sync.
 type ScreenState =
   | { kind: "track"; track: TrackData; positionMs: number }

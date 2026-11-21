@@ -39,7 +39,9 @@ bash android-app/build-native.sh
 
 The app's launcher activity (not the dream) registers the TV as a Spotify Connect device while it is open. The phone lists it as **DomoLED TV**. Playback follows the server's active user: the TV fetches `GET /spotify/stream-token` with `TV_TOKEN` (the same value as `tv-app/config.js`), logs the native session in with that access token, and re-checks the server every 10 s (or sooner, before `expiresAt`). The session follows the active user: switching accounts on the TV moves the device to that account within about 10 s. The TV stores no refresh token and does not log the access token.
 
-The session plays into a discard sink for now: the phone shows the device and controls work, but there is no sound until the AAudio sink lands (#198). When the session drops, for example on lost network or a dead connection, the app fetches a fresh token and reconnects with backoff. Readable reasons (no active user, login expired, server unreachable, Spotify refused) appear as a toast; they do not replace the scene's error card, which the server drives.
+The session plays into a discard sink for now: the phone shows the device and controls work, but there is no sound until the AAudio sink lands (#198). When the session drops, for example on lost network or a dead connection, the app fetches a fresh token and reconnects with backoff.
+
+The app shows a small overlay at the bottom of the screen when playback is unavailable: no active user, non-Premium account, server unreachable, expired login, the server refusing the TV token, or an unexpected native error. It disappears by itself when the session is back. The overlay is separate from the scene's error card, which the server drives, so the state stream never hides it. The dream never shows it because it never starts the player.
 
 The app reads `LED_SERVER_URL` and `TV_TOKEN` from the bundled `config.js`. A build without that file runs the scene and skips the Connect device.
 

@@ -16,8 +16,14 @@ import java.net.URL
 class SpotifyConnect private constructor(
     private val serverUrl: String,
     private val tvToken: String,
-    private val onStatus: (String) -> Unit,
+    private val listener: Listener,
 ) {
+    /** Called from the holder thread. A failure is reported once per reason; connected once per recovery. */
+    interface Listener {
+        fun onFailure(message: String)
+        fun onConnected()
+    }
+
     @Volatile private var running = false
     private var worker: Thread? = null
 
@@ -40,11 +46,12 @@ class SpotifyConnect private constructor(
     private fun run() {
         try {
             if (!Librespot.available) {
-                onStatus("Native player unavailable")
+                listener.onFailure(NATIVE_REASON)
                 return
             }
             var backoffMs = MIN_BACKOFF_MS
             var lastReason: String? = null
+            var connected = false
             var sessionUserId: String? = null
             while (running) {
                 try {
@@ -52,23 +59,28 @@ class SpotifyConnect private constructor(
                     if (token == null) {
                         Librespot.nativeStop()
                         sessionUserId = null
-                        throw Failure("No Spotify user is active.")
+                        throw Failure(NO_USER_REASON)
                     }
                     if (sessionUserId != token.userId || !Librespot.nativeIsAlive()) {
                         Librespot.nativeStop()
                         sessionUserId = null
                         val error = Librespot.nativeStart(token.accessToken, DEVICE_NAME)
-                        if (error != null) throw Failure(error)
+                        if (error != null) throw Failure(startReason(error))
                         sessionUserId = token.userId
                     }
                     backoffMs = MIN_BACKOFF_MS
                     lastReason = null
+                    if (!connected) {
+                        connected = true
+                        listener.onConnected()
+                    }
                     val untilExpiry = token.expiresAt - System.currentTimeMillis()
                     Thread.sleep(minOf(REFRESH_MS, maxOf(untilExpiry, MIN_BACKOFF_MS)))
                 } catch (failure: Failure) {
+                    connected = false
                     if (failure.reason != lastReason) {
                         lastReason = failure.reason
-                        onStatus(failure.reason)
+                        listener.onFailure(failure.reason)
                     }
                     Thread.sleep(backoffMs)
                     backoffMs = minOf(backoffMs * 2, MAX_BACKOFF_MS)
@@ -91,8 +103,8 @@ class SpotifyConnect private constructor(
             when (val status = connection.responseCode) {
                 200 -> {}
                 404 -> return null
-                401 -> throw Failure("Spotify login expired. Log in again from the TV.")
-                403 -> throw Failure("The server refused the TV token.")
+                401 -> throw Failure(EXPIRED_REASON)
+                403 -> throw Failure(REFUSED_REASON)
                 502 -> throw Failure("Spotify could not complete the request.")
                 else -> throw Failure("The server answered with status $status.")
             }
@@ -104,7 +116,7 @@ class SpotifyConnect private constructor(
                 expiresAt = json.getLong("expiresAt"),
             )
         } catch (error: IOException) {
-            throw Failure("Could not reach the server.")
+            throw Failure(UNREACHABLE_REASON)
         } catch (error: org.json.JSONException) {
             throw Failure("The server sent an unreadable Spotify token.")
         } finally {
@@ -126,8 +138,19 @@ class SpotifyConnect private constructor(
         private const val MIN_BACKOFF_MS = 2_000L
         private const val MAX_BACKOFF_MS = 60_000L
 
+        private const val NO_USER_REASON = "No Spotify user is active. Log in from the TV."
+        private const val EXPIRED_REASON = "Spotify login expired. Log in again from the TV."
+        private const val REFUSED_REASON = "The server refused the TV token."
+        private const val UNREACHABLE_REASON = "Could not reach the LED server."
+        private const val PREMIUM_REASON = "Spotify Premium is needed to play on the TV."
+        private const val NATIVE_REASON = "The TV player hit an unexpected error."
+
+        // The native error text is librespot's and is not shown; only its Premium refusal is mapped.
+        private fun startReason(error: String): String =
+            if (error.contains("premium", ignoreCase = true)) PREMIUM_REASON else NATIVE_REASON
+
         /** Reads the server address and TV token that copy-assets bakes into config.js. Null when they are missing. */
-        fun fromAssets(assets: AssetManager, onStatus: (String) -> Unit): SpotifyConnect? {
+        fun fromAssets(assets: AssetManager, listener: Listener): SpotifyConnect? {
             val config = try {
                 assets.open("config.js").bufferedReader().use { it.readText() }
             } catch (error: IOException) {
@@ -136,7 +159,7 @@ class SpotifyConnect private constructor(
             }
             val serverUrl = setting(config, "LED_SERVER_URL") ?: return null
             val tvToken = setting(config, "TV_TOKEN") ?: return null
-            return SpotifyConnect(serverUrl, tvToken, onStatus)
+            return SpotifyConnect(serverUrl, tvToken, listener)
         }
 
         private fun setting(config: String, name: String): String? =

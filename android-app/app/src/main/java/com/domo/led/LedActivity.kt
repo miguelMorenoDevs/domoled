@@ -6,7 +6,6 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.WindowManager
 import android.webkit.WebView
-import android.widget.Toast
 import com.domo.led.connect.SpotifyConnect
 import com.domo.led.scene.SCENE_URL
 import com.domo.led.scene.createSceneWebView
@@ -15,6 +14,15 @@ class LedActivity : Activity() {
     private var webView: WebView? = null
     private var spotifyConnect: SpotifyConnect? = null
     private val passive by lazy { intent.getBooleanExtra(EXTRA_PASSIVE, false) }
+    private val connectListener = object : SpotifyConnect.Listener {
+        override fun onFailure(message: String) {
+            runOnUiThread { webView?.evaluateJavascript("window.showPlayerError(${org.json.JSONObject.quote(message)})", null) }
+        }
+
+        override fun onConnected() {
+            runOnUiThread { webView?.evaluateJavascript("window.clearPlayerError()", null) }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +43,7 @@ class LedActivity : Activity() {
     override fun onStart() {
         super.onStart()
         if (passive || spotifyConnect != null) return
-        spotifyConnect = SpotifyConnect.fromAssets(assets, ::showConnectStatus)?.also { it.start() }
+        spotifyConnect = SpotifyConnect.fromAssets(assets, connectListener)?.also { it.start() }
     }
 
     override fun onStop() {
@@ -44,19 +52,9 @@ class LedActivity : Activity() {
         super.onStop()
     }
 
-    private fun showConnectStatus(message: String) {
-        runOnUiThread { Toast.makeText(this, message, Toast.LENGTH_LONG).show() }
-    }
-
-    // The error card belongs to the server state stream, which would overwrite it on the next
-    // event, so a packaging failure gets a toast and a log line instead.
     private fun reportNativeLibrary() {
-        val version = Librespot.version
-        if (version != null) {
-            Log.i("Librespot", "native $version")
-            return
-        }
-        Toast.makeText(this, "Native player unavailable", Toast.LENGTH_LONG).show()
+        val version = Librespot.version ?: return
+        Log.i("Librespot", "native $version")
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
