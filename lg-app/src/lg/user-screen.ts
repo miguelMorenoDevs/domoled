@@ -9,13 +9,6 @@ const CLOSE_BOX: Box = { x: STAGE_WIDTH - 66, y: 8, width: 58, height: 20 };
 const ADD_BOX: Box = { x: 8, y: 8, width: 58, height: 20 };
 const ACTIVE_COLOR = "#1db954";
 
-interface Box {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 function inside(box: Box, x: number, y: number): boolean {
   return (
     x >= box.x &&
@@ -72,6 +65,26 @@ export class UserScreen {
     }
     const row = this.layout().find((r) => inside(r.box, x, y));
     if (row) void this.switchTo(row.user.id);
+  }
+
+  /** The controls a remote can select, in arrow order. Empty while the list is closed. */
+  focusTargets(): FocusTarget[] {
+    if (!this.open) return [];
+    return [
+      { key: "add", box: ADD_BOX },
+      ...this.layout().map(({ user, box }) => ({
+        key: `user:${user.id}`,
+        box,
+      })),
+      { key: "close", box: CLOSE_BOX },
+    ];
+  }
+
+  /** The row of the active user, or Add user when no account is logged in. */
+  defaultFocusKey(): string {
+    return this.users.some((user) => user.id === this.activeId)
+      ? `user:${this.activeId}`
+      : "add";
   }
 
   /** Draws over the stage; the caller draws the profile badge after it so the badge stays on top. */

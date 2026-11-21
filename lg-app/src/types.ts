@@ -101,3 +101,17 @@ interface ArtPalette {
   opposite: Rgb;
   oppositeDeep: Rgb;
 }
+
+/** A rectangle in stage units (400x225). */
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** A control a remote can select. `key` keeps the selection across redraws. */
+interface FocusTarget {
+  key: string;
+  box: Box;
+}

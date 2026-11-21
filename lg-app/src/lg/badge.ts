@@ -35,8 +35,15 @@ export class ProfileBadge {
     return Math.hypot(x - cx, y - cy) <= RADIUS + 4;
   }
 
+  /** The square around the badge that a remote selects, with the same slack as contains(). */
+  box(): Box {
+    const { cx, cy } = center();
+    const half = RADIUS + 4;
+    return { x: cx - half, y: cy - half, width: half * 2, height: half * 2 };
+  }
+
   /** Draws over the current transform, which the caller sets to the 400x225 stage. */
-  draw(ctx: CanvasRenderingContext2D): void {
+  draw(ctx: CanvasRenderingContext2D, focused: boolean): void {
     const { cx, cy } = center();
 
     ctx.save();
@@ -73,6 +80,13 @@ export class ProfileBadge {
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 1.2;
     ctx.stroke();
+
+    if (focused) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, RADIUS + 3, 0, Math.PI * 2);
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
   }
 
   private initial(): string {

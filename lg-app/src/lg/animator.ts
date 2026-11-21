@@ -15,9 +15,16 @@ import {
   MeadowBackdrop,
   drawNightOverlay,
 } from "./scene.js";
-import { wrapText } from "../utils/canvas.js";
+import { focusRing, wrapText } from "../utils/canvas.js";
 
 const FPS = 30;
+// Left and Up step back through the focus order; Right and Down step forward.
+const STEP_KEYS: Record<string, number> = {
+  ArrowLeft: -1,
+  ArrowUp: -1,
+  ArrowRight: 1,
+  ArrowDown: 1,
+};
 
 /**
  * Same lifecycle as CdAnimator in src/led/animator.ts (shared AnimationRunner), drawing the meadow
@@ -36,6 +43,7 @@ export class LgAnimator {
   private errorMessage = "";
   private offline = false;
   private intervalId: number | null = null;
+  private focusKey: string | null = null;
   private readonly passive: boolean;
 
   /** A passive animator (the Fire TV dream) has no badge, account list or click handling. */
@@ -47,7 +55,10 @@ export class LgAnimator {
     this.ctx = canvas.getContext("2d")!;
     this.fitToWindow();
     window.addEventListener("resize", this.fitToWindow);
-    if (!passive) canvas.addEventListener("click", this.handleClick);
+    if (!passive) {
+      canvas.addEventListener("click", this.handleClick);
+      window.addEventListener("keydown", this.handleKey);
+    }
   }
 
   /** Renders at the 16:9 render size and scales the element to the window, so any panel gets a full screen. */
@@ -165,14 +176,40 @@ export class LgAnimator {
     this.offline = offline;
   }
 
-  /**
-   * Maps a click to the stage: the badge toggles the user screen, the login QR's Back box returns to
-   * the account list, and anything else goes to the user screen.
-   */
+  /** Maps a click to the stage and presses it. */
   private handleClick = (event: MouseEvent): void => {
     const rect = this.canvas.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * STAGE_WIDTH;
     const y = ((event.clientY - rect.top) / rect.height) * STAGE_HEIGHT;
+    this.press(x, y);
+  };
+
+  /** Arrows move the selection, Enter presses it through the click path. Other keys pass through. */
+  private handleKey = (event: KeyboardEvent): void => {
+    const targets = this.focusTargets();
+    const index = this.focusedIndex(targets);
+    const target = targets[index];
+    if (!target) return;
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const { x, y, width, height } = target.box;
+      this.press(x + width / 2, y + height / 2);
+      return;
+    }
+    const step = STEP_KEYS[event.key];
+    if (step === undefined) return;
+    event.preventDefault();
+    const next = Math.min(Math.max(index + step, 0), targets.length - 1);
+    this.focusKey = targets[next]?.key ?? null;
+    this.redraw();
+  };
+
+  /**
+   * Presses a stage point: the badge toggles the user screen, the login QR's Back box returns to the
+   * account list, and anything else goes to the user screen. The selection returns to its default.
+   */
+  private press(x: number, y: number): void {
+    this.focusKey = null;
     const current = this.runner.current;
     if (this.badge.contains(x, y)) this.users.toggle();
     else if (
@@ -183,7 +220,26 @@ export class LgAnimator {
       this.startIdle();
       void this.users.show();
     } else this.users.handleClick(x, y);
-  };
+  }
+
+  /** What a remote can select right now: the account list, the QR's Back box, or the badge. */
+  private focusTargets(): FocusTarget[] {
+    if (this.users.isOpen()) return this.users.focusTargets();
+    const badge = { key: "badge", box: this.badge.box() };
+    const current = this.runner.current;
+    const back = current instanceof QrAnimation ? current.backBox() : null;
+    return back ? [{ key: "back", box: back }, badge] : [badge];
+  }
+
+  /** The stored selection if it is still on screen, else the default: the active account, or the first control. */
+  private focusedIndex(targets: FocusTarget[]): number {
+    const stored = targets.findIndex((target) => target.key === this.focusKey);
+    if (stored >= 0) return stored;
+    const fallback = targets.findIndex(
+      (target) => target.key === this.users.defaultFocusKey(),
+    );
+    return Math.max(fallback, 0);
+  }
 
   /**
    * Redraws the frame a paused track holds, so the user screen shows while the loop is stopped. An
@@ -274,11 +330,14 @@ export class LgAnimator {
     ctx.restore();
   }
 
-  /** The account list and profile badge; a passive animator draws neither. */
+  /** The account list, the focus ring and the profile badge; a passive animator draws none of them. */
   private drawControls(ctx: CanvasContext): void {
     if (this.passive) return;
+    const targets = this.focusTargets();
+    const focused = targets[this.focusedIndex(targets)];
     this.users.draw(ctx);
-    this.badge.draw(ctx);
+    if (focused && focused.key !== "badge") focusRing(ctx, focused.box);
+    this.badge.draw(ctx, focused?.key === "badge");
   }
 
   /**
