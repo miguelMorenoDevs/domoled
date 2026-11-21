@@ -23,6 +23,13 @@
 - Access tokens refresh automatically, with one retry when the API returns `401`. A refresh token that Spotify rejects (`invalid_grant`) is removed and the login QR is shown again.
 - Spotify API failures are errors, not "nothing playing": non-2xx responses, timeouts (10 s per request) and malformed payloads make the callback return `502`. A `429` forwards `Retry-After`.
 
+## Stream token
+
+- The login asks for `streaming` as well as `user-read-currently-playing user-read-private`. The Fire TV's native Spotify Connect session needs it.
+- `GET /spotify/stream-token` returns `{ userId, accessToken, expiresAt }` for the active user, with `expiresAt` in epoch milliseconds from Spotify's `expires_in`. Each call refreshes the access token first. The refresh token is never returned, and the response is `Cache-Control: no-store`.
+- It is guarded by `requireTv` like the account routes: loopback or the `X-TV-Token` header (`403` otherwise). It answers `404` when no user is active and `401` when Spotify rejects the stored login.
+- A login stored before `streaming` was added is removed when Spotify refuses its refresh with `invalid_scope` (the same path as `invalid_grant`), so the login QR comes back. Log in again to get the scope.
+
 ## Status
 
 - `GET /spotify/status` returns the active user (`activeUser`), its Spotify `displayName` and profile picture `avatarUrl`, whether a track is playing (`playing`), and its `track` title and artist. `track` is `null` when paused, idle or no user is active.

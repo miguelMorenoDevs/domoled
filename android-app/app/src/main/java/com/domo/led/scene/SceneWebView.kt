@@ -13,7 +13,7 @@ import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 const val SCENE_URL = "http://appassets.androidplatform.net/assets/index.html"
 
 // http, not https: the Pi serves plain HTTP, and an https page would make those requests mixed content.
-fun createSceneWebView(context: Context, url: String): WebView {
+fun createSceneWebView(context: Context, url: String, onReady: () -> Unit = {}): WebView {
     val assets = WebViewAssetLoader.Builder()
         // HTTP is not allowed by default; the page is served over http so the Pi's plain-HTTP
         // requests stay same-scheme instead of becoming mixed content.
@@ -30,6 +30,8 @@ fun createSceneWebView(context: Context, url: String): WebView {
                 view: WebView,
                 request: WebResourceRequest,
             ): WebResourceResponse? = assets.shouldInterceptRequest(request.url)
+
+            override fun onPageFinished(view: WebView, url: String?) = onReady()
         }
     }
     if (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {

@@ -6,13 +6,32 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.WindowManager
 import android.webkit.WebView
-import android.widget.Toast
+import com.domo.led.connect.SpotifyConnect
 import com.domo.led.scene.SCENE_URL
 import com.domo.led.scene.createSceneWebView
 
 class LedActivity : Activity() {
     private var webView: WebView? = null
+    private var spotifyConnect: SpotifyConnect? = null
     private val passive by lazy { intent.getBooleanExtra(EXTRA_PASSIVE, false) }
+    // Only touched on the UI thread. The listener runs on the holder thread and hops over.
+    private var playerError: String? = null
+    private var pageReady = false
+    private val connectListener = object : SpotifyConnect.Listener {
+        override fun onFailure(message: String) {
+            runOnUiThread {
+                playerError = message
+                sendPlayerState()
+            }
+        }
+
+        override fun onConnected() {
+            runOnUiThread {
+                playerError = null
+                sendPlayerState()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,22 +41,40 @@ class LedActivity : Activity() {
         if (passive) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         val url = if (passive) "$SCENE_URL?passive=1" else SCENE_URL
-        val view = createSceneWebView(this, url)
+        val view = createSceneWebView(this, url) {
+            pageReady = true
+            sendPlayerState()
+        }
         webView = view
         setContentView(view)
         // The dream never touches the player; the app reports which librespot it ships.
         if (!passive) reportNativeLibrary()
     }
 
-    // The error card belongs to the server state stream, which would overwrite it on the next
-    // event, so a packaging failure gets a toast and a log line instead.
+    // The Connect device is listed only while the app is open; the dream never starts it.
+    override fun onStart() {
+        super.onStart()
+        if (passive || spotifyConnect != null) return
+        spotifyConnect = SpotifyConnect.fromAssets(assets, connectListener)?.also { it.start() }
+    }
+
+    override fun onStop() {
+        spotifyConnect?.stop()
+        spotifyConnect = null
+        super.onStop()
+    }
+
+    // Evaluating before the page loads would reach the outgoing document, so it waits for onReady.
+    private fun sendPlayerState() {
+        if (!pageReady) return
+        val script = playerError?.let { "window.showPlayerError(${org.json.JSONObject.quote(it)})" }
+            ?: "window.clearPlayerError()"
+        webView?.evaluateJavascript(script, null)
+    }
+
     private fun reportNativeLibrary() {
-        val version = Librespot.version
-        if (version != null) {
-            Log.i("Librespot", "native $version")
-            return
-        }
-        Toast.makeText(this, "Native player unavailable", Toast.LENGTH_LONG).show()
+        val version = Librespot.version ?: return
+        Log.i("Librespot", "native $version")
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {

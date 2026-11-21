@@ -114,6 +114,11 @@ export class CdAnimator {
 
     if (process.platform === "win32" || process.platform === "darwin") {
       this.wss = new WebSocketServer({ port: 8080 });
+      // Without this, a second instance or a test run sharing the port throws after the matrix
+      // is already up and takes the whole process down.
+      this.wss.on("error", (error) =>
+        console.warn(`[Simulator] live server unavailable: ${error.message}`),
+      );
       this.wss.on("connection", (ws) => {
         console.log("[Simulator] 🟢 Browser connected to live stream!");
         this.wsClients.add(ws);

@@ -49,8 +49,18 @@ export interface StoredUsers {
 export interface TokenResponse {
   access_token: string;
   refresh_token?: string;
+  /** Seconds until access_token expires. */
+  expires_in?: number;
   /** Space-separated scopes Spotify actually granted. */
   scope?: string;
+}
+
+/** `GET /spotify/stream-token`: a short-lived access token for the active user's Connect session. */
+export interface StreamToken {
+  userId: string;
+  accessToken: string;
+  /** Epoch milliseconds. */
+  expiresAt: number;
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {

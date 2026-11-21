@@ -24,10 +24,26 @@
         max-width: 100vw;
         max-height: 100vh;
       }
+      #player-error {
+        position: fixed;
+        bottom: 8vh;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 80vw;
+        padding: 1.5vmin 3vmin;
+        border-radius: 2vmin;
+        background: rgba(0, 0, 0, 0.85);
+        color: #fff;
+        font: 500 4vmin/1.3 system-ui, sans-serif;
+        text-align: center;
+        pointer-events: none;
+        z-index: 1;
+      }
     </style>
   </head>
   <body>
     <canvas id="screen"></canvas>
+    <div id="player-error" hidden></div>
     <script src="config.js"></script>
     <script src="app.js"></script>
   </body>

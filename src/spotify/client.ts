@@ -9,6 +9,7 @@ import {
   type GetUserTokenOptions,
   type LoggedUser,
   type SpotifyProfile,
+  type StreamToken,
   type StoredUsers,
   type UserTokens,
 } from "./types/api.js";
@@ -108,7 +109,9 @@ class SpotifyClient {
     }
   }
 
-  async getUserToken(options: GetUserTokenOptions) {
+  async getUserToken(
+    options: GetUserTokenOptions,
+  ): Promise<number | undefined> {
     console.info("Token retrieval started on type " + options.grant_type);
 
     const headers: Record<string, string> = {
@@ -156,7 +159,8 @@ class SpotifyClient {
       if (
         refreshingUser &&
         isRecord(failure) &&
-        failure["error"] === "invalid_grant"
+        (failure["error"] === "invalid_grant" ||
+          failure["error"] === "invalid_scope")
       ) {
         this.forgetUser(refreshingUser);
         throw new SpotifyAuthRevokedError(refreshingUser);
@@ -192,6 +196,24 @@ class SpotifyClient {
     }
 
     this.saveStore();
+    return payload.expires_in;
+  }
+
+  /** Refreshes the active user's access token, so the expiry is the one Spotify just issued. */
+  async getStreamToken(): Promise<StreamToken | undefined> {
+    const userId = this.active_user;
+    if (!userId) return undefined;
+
+    const expiresIn = await this.getUserToken({ grant_type: "refresh_token" });
+    const tokens = this.users_map.get(userId);
+    if (expiresIn === undefined || !tokens)
+      throw new SpotifyResponseError("/token");
+
+    return {
+      userId,
+      accessToken: tokens.access_token,
+      expiresAt: Date.now() + expiresIn * 1000,
+    };
   }
 
   private async fetch<T>(

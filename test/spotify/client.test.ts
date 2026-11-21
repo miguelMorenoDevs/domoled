@@ -732,3 +732,47 @@ test("a 500 on refresh keeps the user's tokens for a later retry", async (t) => 
     true,
   );
 });
+
+test("getStreamToken refreshes the active user and returns the token with its expiry", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/token": () =>
+      jsonResponse({
+        access_token: "stream-access",
+        expires_in: 3600,
+      }),
+  });
+
+  const before = Date.now();
+  const token = await spotify.getStreamToken();
+
+  assert.equal(token?.userId, "user-id");
+  assert.equal(token?.accessToken, "stream-access");
+  assert.ok(token && token.expiresAt >= before + 3600_000);
+  assert.ok(token && token.expiresAt <= Date.now() + 3600_000);
+});
+
+test("getStreamToken returns undefined when no user is active", async () => {
+  await spotify.clearActiveUser();
+
+  assert.equal(await spotify.getStreamToken(), undefined);
+});
+
+test("an invalid_scope refresh removes the user so the login comes back", async (t) => {
+  await login(t);
+  mockSpotify(t, {
+    "/token": () =>
+      statusResponse(400, {
+        error: "invalid_scope",
+        error_description: "Scope streaming was not granted",
+      }),
+  });
+
+  await assert.rejects(
+    spotify.getStreamToken(),
+    (error: unknown) =>
+      error instanceof SpotifyAuthRevokedError && error.userId === "user-id",
+  );
+
+  assert.equal(await spotify.hasActiveUser(), false);
+});

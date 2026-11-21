@@ -56,3 +56,13 @@ source.onmessage = (event) => {
   else if (state.kind === "error") animator.showError(state.message);
   else animator.startIdle();
 };
+
+// Kotlin calls these from the Fire TV app's Spotify Connect listener; the state stream never touches the overlay.
+window.showPlayerError = (message: string) => {
+  const el = document.getElementById("player-error")!;
+  el.textContent = message;
+  el.hidden = false;
+};
+window.clearPlayerError = () => {
+  document.getElementById("player-error")!.hidden = true;
+};
