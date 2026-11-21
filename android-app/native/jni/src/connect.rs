@@ -1,44 +1,24 @@
-//! The Spotify Connect device: one session, registered as a TV, that plays into a discard sink.
+//! The Spotify Connect device: one session, registered as a TV, that plays through the AAudio sink.
 //! The access token comes from the server (`GET /spotify/stream-token`) and is only used to log
 //! in; the session keeps its own connection afterwards.
 
 use std::sync::{Mutex, OnceLock};
-use std::thread;
 use std::time::Duration;
 
 use librespot_connect::{ConnectConfig, Spirc};
 use librespot_core::authentication::Credentials;
 use librespot_core::config::{DeviceType, SessionConfig};
 use librespot_core::Session;
-use librespot_playback::audio_backend::{Sink, SinkResult};
 use librespot_playback::config::PlayerConfig;
-use librespot_playback::convert::Converter;
-use librespot_playback::decoder::AudioPacket;
 use librespot_playback::mixer::softmixer::SoftMixer;
 use librespot_playback::mixer::{Mixer, MixerConfig};
 use librespot_playback::player::Player;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 
+use crate::sink::AaudioSink;
+
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
-
-// Spotify streams 44.1 kHz stereo; the discard sink paces itself to that rate so the player
-// keeps the track's real timing and does not run to the end of it in seconds.
-const SAMPLE_RATE: f64 = 44_100.0;
-const CHANNELS: f64 = 2.0;
-
-/// Consumes decoded audio at real-time speed and drops it. Replaced by the AAudio sink in #198.
-struct DiscardSink;
-
-impl Sink for DiscardSink {
-    fn write(&mut self, packet: AudioPacket, _converter: &mut Converter) -> SinkResult<()> {
-        if let Ok(samples) = packet.samples() {
-            let seconds = samples.len() as f64 / (SAMPLE_RATE * CHANNELS);
-            thread::sleep(Duration::from_secs_f64(seconds));
-        }
-        Ok(())
-    }
-}
 
 struct Live {
     session: Session,
@@ -83,7 +63,7 @@ pub fn start(access_token: &str, name: &str) -> Result<(), String> {
                 PlayerConfig::default(),
                 session.clone(),
                 mixer.get_soft_volume(),
-                || Box::new(DiscardSink),
+                || Box::new(AaudioSink::open()),
             );
 
             let config = ConnectConfig {

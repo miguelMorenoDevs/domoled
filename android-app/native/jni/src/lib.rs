@@ -1,7 +1,8 @@
-//! The native half of the Fire TV app: the Spotify Connect device (see `connect.rs`). The AAudio
-//! sink arrives in #198; until then the session plays into a discard sink.
+//! The native half of the Fire TV app: the Spotify Connect device (see `connect.rs`) and the AAudio
+//! sink it plays through (see `sink.rs`).
 
 mod connect;
+mod sink;
 
 use jni::objects::{JObject, JString};
 use jni::sys::{jboolean, jstring};
