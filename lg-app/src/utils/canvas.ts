@@ -101,3 +101,12 @@ export function fillTriangle(
   ctx.fillStyle = color;
   ctx.fill();
 }
+
+/** The white outline that marks the remote's selection on a stage box. */
+export function focusRing(ctx: CanvasContext, box: Box): void {
+  ctx.save();
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(box.x - 2, box.y - 2, box.width + 4, box.height + 4);
+  ctx.restore();
+}

@@ -40,6 +40,11 @@ export class QrAnimation extends BaseAnimation<CanvasContext> {
     this.hasBack = hasBack;
   }
 
+  /** The Back box in stage units, or null when the QR has none. */
+  backBox(): Box | null {
+    return this.hasBack ? BACK_BOX : null;
+  }
+
   /** Whether a stage point lands on the Back box. */
   hitsBack(x: number, y: number): boolean {
     return (
