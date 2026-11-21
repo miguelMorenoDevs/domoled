@@ -15,6 +15,9 @@ const val SCENE_URL = "http://appassets.androidplatform.net/assets/index.html"
 // http, not https: the Pi serves plain HTTP, and an https page would make those requests mixed content.
 fun createSceneWebView(context: Context, url: String): WebView {
     val assets = WebViewAssetLoader.Builder()
+        // HTTP is not allowed by default; the page is served over http so the Pi's plain-HTTP
+        // requests stay same-scheme instead of becoming mixed content.
+        .setHttpAllowed(true)
         .addPathHandler("/assets/", AssetsPathHandler(context))
         .build()
 
