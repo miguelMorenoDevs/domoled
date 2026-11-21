@@ -35,6 +35,14 @@ bash android-app/build-native.sh
 
 `librespot-core` is pinned to `0.8.0`, with `vergen` / `vergen-gitcl` / `vergen-lib` at `9.0.6` / `1.0.8` / `0.1.6`, the versions in librespot's own lockfile: its build script breaks with a newer resolution. `ring` is pointed at the NDK compiler through forwarder scripts the build creates, because its build looks up an alias the NDK no longer ships. librespot is MIT licensed; the notice is `android-app/native/LICENSE-librespot`.
 
+### Spotify Connect
+
+The app's launcher activity (not the dream) registers the TV as a Spotify Connect device while it is open. The phone lists it as **DomoLED TV**. Playback follows the server's active user: the TV fetches `GET /spotify/stream-token` with `TV_TOKEN` (the same value as `tv-app/config.js`), logs the native session in with that access token, and keeps the session until the app closes. The TV stores no refresh token and does not log the access token.
+
+The session plays into a discard sink for now: the phone shows the device and controls work, but there is no sound until the AAudio sink lands (#198). When the session drops, for example on lost network or a dead connection, the app fetches a fresh token and reconnects with backoff. Readable reasons (no active user, login expired, server unreachable, Spotify refused) appear as a toast; they do not replace the scene's error card, which the server drives.
+
+The app reads `LED_SERVER_URL` and `TV_TOKEN` from the bundled `config.js`. A build without that file runs the scene and skips the Connect device.
+
 ## Install and activate as the screensaver
 
 With `TV_HOST` set:

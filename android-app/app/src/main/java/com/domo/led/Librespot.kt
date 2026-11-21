@@ -7,18 +7,27 @@ import android.util.Log
  * build, and the scene still works without it.
  */
 object Librespot {
-    val version: String? by lazy {
+    val available: Boolean by lazy {
         try {
             // loadLibrary prefixes lib: this maps to librespot_jni.so.
             System.loadLibrary("respot_jni")
-            nativeVersion()
+            true
         } catch (error: UnsatisfiedLinkError) {
             Log.e(TAG, "native library unavailable", error)
-            null
+            false
         }
     }
 
+    val version: String? by lazy { if (available) nativeVersion() else null }
+
     private external fun nativeVersion(): String?
+
+    /** Null when the session is up, otherwise the reason it could not start. */
+    internal external fun nativeStart(accessToken: String, deviceName: String): String?
+
+    internal external fun nativeStop()
+
+    internal external fun nativeIsAlive(): Boolean
 
     private const val TAG = "Librespot"
 }

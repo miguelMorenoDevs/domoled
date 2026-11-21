@@ -11,10 +11,13 @@ crate-type = ["cdylib"]
 
 [dependencies]
 jni = "0.21"
-# Pinned: the next slices build the Connect session and the AAudio sink on top of this crate.
+tokio = { version = "1", features = ["rt-multi-thread", "time"] }
+# Pinned: the Connect session and the sink are built on these versions.
 librespot-core = { version = "=0.8.0", default-features = false, features = [
   "rustls-tls-webpki-roots",
 ] }
+librespot-connect = { version = "=0.8.0", default-features = false }
+librespot-playback = { version = "=0.8.0", default-features = false }
 # librespot 0.8.0's build script breaks when a fresh resolution picks a newer vergen-lib
 # patch; these pins match the versions in its own Cargo.lock.
 vergen = { version = "=9.0.6", default-features = false }

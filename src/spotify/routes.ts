@@ -31,7 +31,7 @@ function spotifyAuthorizeUrl(): string {
     throw Error("Cannot build Spotify login URL, missing SPOTIFY_CLIENT_ID");
 
   const state = createOAuthState(getLocalIP() + ":3000");
-  const scope = "user-read-currently-playing user-read-private";
+  const scope = "user-read-currently-playing user-read-private streaming";
 
   const params = new URLSearchParams();
   params.append("response_type", "code");
@@ -147,6 +147,34 @@ router.get("/status", (_req: Request, res: Response) => {
       SpotifyClient.getActiveUserProfile(),
     ),
   );
+});
+
+// Read by the TV's native Connect session, which logs in with this token as the active user. TV-only: the token plays as the account.
+router.get("/stream-token", requireTv, async (_req: Request, res: Response) => {
+  try {
+    const token = await SpotifyClient.getStreamToken();
+    if (!token) {
+      res.status(404).send("No active Spotify user");
+      return;
+    }
+    res.set("Cache-Control", "no-store");
+    res.json(token);
+  } catch (error) {
+    console.error(error);
+    if (error instanceof SpotifyAuthRevokedError) {
+      res.status(401).send("Spotify login expired. Log in again from the TV.");
+      return;
+    }
+    if (
+      error instanceof SpotifyApiError ||
+      error instanceof SpotifyRequestError ||
+      error instanceof SpotifyResponseError
+    ) {
+      res.status(502).send("Spotify could not complete the request.");
+      return;
+    }
+    res.sendStatus(500);
+  }
 });
 
 // Read and switched by the TV app, so they are reachable from the LAN but need the TV token; tokens are never returned.
