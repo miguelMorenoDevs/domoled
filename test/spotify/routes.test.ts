@@ -35,8 +35,12 @@ Object.assign(globalThis, {
   },
 });
 
-const { default: spotify, SpotifyAuthRevokedError } =
-  await import("../../src/spotify/client.js");
+const {
+  default: spotify,
+  MissingTvCredentialError,
+  SpotifyAuthRevokedError,
+  TvCredentialRevokedError,
+} = await import("../../src/spotify/client.js");
 const { default: spotifyRouter, loginQrUrl } =
   await import("../../src/spotify/routes.js");
 const { cdAnimator } = await import("../../src/led/animator.js");
@@ -68,4 +72,50 @@ test("a revoked login answers 401 and brings the login QR back", async (t: TestC
   );
   assert.equal(showQr.mock.callCount(), 1);
   assert.deepEqual(showQr.mock.calls[0]?.arguments, [loginQrUrl()]);
+});
+
+test("stream-token answers 404 when no user is active", async (t: TestContext) => {
+  const { server, url } = await startServer();
+  t.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
+  t.mock.method(spotify, "getStreamToken", async () => undefined);
+
+  const response = await fetch(`${url}/spotify/stream-token`);
+
+  assert.equal(response.status, 404);
+});
+
+test("stream-token answers 409 with a token-free message when the active user has no TV credential", async (t: TestContext) => {
+  const { server, url } = await startServer();
+  t.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
+  t.mock.method(spotify, "getStreamToken", async () => {
+    throw new MissingTvCredentialError("user-id");
+  });
+
+  const response = await fetch(`${url}/spotify/stream-token`);
+  const body = await response.text();
+
+  assert.equal(response.status, 409);
+  assert.equal(
+    body,
+    "This account has no TV credential. Run scripts/tv-login.mjs on the server to authorize it.",
+  );
+  assert.equal(body.includes("\n"), false);
+});
+
+test("a revoked TV credential answers 401 with the authorization hint and no login QR", async (t: TestContext) => {
+  const { server, url } = await startServer();
+  t.after(() => new Promise<void>((resolve) => server.close(() => resolve())));
+  t.mock.method(spotify, "getStreamToken", async () => {
+    throw new TvCredentialRevokedError("user-id");
+  });
+  const showQr = t.mock.method(cdAnimator, "showQr", () => {});
+
+  const response = await fetch(`${url}/spotify/stream-token`);
+
+  assert.equal(response.status, 401);
+  assert.equal(
+    await response.text(),
+    "Spotify rejected the TV credential for this account. Run scripts/tv-login.mjs on the server again.",
+  );
+  assert.equal(showQr.mock.callCount(), 0);
 });
