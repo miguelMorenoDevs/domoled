@@ -53,15 +53,15 @@ export interface TvCredential {
 
 export type StoredTvCredentials = Record<string, TvCredential>;
 
+/** One entry of `data/tv-credentials.json`, or the whole `data/tv-credentials.pending.json`. */
+export function isTvCredential(value: unknown): value is TvCredential {
+  return isRecord(value) && typeof value["refresh_token"] === "string";
+}
+
 export function isStoredTvCredentials(
   value: unknown,
 ): value is StoredTvCredentials {
-  return (
-    isRecord(value) &&
-    Object.values(value).every(
-      (entry) => isRecord(entry) && typeof entry["refresh_token"] === "string",
-    )
-  );
+  return isRecord(value) && Object.values(value).every(isTvCredential);
 }
 
 export interface TokenResponse {
