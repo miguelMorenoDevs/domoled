@@ -44,9 +44,9 @@ object Librespot {
 
     private external fun nativeStop()
 
-    private external fun nativeIsAlive()
+    private external fun nativeIsAlive(): Boolean
 
-    private external fun nativeIsPlaying()
+    private external fun nativeIsPlaying(): Boolean
 
     private external fun nativeControl(action: Int)
 
