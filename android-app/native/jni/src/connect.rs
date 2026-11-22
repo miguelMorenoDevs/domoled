@@ -59,11 +59,9 @@ pub fn start(access_token: &str, name: &str) -> Result<(), String> {
 
     let live = runtime.block_on(async {
         tokio::time::timeout(CONNECT_TIMEOUT, async {
+            // Spirc::new logs in with these credentials; connecting here as well makes its own
+            // connect fail with "Session is not connected" and the device never registers.
             let session = Session::new(SessionConfig::default(), None);
-            session
-                .connect(credentials.clone(), false)
-                .await
-                .map_err(|error| format!("Spotify login failed: {error}"))?;
 
             let mixer: std::sync::Arc<dyn Mixer> = std::sync::Arc::new(
                 SoftMixer::open(MixerConfig::default())
