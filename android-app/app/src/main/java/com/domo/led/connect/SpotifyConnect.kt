@@ -40,7 +40,7 @@ class SpotifyConnect private constructor(
         running = false
         worker?.interrupt()
         worker = null
-        if (Librespot.available) Librespot.nativeStop()
+        Librespot.stop()
     }
 
     private fun run() {
@@ -57,14 +57,14 @@ class SpotifyConnect private constructor(
                 try {
                     val token = fetchToken()
                     if (token == null) {
-                        Librespot.nativeStop()
+                        Librespot.stop()
                         sessionUserId = null
                         throw Failure(NO_USER_REASON)
                     }
-                    if (sessionUserId != token.userId || !Librespot.nativeIsAlive()) {
-                        Librespot.nativeStop()
+                    if (sessionUserId != token.userId || !Librespot.isAlive()) {
+                        Librespot.stop()
                         sessionUserId = null
-                        val error = Librespot.nativeStart(token.accessToken, DEVICE_NAME)
+                        val error = Librespot.start(token.accessToken, DEVICE_NAME)
                         if (error != null) throw Failure(startReason(error))
                         sessionUserId = token.userId
                     }
@@ -89,7 +89,7 @@ class SpotifyConnect private constructor(
         } catch (interrupted: InterruptedException) {
             // stop() asked for it.
         } finally {
-            Librespot.nativeStop()
+            Librespot.stop()
         }
     }
 
