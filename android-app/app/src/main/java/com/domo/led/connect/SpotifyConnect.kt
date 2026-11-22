@@ -64,7 +64,7 @@ class SpotifyConnect private constructor(
                     if (sessionUserId != token.userId || !Librespot.isAlive()) {
                         Librespot.stop()
                         sessionUserId = null
-                        val error = Librespot.start(token.accessToken, DEVICE_NAME)
+                        val error = Librespot.start(token.accessToken, DEVICE_NAME, token.clientId)
                         if (error != null) throw Failure(startReason(error))
                         sessionUserId = token.userId
                     }
@@ -114,6 +114,7 @@ class SpotifyConnect private constructor(
                 userId = json.getString("userId"),
                 accessToken = json.getString("accessToken"),
                 expiresAt = json.getLong("expiresAt"),
+                clientId = json.getString("clientId"),
             )
         } catch (error: IOException) {
             throw Failure(UNREACHABLE_REASON)
@@ -126,7 +127,12 @@ class SpotifyConnect private constructor(
 
     private class Failure(val reason: String) : Exception(reason)
 
-    private class StreamToken(val userId: String, val accessToken: String, val expiresAt: Long)
+    private class StreamToken(
+        val userId: String,
+        val accessToken: String,
+        val expiresAt: Long,
+        val clientId: String,
+    )
 
     companion object {
         /** The name the phone lists. Documented in docs/firetv.md. */
@@ -145,9 +151,11 @@ class SpotifyConnect private constructor(
         private const val PREMIUM_REASON = "Spotify Premium is needed to play on the TV."
         private const val NATIVE_REASON = "The TV player hit an unexpected error."
 
-        // The native error text is librespot's and is not shown; only its Premium refusal is mapped.
-        private fun startReason(error: String): String =
-            if (error.contains("premium", ignoreCase = true)) PREMIUM_REASON else NATIVE_REASON
+        // The native error text is librespot's: it is logged here, and only its Premium refusal is mapped.
+        private fun startReason(error: String): String {
+            Log.w(TAG, "native player could not start: $error")
+            return if (error.contains("premium", ignoreCase = true)) PREMIUM_REASON else NATIVE_REASON
+        }
 
         /** Reads the server address and TV token that copy-assets bakes into config.js. Null when they are missing. */
         fun fromAssets(assets: AssetManager, listener: Listener): SpotifyConnect? {

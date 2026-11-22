@@ -748,6 +748,7 @@ test("getStreamToken refreshes the active user and returns the token with its ex
 
   assert.equal(token?.userId, "user-id");
   assert.equal(token?.accessToken, "stream-access");
+  assert.equal(token?.clientId, "test-client-id");
   assert.ok(token && token.expiresAt >= before + 3600_000);
   assert.ok(token && token.expiresAt <= Date.now() + 3600_000);
 });
