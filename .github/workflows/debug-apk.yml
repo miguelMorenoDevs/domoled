@@ -1,0 +1,59 @@
+name: debug apk
+
+# Temporary: builds a debug APK with the real LED_SERVER_URL and TV_TOKEN for debugging on the
+# device, without merging the branch. Deleted after use.
+
+on:
+  push:
+    branches: [debug/native-reason]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7-linux-androideabi
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Write tv-app/config.js
+        env:
+          LED_SERVER_URL: ${{ secrets.LED_SERVER_URL }}
+          TV_TOKEN: ${{ secrets.TV_TOKEN }}
+        run: |
+          {
+            echo "var LED_SERVER_URL = \"$LED_SERVER_URL\";"
+            echo "var TV_TOKEN = \"$TV_TOKEN\";"
+          } > tv-app/config.js
+
+      - name: Build the native library
+        run: bash android-app/build-native.sh
+
+      - run: pnpm android:build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk

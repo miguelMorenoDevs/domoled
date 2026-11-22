@@ -146,8 +146,10 @@ class SpotifyConnect private constructor(
         private const val NATIVE_REASON = "The TV player hit an unexpected error."
 
         // The native error text is librespot's and is not shown; only its Premium refusal is mapped.
-        private fun startReason(error: String): String =
-            if (error.contains("premium", ignoreCase = true)) PREMIUM_REASON else NATIVE_REASON
+        private fun startReason(error: String): String {
+            Log.w(TAG, "player start failed: $error")
+            return if (error.contains("premium", ignoreCase = true)) PREMIUM_REASON else NATIVE_REASON
+        }
 
         /** Reads the server address and TV token that copy-assets bakes into config.js. Null when they are missing. */
         fun fromAssets(assets: AssetManager, listener: Listener): SpotifyConnect? {
