@@ -8,11 +8,12 @@ use jni::objects::{JObject, JString};
 use jni::sys::{jboolean, jint, jstring};
 use jni::JNIEnv;
 use std::ffi::CString;
+use std::os::raw::c_char;
 use std::sync::Once;
 
 #[link(name = "log")]
 extern "C" {
-    fn __android_log_write(priority: i32, tag: *const i8, text: *const i8) -> i32;
+    fn __android_log_write(priority: i32, tag: *const c_char, text: *const c_char) -> i32;
 }
 
 struct Logcat;
