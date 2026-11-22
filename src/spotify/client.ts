@@ -213,6 +213,7 @@ class SpotifyClient {
       userId,
       accessToken: tokens.access_token,
       expiresAt: Date.now() + expiresIn * 1000,
+      clientId: this.client_id,
     };
   }
 

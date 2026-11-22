@@ -52,18 +52,25 @@ fn runtime() -> Result<&'static Runtime, String> {
 
 /// Logs in with `access_token` and registers the device as `name`. Blocks until the session is
 /// up or fails. Replaces any session that is already running.
-pub fn start(access_token: &str, name: &str) -> Result<(), String> {
+pub fn start(access_token: &str, name: &str, client_id: &str) -> Result<(), String> {
+    android_logger::init_once(
+        android_logger::Config::default()
+            .with_tag("librespot")
+            .with_max_level(log::LevelFilter::Trace),
+    );
     stop();
     let runtime = runtime()?;
     let credentials = Credentials::with_access_token(access_token);
 
     let live = runtime.block_on(async {
         tokio::time::timeout(CONNECT_TIMEOUT, async {
-            let session = Session::new(SessionConfig::default(), None);
-            session
-                .connect(credentials.clone(), false)
-                .await
-                .map_err(|error| format!("Spotify login failed: {error}"))?;
+            let session = Session::new(
+                SessionConfig {
+                    client_id: client_id.to_owned(),
+                    ..SessionConfig::default()
+                },
+                None,
+            );
 
             let mixer: std::sync::Arc<dyn Mixer> = std::sync::Arc::new(
                 SoftMixer::open(MixerConfig::default())

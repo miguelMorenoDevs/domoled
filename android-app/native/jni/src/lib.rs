@@ -32,6 +32,7 @@ pub extern "system" fn Java_com_domo_led_Librespot_nativeStart<'local>(
     _this: JObject<'local>,
     access_token: JString<'local>,
     device_name: JString<'local>,
+    client_id: JString<'local>,
 ) -> jstring {
     let result = (|| -> Result<(), String> {
         let token: String = env
@@ -42,7 +43,11 @@ pub extern "system" fn Java_com_domo_led_Librespot_nativeStart<'local>(
             .get_string(&device_name)
             .map_err(|error| error.to_string())?
             .into();
-        connect::start(&token, &name)
+        let client: String = env
+            .get_string(&client_id)
+            .map_err(|error| error.to_string())?
+            .into();
+        connect::start(&token, &name, &client)
     })();
     match result {
         Ok(()) => std::ptr::null_mut(),
