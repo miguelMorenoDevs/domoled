@@ -1,13 +1,21 @@
 // One-off: authorize a Spotify account for the TV player with Spotify's keymaster client id (the one librespot uses).
 // Run pnpm build first; run it on the server host, because the redirect goes to the loopback address.
+// `node scripts/tv-login.mjs <spotify-user-id>` finishes a login whose profile lookup failed.
 import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
-import { saveTvCredential } from "../dist/spotify/tv-credentials.js";
+import {
+  getPendingTvCredential,
+  removePendingTvCredential,
+  savePendingTvCredential,
+  saveTvCredential,
+} from "../dist/spotify/tv-credentials.js";
 
 const CLIENT_ID = "65b708073fc0480ea92a077233ca87bd";
 const REDIRECT_URI = "http://127.0.0.1:8898/login";
 const SCOPE = "streaming";
 const REDIRECT_TIMEOUT_MS = 5 * 60_000;
+const PROFILE_ATTEMPTS = 4;
+const MAX_RETRY_AFTER_S = 60;
 
 class LoginError extends Error {}
 
@@ -106,17 +114,49 @@ async function exchangeCode(code, verifier) {
 }
 
 async function fetchProfile(accessToken) {
-  const res = await fetchSpotify("https://api.spotify.com/v1/me", {
-    headers: { Authorization: "Bearer " + accessToken },
-  });
-  const profile = await res.json().catch(() => undefined);
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetchSpotify("https://api.spotify.com/v1/me", {
+      headers: { Authorization: "Bearer " + accessToken },
+    });
+    if (res.ok) {
+      const profile = await res.json().catch(() => undefined);
+      if (typeof profile?.id === "string") return profile;
+      throw new LoginError("Spotify /me returned no user id.");
+    }
 
-  if (!res.ok || typeof profile?.id !== "string")
-    throw new LoginError(`Spotify /me failed with status ${res.status}.`);
-  return profile;
+    const throttledOrDown = res.status === 429 || res.status >= 500;
+    if (!throttledOrDown || attempt === PROFILE_ATTEMPTS)
+      throw new LoginError(`Spotify /me failed with status ${res.status}.`);
+
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const waitS =
+      retryAfter > 0
+        ? Math.min(retryAfter, MAX_RETRY_AFTER_S)
+        : Math.min(2 ** attempt, MAX_RETRY_AFTER_S);
+    console.log(
+      `Spotify /me returned ${res.status}; retrying in ${waitS}s (attempt ${attempt + 1} of ${PROFILE_ATTEMPTS}).`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, waitS * 1000));
+  }
+}
+
+async function finishPending(userId) {
+  const refreshToken = getPendingTvCredential();
+  if (!refreshToken)
+    throw new LoginError(
+      "No pending login to finish. Run the command without arguments to authorize an account.",
+    );
+  saveTvCredential(userId, refreshToken);
+  removePendingTvCredential();
+  console.log(
+    `Stored TV credential for ${userId} in data/tv-credentials.json.`,
+  );
 }
 
 async function main() {
+  const userId = process.argv[2];
+  if (userId) return finishPending(userId);
+
   const verifier = base64url(randomBytes(64));
   const challenge = base64url(createHash("sha256").update(verifier).digest());
   const state = base64url(randomBytes(16));
@@ -140,8 +180,19 @@ async function main() {
 
   const code = await redirect;
   const tokens = await exchangeCode(code, verifier);
-  const profile = await fetchProfile(tokens.access_token);
+  // The code is single-use, so keep the token before the profile lookup can fail.
+  savePendingTvCredential(tokens.refresh_token);
+
+  let profile;
+  try {
+    profile = await fetchProfile(tokens.access_token);
+  } catch (error) {
+    throw new LoginError(
+      `${error.message} The login is kept in data/tv-credentials.pending.json. Run "node scripts/tv-login.mjs <spotify-user-id>" to finish it without approving again.`,
+    );
+  }
   saveTvCredential(profile.id, tokens.refresh_token);
+  removePendingTvCredential();
 
   console.log(
     `Stored TV credential for ${profile.display_name ?? profile.id} (${profile.id}) in data/tv-credentials.json.`,
