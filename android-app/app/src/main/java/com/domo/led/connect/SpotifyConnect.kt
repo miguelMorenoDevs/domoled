@@ -64,7 +64,7 @@ class SpotifyConnect private constructor(
                     if (sessionUserId != token.userId || !Librespot.isAlive()) {
                         Librespot.stop()
                         sessionUserId = null
-                        val error = Librespot.start(token.accessToken, DEVICE_NAME)
+                        val error = Librespot.start(token.accessToken, token.clientId, DEVICE_NAME)
                         if (error != null) throw Failure(startReason(error))
                         sessionUserId = token.userId
                     }
@@ -114,6 +114,7 @@ class SpotifyConnect private constructor(
                 userId = json.getString("userId"),
                 accessToken = json.getString("accessToken"),
                 expiresAt = json.getLong("expiresAt"),
+                clientId = json.getString("clientId"),
             )
         } catch (error: IOException) {
             throw Failure(UNREACHABLE_REASON)
@@ -126,7 +127,12 @@ class SpotifyConnect private constructor(
 
     private class Failure(val reason: String) : Exception(reason)
 
-    private class StreamToken(val userId: String, val accessToken: String, val expiresAt: Long)
+    private class StreamToken(
+        val userId: String,
+        val accessToken: String,
+        val expiresAt: Long,
+        val clientId: String,
+    )
 
     companion object {
         /** The name the phone lists. Documented in docs/firetv.md. */

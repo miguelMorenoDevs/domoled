@@ -61,6 +61,8 @@ export interface StreamToken {
   accessToken: string;
   /** Epoch milliseconds. */
   expiresAt: number;
+  /** The client that minted the token; librespot sends it to login5 with the token. */
+  clientId: string;
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {

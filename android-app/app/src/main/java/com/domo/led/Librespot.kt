@@ -21,8 +21,8 @@ object Librespot {
     val version: String? by lazy { if (available) nativeVersion() else null }
 
     /** Null when the session is up, otherwise the reason it could not start. */
-    fun start(accessToken: String, deviceName: String): String? =
-        if (available) nativeStart(accessToken, deviceName) else unavailable
+    fun start(accessToken: String, clientId: String, deviceName: String): String? =
+        if (available) nativeStart(accessToken, clientId, deviceName) else unavailable
 
     fun stop() {
         if (available) nativeStop()
@@ -40,7 +40,11 @@ object Librespot {
     // (nativeStop would become nativeStop$app_debug), so they stay private.
     private external fun nativeVersion(): String?
 
-    private external fun nativeStart(accessToken: String, deviceName: String): String?
+    private external fun nativeStart(
+        accessToken: String,
+        clientId: String,
+        deviceName: String,
+    ): String?
 
     private external fun nativeStop()
 

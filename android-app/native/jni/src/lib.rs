@@ -79,6 +79,7 @@ pub extern "system" fn Java_com_domo_led_Librespot_nativeStart<'local>(
     mut env: JNIEnv<'local>,
     _this: JObject<'local>,
     access_token: JString<'local>,
+    client_id: JString<'local>,
     device_name: JString<'local>,
 ) -> jstring {
     init_logging();
@@ -87,11 +88,15 @@ pub extern "system" fn Java_com_domo_led_Librespot_nativeStart<'local>(
             .get_string(&access_token)
             .map_err(|error| error.to_string())?
             .into();
+        let client_id: String = env
+            .get_string(&client_id)
+            .map_err(|error| error.to_string())?
+            .into();
         let name: String = env
             .get_string(&device_name)
             .map_err(|error| error.to_string())?
             .into();
-        connect::start(&token, &name)
+        connect::start(&token, &client_id, &name)
     })();
     match result {
         Ok(()) => std::ptr::null_mut(),

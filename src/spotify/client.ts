@@ -213,6 +213,8 @@ class SpotifyClient {
       userId,
       accessToken: tokens.access_token,
       expiresAt: Date.now() + expiresIn * 1000,
+      // librespot sends this to login5, which only accepts a token presented by its minting client.
+      clientId: this.client_id,
     };
   }
 

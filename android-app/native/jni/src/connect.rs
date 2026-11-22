@@ -50,9 +50,10 @@ fn runtime() -> Result<&'static Runtime, String> {
     Ok(RUNTIME.get_or_init(|| runtime))
 }
 
-/// Logs in with `access_token` and registers the device as `name`. Blocks until the session is
-/// up or fails. Replaces any session that is already running.
-pub fn start(access_token: &str, name: &str) -> Result<(), String> {
+/// Logs in with `access_token` and registers the device as `name`. `client_id` is the one that
+/// minted the token: login5 only accepts a stored credential presented by its own client. Blocks
+/// until the session is up or fails. Replaces any session that is already running.
+pub fn start(access_token: &str, client_id: &str, name: &str) -> Result<(), String> {
     stop();
     let runtime = runtime()?;
     let credentials = Credentials::with_access_token(access_token);
@@ -61,7 +62,13 @@ pub fn start(access_token: &str, name: &str) -> Result<(), String> {
         tokio::time::timeout(CONNECT_TIMEOUT, async {
             // Spirc::new logs in with these credentials; connecting here as well makes its own
             // connect fail with "Session is not connected" and the device never registers.
-            let session = Session::new(SessionConfig::default(), None);
+            let session = Session::new(
+                SessionConfig {
+                    client_id: client_id.to_owned(),
+                    ..SessionConfig::default()
+                },
+                None,
+            );
 
             let mixer: std::sync::Arc<dyn Mixer> = std::sync::Arc::new(
                 SoftMixer::open(MixerConfig::default())
