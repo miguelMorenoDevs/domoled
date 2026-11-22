@@ -20,18 +20,35 @@ object Librespot {
 
     val version: String? by lazy { if (available) nativeVersion() else null }
 
+    /** Null when the session is up, otherwise the reason it could not start. */
+    fun start(accessToken: String, deviceName: String): String? =
+        if (available) nativeStart(accessToken, deviceName) else unavailable
+
+    fun stop() {
+        if (available) nativeStop()
+    }
+
+    fun isAlive(): Boolean = available && nativeIsAlive()
+
+    fun isPlaying(): Boolean = available && nativeIsPlaying()
+
+    fun control(action: Int) {
+        if (available) nativeControl(action)
+    }
+
+    // JNI looks these up by their JVM names, and Kotlin only renames `internal` declarations
+    // (nativeStop would become nativeStop$app_debug), so they stay private.
     private external fun nativeVersion(): String?
 
-    /** Null when the session is up, otherwise the reason it could not start. */
-    internal external fun nativeStart(accessToken: String, deviceName: String): String?
+    private external fun nativeStart(accessToken: String, deviceName: String): String?
 
-    internal external fun nativeStop()
+    private external fun nativeStop()
 
-    internal external fun nativeIsAlive(): Boolean
+    private external fun nativeIsAlive()
 
-    internal external fun nativeControl(action: Int)
+    private external fun nativeIsPlaying()
 
-    internal external fun nativeIsPlaying(): Boolean
+    private external fun nativeControl(action: Int)
 
     /** Same codes as `native/jni/src/connect.rs`. */
     const val ACTION_PLAY = 0
@@ -40,11 +57,6 @@ object Librespot {
     const val ACTION_NEXT = 3
     const val ACTION_PREVIOUS = 4
 
-    fun control(action: Int) {
-        if (available) nativeControl(action)
-    }
-
-    fun isPlaying(): Boolean = available && nativeIsPlaying()
-
+    private const val unavailable = "The native player is not available."
     private const val TAG = "Librespot"
 }
