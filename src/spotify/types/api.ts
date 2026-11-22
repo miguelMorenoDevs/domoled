@@ -46,6 +46,24 @@ export interface StoredUsers {
   active_user: string | null;
 }
 
+/** `data/tv-credentials.json`: keymaster refresh tokens keyed by Spotify user id. */
+export interface TvCredential {
+  refresh_token: string;
+}
+
+export type StoredTvCredentials = Record<string, TvCredential>;
+
+export function isStoredTvCredentials(
+  value: unknown,
+): value is StoredTvCredentials {
+  return (
+    isRecord(value) &&
+    Object.values(value).every(
+      (entry) => isRecord(entry) && typeof entry["refresh_token"] === "string",
+    )
+  );
+}
+
 export interface TokenResponse {
   access_token: string;
   refresh_token?: string;
