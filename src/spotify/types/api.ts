@@ -79,7 +79,7 @@ export interface StreamToken {
   accessToken: string;
   /** Epoch milliseconds. */
   expiresAt: number;
-  /** The app's Spotify client id; the native session uses it as its SessionConfig client id. */
+  /** The keymaster client id the token was minted with; the native session uses it as its SessionConfig client id. */
   clientId: string;
 }
 

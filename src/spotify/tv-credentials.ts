@@ -7,6 +7,9 @@ import {
 
 const STORE_PATH = path.resolve("data", "tv-credentials.json");
 
+/** The client id librespot uses; login5 accepts only tokens minted with it. */
+export const KEYMASTER_CLIENT_ID = "65b708073fc0480ea92a077233ca87bd";
+
 function readStore(): StoredTvCredentials {
   let raw: string;
   try {
@@ -23,13 +26,26 @@ function readStore(): StoredTvCredentials {
   return store;
 }
 
-/** Adds or replaces one account's keymaster refresh token; other accounts are kept. */
-export function saveTvCredential(userId: string, refreshToken: string): void {
-  const store = readStore();
-  store[userId] = { refresh_token: refreshToken };
-
+function writeStore(store: StoredTvCredentials): void {
   mkdirSync(path.dirname(STORE_PATH), { recursive: true });
   const tmpPath = STORE_PATH + ".tmp";
   writeFileSync(tmpPath, JSON.stringify(store, null, 2), { mode: 0o600 });
   renameSync(tmpPath, STORE_PATH);
+}
+
+/** Adds or replaces one account's keymaster refresh token; other accounts are kept. */
+export function saveTvCredential(userId: string, refreshToken: string): void {
+  const store = readStore();
+  store[userId] = { refresh_token: refreshToken };
+  writeStore(store);
+}
+
+export function getTvCredential(userId: string): string | undefined {
+  return readStore()[userId]?.refresh_token;
+}
+
+export function removeTvCredential(userId: string): void {
+  const store = readStore();
+  delete store[userId];
+  writeStore(store);
 }

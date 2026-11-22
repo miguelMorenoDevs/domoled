@@ -4,10 +4,12 @@ import qrcode from "qrcode-terminal";
 import SpotifyClient from "./client.js";
 import type { LoginQr } from "./types/api.js";
 import {
+  MissingTvCredentialError,
   SpotifyApiError,
   SpotifyAuthRevokedError,
   SpotifyRequestError,
   SpotifyResponseError,
+  TvCredentialRevokedError,
   UserNotLoggedError,
 } from "./errors.js";
 import { getLocalIP } from "../utils/network.js";
@@ -161,6 +163,22 @@ router.get("/stream-token", requireTv, async (_req: Request, res: Response) => {
     res.json(token);
   } catch (error) {
     console.error(error);
+    if (error instanceof MissingTvCredentialError) {
+      res
+        .status(409)
+        .send(
+          "This account has no TV credential. Run scripts/tv-login.mjs on the server to authorize it.",
+        );
+      return;
+    }
+    if (error instanceof TvCredentialRevokedError) {
+      res
+        .status(401)
+        .send(
+          "Spotify rejected the TV credential for this account. Run scripts/tv-login.mjs on the server again.",
+        );
+      return;
+    }
     if (error instanceof SpotifyAuthRevokedError) {
       cdAnimator.showQr(loginQrUrl());
       res.status(401).send("Spotify login expired. Log in again from the TV.");

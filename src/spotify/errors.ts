@@ -58,3 +58,25 @@ export class SpotifyAuthRevokedError extends Error {
     this.userId = userId;
   }
 }
+
+/** The active user has no keymaster refresh token on the server, so the TV cannot play as them. */
+export class MissingTvCredentialError extends Error {
+  readonly userId: string;
+
+  constructor(userId: string) {
+    super("No TV credential is stored for this account");
+    this.name = "MissingTvCredentialError";
+    this.userId = userId;
+  }
+}
+
+/** Spotify rejected the keymaster refresh token; it has been removed from the TV credential store. */
+export class TvCredentialRevokedError extends Error {
+  readonly userId: string;
+
+  constructor(userId: string) {
+    super("Spotify rejected the stored TV credential for this account");
+    this.name = "TvCredentialRevokedError";
+    this.userId = userId;
+  }
+}

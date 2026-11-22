@@ -16,8 +16,12 @@ const {
   SpotifyAuthRevokedError,
   SpotifyRequestError,
   SpotifyResponseError,
+  MissingTvCredentialError,
+  TvCredentialRevokedError,
   UserNotLoggedError,
 } = await import("../../src/spotify/client.js");
+const { getTvCredential, removeTvCredential, saveTvCredential } =
+  await import("../../src/spotify/tv-credentials.js");
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -733,24 +737,73 @@ test("a 500 on refresh keeps the user's tokens for a later retry", async (t) => 
   );
 });
 
-test("getStreamToken refreshes the active user and returns the token with its expiry", async (t) => {
+test("getStreamToken mints the TV token from the keymaster refresh token and leaves the web token alone", async (t) => {
   await login(t);
-  mockSpotify(t, {
-    "/token": () =>
-      jsonResponse({
-        access_token: "stream-access",
-        expires_in: 3600,
-      }),
-  });
+  saveTvCredential("user-id", "keymaster-refresh");
+  const tokenCalls: URLSearchParams[] = [];
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (input: string | URL | Request, init?: RequestInit) => {
+      if (!String(input).endsWith("/token"))
+        throw new Error("Unexpected fetch: " + String(input));
+      tokenCalls.push(init?.body as URLSearchParams);
+      return jsonResponse({ access_token: "stream-access", expires_in: 3600 });
+    },
+  );
 
   const before = Date.now();
   const token = await spotify.getStreamToken();
 
   assert.equal(token?.userId, "user-id");
   assert.equal(token?.accessToken, "stream-access");
-  assert.equal(token?.clientId, "test-client-id");
+  assert.equal(token?.clientId, "65b708073fc0480ea92a077233ca87bd");
   assert.ok(token && token.expiresAt >= before + 3600_000);
-  assert.ok(token && token.expiresAt <= Date.now() + 3600_000);
+  assert.equal(tokenCalls.length, 1);
+  assert.equal(tokenCalls[0]?.get("grant_type"), "refresh_token");
+  assert.equal(tokenCalls[0]?.get("refresh_token"), "keymaster-refresh");
+  assert.equal(
+    tokenCalls[0]?.get("client_id"),
+    "65b708073fc0480ea92a077233ca87bd",
+  );
+  assert.equal(
+    readFileSync(path.join(storeDir, "data", "users.json"), "utf8").includes(
+      "stream-access",
+    ),
+    false,
+  );
+});
+
+test("getStreamToken stores a rotated keymaster refresh token", async (t) => {
+  await login(t);
+  saveTvCredential("user-id", "old-refresh");
+  mockSpotify(t, {
+    "/token": () =>
+      jsonResponse({
+        access_token: "stream-access",
+        expires_in: 3600,
+        refresh_token: "new-refresh",
+      }),
+  });
+
+  await spotify.getStreamToken();
+
+  assert.deepEqual(getTvCredential("user-id"), "new-refresh");
+});
+
+test("getStreamToken throws MissingTvCredentialError when the active user has no keymaster credential", async (t) => {
+  await login(t);
+  removeTvCredential("user-id");
+  mockSpotify(t, {
+    "/token": () => jsonResponse({ access_token: "unused", expires_in: 3600 }),
+  });
+
+  await assert.rejects(
+    spotify.getStreamToken(),
+    (error: unknown) =>
+      error instanceof MissingTvCredentialError && error.userId === "user-id",
+  );
+  assert.equal(await spotify.hasActiveUser(), true);
 });
 
 test("getStreamToken returns undefined when no user is active", async () => {
@@ -759,21 +812,23 @@ test("getStreamToken returns undefined when no user is active", async () => {
   assert.equal(await spotify.getStreamToken(), undefined);
 });
 
-test("an invalid_scope refresh removes the user so the login comes back", async (t) => {
+test("a revoked keymaster refresh token is dropped and the web login is kept", async (t) => {
   await login(t);
+  saveTvCredential("user-id", "revoked-refresh");
   mockSpotify(t, {
     "/token": () =>
       statusResponse(400, {
-        error: "invalid_scope",
-        error_description: "Scope streaming was not granted",
+        error: "invalid_grant",
+        error_description: "Refresh token revoked",
       }),
   });
 
   await assert.rejects(
     spotify.getStreamToken(),
     (error: unknown) =>
-      error instanceof SpotifyAuthRevokedError && error.userId === "user-id",
+      error instanceof TvCredentialRevokedError && error.userId === "user-id",
   );
 
-  assert.equal(await spotify.hasActiveUser(), false);
+  assert.equal(getTvCredential("user-id"), undefined);
+  assert.equal(await spotify.hasActiveUser(), true);
 });

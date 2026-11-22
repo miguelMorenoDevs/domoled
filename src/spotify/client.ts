@@ -15,15 +15,25 @@ import {
 } from "./types/api.js";
 import { isGetCurrentSongResponse } from "./types/service.js";
 import {
+  MissingTvCredentialError,
   SpotifyApiError,
   SpotifyAuthRevokedError,
   SpotifyRequestError,
   SpotifyResponseError,
+  TvCredentialRevokedError,
   UserNotLoggedError,
 } from "./errors.js";
+import {
+  getTvCredential,
+  KEYMASTER_CLIENT_ID,
+  removeTvCredential,
+  saveTvCredential,
+} from "./tv-credentials.js";
 import { parseRetryAfter } from "../utils/http.js";
 
 export {
+  MissingTvCredentialError,
+  TvCredentialRevokedError,
   SpotifyApiError,
   SpotifyAuthRevokedError,
   SpotifyRequestError,
@@ -199,21 +209,50 @@ class SpotifyClient {
     return payload.expires_in;
   }
 
-  /** Refreshes the active user's access token, so the expiry is the one Spotify just issued. */
+  /** Mints the active user's TV token from their keymaster refresh token; the web token is not touched. */
   async getStreamToken(): Promise<StreamToken | undefined> {
     const userId = this.active_user;
     if (!userId) return undefined;
 
-    const expiresIn = await this.getUserToken({ grant_type: "refresh_token" });
-    const tokens = this.users_map.get(userId);
-    if (expiresIn === undefined || !tokens)
+    const refreshToken = getTvCredential(userId);
+    if (!refreshToken) throw new MissingTvCredentialError(userId);
+
+    const res = await this.send("/token", this.auth_url + "/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: KEYMASTER_CLIENT_ID,
+      }),
+    });
+
+    if (!res.ok) {
+      const failure: unknown = await res.json().catch(() => undefined);
+      if (
+        isRecord(failure) &&
+        (failure["error"] === "invalid_grant" ||
+          failure["error"] === "invalid_scope")
+      ) {
+        console.error(
+          `TV credential for ${userId} was rejected (${failure["error"]}); authorize it again with scripts/tv-login.mjs`,
+        );
+        removeTvCredential(userId);
+        throw new TvCredentialRevokedError(userId);
+      }
+      throw new SpotifyApiError("/token", res.status, parseRetryAfter(res));
+    }
+
+    const payload: unknown = await readBody("/token", () => res.json());
+    if (!isTokenResponse(payload) || payload.expires_in === undefined)
       throw new SpotifyResponseError("/token");
+    if (payload.refresh_token) saveTvCredential(userId, payload.refresh_token);
 
     return {
       userId,
-      accessToken: tokens.access_token,
-      expiresAt: Date.now() + expiresIn * 1000,
-      clientId: this.client_id,
+      accessToken: payload.access_token,
+      expiresAt: Date.now() + payload.expires_in * 1000,
+      clientId: KEYMASTER_CLIENT_ID,
     };
   }
 
